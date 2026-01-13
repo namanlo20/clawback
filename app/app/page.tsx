@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CARDS, DEFAULT_POINT_VALUES_USD, type Card } from "../../../data/cards";
+import { CARDS, DEFAULT_POINT_VALUES_USD, type Card } from "../../data/cards";
 
 function money(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
