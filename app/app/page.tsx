@@ -50,11 +50,7 @@ function freqSort(freq: CreditFrequency): number {
 
 function creditSubtitle(c: Credit): string {
   const a = annualize(c.amount, c.frequency);
-  const parts = [
-    `${freqLabel(c.frequency)} • ${formatMoney(c.amount)}`,
-    `Annualized: ${formatMoney(a)}`,
-  ];
-  return parts.join(" • ");
+  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
 }
 
 function pillClass(kind: "off" | "on" | "warn" | "good"): string {
@@ -73,19 +69,22 @@ function statCardClass(tone: "green" | "gray" | "red"): string {
 }
 
 export default function AppDashboardPage() {
-  const pinnedKeys = new Set<Card["key"]>([
+  // Explicit pinned ordering (your request: Platinum above Chase)
+  const pinnedOrder: Card["key"][] = [
     "amex-platinum",
     "chase-sapphire-reserve",
     "capitalone-venture-x",
-  ]);
+  ];
+  const pinnedIndex = useMemo(() => {
+    const m = new Map<string, number>();
+    pinnedOrder.forEach((k, i) => m.set(k, i));
+    return m;
+  }, []);
 
   const [search, setSearch] = useState("");
-  const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("amex-platinum");
+  const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("chase-sapphire-reserve");
 
-  // mock saved cards
   const [savedCards, setSavedCards] = useState<string[]>([]);
-
-  // composite-key states so nothing collides across cards
   const [used, setUsed] = useState<ToggleState>({});
   const [dontCare, setDontCare] = useState<ToggleState>({});
   const [remind, setRemind] = useState<ToggleState>({});
@@ -97,15 +96,24 @@ export default function AppDashboardPage() {
 
   const filteredCards = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const cards = CARDS.slice().sort((a, b) => {
-      const ap = pinnedKeys.has(a.key) ? 0 : 1;
-      const bp = pinnedKeys.has(b.key) ? 0 : 1;
+
+    const sorted = CARDS.slice().sort((a, b) => {
+      const ap = pinnedIndex.has(a.key) ? 0 : 1;
+      const bp = pinnedIndex.has(b.key) ? 0 : 1;
       if (ap !== bp) return ap - bp;
+
+      // If both pinned, preserve explicit order
+      if (ap === 0 && bp === 0) {
+        return (pinnedIndex.get(a.key) ?? 999) - (pinnedIndex.get(b.key) ?? 999);
+      }
+
+      // Otherwise alphabetical
       return a.name.localeCompare(b.name);
     });
-    if (!q) return cards;
-    return cards.filter((c) => (c.name + " " + c.issuer).toLowerCase().includes(q));
-  }, [search, pinnedKeys]);
+
+    if (!q) return sorted;
+    return sorted.filter((c) => (c.name + " " + c.issuer).toLowerCase().includes(q));
+  }, [search, pinnedIndex]);
 
   const creditsSorted = useMemo(() => {
     return activeCard.credits
@@ -137,7 +145,6 @@ export default function AppDashboardPage() {
   }, [creditsSorted, activeCard.key, dontCare, used]);
 
   const expiringSoon = useMemo(() => {
-    // v1: remind-only, excludes used/don't care (date math is next step)
     const out: Credit[] = [];
     for (const c of creditsSorted) {
       const k = `${activeCard.key}:${c.id}`;
@@ -149,24 +156,32 @@ export default function AppDashboardPage() {
     return out.slice(0, 6);
   }, [creditsSorted, activeCard.key, remind, used, dontCare]);
 
+  const remindCount = useMemo(() => {
+    let n = 0;
+    for (const c of creditsSorted) {
+      const k = `${activeCard.key}:${c.id}`;
+      if (remind[k] && !used[k] && !dontCare[k]) n += 1;
+    }
+    return n;
+  }, [creditsSorted, activeCard.key, remind, used, dontCare]);
+
   function toggleUsed(cardKey: string, creditId: string) {
     const k = `${cardKey}:${creditId}`;
     setUsed((prev) => ({ ...prev, [k]: !prev[k] }));
   }
-
   function toggleDontCare(cardKey: string, creditId: string) {
     const k = `${cardKey}:${creditId}`;
     setDontCare((prev) => ({ ...prev, [k]: !prev[k] }));
   }
-
   function toggleRemind(cardKey: string, creditId: string) {
     const k = `${cardKey}:${creditId}`;
     setRemind((prev) => ({ ...prev, [k]: !prev[k] }));
   }
-
   function notifyMeForThisCard() {
     setSavedCards((prev) => (prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]));
   }
+
+  const isPinned = (key: string) => pinnedIndex.has(key);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -185,10 +200,10 @@ export default function AppDashboardPage() {
           </div>
         </div>
 
-        {/* 12-col layout so middle is wider */}
+        {/* Wider left + right columns */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          {/* LEFT */}
-          <aside className="lg:col-span-3">
+          {/* LEFT (bigger) */}
+          <aside className="lg:col-span-4">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
               <div className="text-sm font-semibold">Choose your card</div>
               <div className="mt-1 text-xs text-white/60">Browse any card free. “Notify me” saves it to your dashboard.</div>
@@ -205,37 +220,39 @@ export default function AppDashboardPage() {
               <div className="mt-3 max-h-[440px] overflow-auto rounded-xl border border-white/10">
                 {filteredCards.map((card) => {
                   const active = card.key === activeCard.key;
-                  const pinned = pinnedKeys.has(card.key);
+                  const pinned = isPinned(card.key);
+
                   return (
                     <button
                       key={card.key}
                       onClick={() => setActiveCardKey(card.key)}
                       className={[
-                        "flex w-full items-center gap-3 px-3 py-3 text-left transition",
+                        "flex w-full items-start gap-3 px-3 py-3 text-left transition",
                         active ? "bg-white/10" : "hover:bg-white/5",
                         pinned ? "border-l-2 border-amber-400/60" : "border-l-2 border-transparent",
                       ].join(" ")}
                       type="button"
                     >
-                      <div className="relative h-9 w-9 overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                      <div className="relative mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
                         <Image src={card.logo} alt={card.name} fill className="object-cover" />
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <div className="truncate text-sm font-semibold">{card.name}</div>
+                          {/* 2-line name instead of hard truncation */}
+                          <div className="text-sm font-semibold leading-5 line-clamp-2">{card.name}</div>
                           {pinned && (
                             <span className="shrink-0 rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] text-amber-200">
                               Top pick
                             </span>
                           )}
                         </div>
-                        <div className="truncate text-xs text-white/60">
+                        <div className="mt-0.5 text-xs text-white/60">
                           Fee: {formatMoney(card.annualFee)} • Credits: {formatMoney(card.creditsTrackedAnnualized)}
                         </div>
                       </div>
 
-                      <div className="text-[10px] text-white/40">{active ? "Viewing" : ""}</div>
+                      <div className="pt-1 text-[10px] text-white/40">{active ? "Viewing" : ""}</div>
                     </button>
                   );
                 })}
@@ -253,8 +270,8 @@ export default function AppDashboardPage() {
             </div>
           </aside>
 
-          {/* MIDDLE (wider) */}
-          <main className="lg:col-span-6 xl:col-span-7">
+          {/* MIDDLE */}
+          <main className="lg:col-span-5">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className={statCardClass("green")}>
                 <div className="text-xs text-white/60">Credits Redeemed (Active Card)</div>
@@ -278,24 +295,30 @@ export default function AppDashboardPage() {
               </div>
             </div>
 
+            {/* Active card header w/ subtle glow */}
             <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                    <Image src={activeCard.logo} alt={activeCard.name} fill className="object-cover" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate text-lg font-semibold">{activeCard.name}</div>
-                    <div className="truncate text-xs text-white/60">
-                      Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked (annualized):{" "}
-                      {formatMoney(activeCard.creditsTrackedAnnualized)}
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 shadow-[0_0_40px_rgba(255,255,255,0.04)]">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/30">
+                      <Image src={activeCard.logo} alt={activeCard.name} fill className="object-cover" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="truncate text-lg font-semibold">{activeCard.name}</div>
+                      <div className="truncate text-xs text-white/60">
+                        Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked (annualized):{" "}
+                        {formatMoney(activeCard.creditsTrackedAnnualized)}
+                      </div>
+                      <div className="mt-1 text-[11px] text-white/45">
+                        Credits listed: {creditsSorted.length} • Remind set: {remindCount}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-xs text-white/50">
-                  Status
-                  <br />
-                  Preview only
+                  <div className="text-xs text-white/50">
+                    Status
+                    <br />
+                    Preview only
+                  </div>
                 </div>
               </div>
 
@@ -311,7 +334,6 @@ export default function AppDashboardPage() {
 
                     return (
                       <div key={c.id} className="rounded-2xl border border-white/10 bg-black/30 p-4">
-                        {/* ALL BUTTONS ON ONE LINE */}
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate text-sm font-semibold text-white">{c.title}</div>
@@ -347,19 +369,28 @@ export default function AppDashboardPage() {
             </div>
           </main>
 
-          {/* RIGHT */}
-          <aside className="lg:col-span-3 xl:col-span-2">
+          {/* RIGHT (bigger) */}
+          <aside className="lg:col-span-3">
             <div className="rounded-2xl border border-amber-400/25 bg-amber-400/10 p-4 shadow-[0_0_60px_rgba(0,0,0,0.45)]">
               <div className="text-sm font-semibold text-amber-100">Points / Cash Back</div>
               <div className="mt-1 text-xs text-amber-100/70">Category multipliers for the active card</div>
 
               <div className="mt-4 space-y-2">
                 {activeCard.multipliers.map((m) => (
-                  <div key={m.label} className="flex items-center justify-between rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2">
-                    <div className="text-xs text-amber-50/90">{m.label}</div>
-                    <div className="text-xs font-semibold text-amber-50">{m.x}x</div>
+                  <div
+                    key={m.label}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2"
+                  >
+                    {/* allow longer label; wrap to 2 lines if needed */}
+                    <div className="text-xs text-amber-50/90 leading-4 line-clamp-2">{m.label}</div>
+                    <div className="shrink-0 text-xs font-semibold text-amber-50">{m.x}x</div>
                   </div>
                 ))}
+              </div>
+
+              {/* small polish content */}
+              <div className="mt-4 rounded-xl border border-amber-200/15 bg-black/20 p-3 text-[11px] text-amber-50/80">
+                Tip: Turn on <span className="font-semibold">Remind</span> for recurring credits you often forget. Tomorrow we’ll make this smarter with AI.
               </div>
             </div>
 
@@ -408,13 +439,13 @@ export default function AppDashboardPage() {
                     const card = CARDS.find((c) => c.key === k);
                     if (!card) return null;
                     return (
-                      <div key={k} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-3">
-                        <div className="relative h-8 w-8 overflow-hidden rounded-lg border border-white/10 bg-black/30">
+                      <div key={k} className="flex items-start gap-3 rounded-xl border border-white/10 bg-black/30 p-3">
+                        <div className="relative mt-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
                           <Image src={card.logo} alt={card.name} fill className="object-cover" />
                         </div>
                         <div className="min-w-0">
-                          <div className="truncate text-xs font-semibold">{card.name}</div>
-                          <div className="truncate text-[11px] text-white/60">Fee: {formatMoney(card.annualFee)}</div>
+                          <div className="text-xs font-semibold leading-4 line-clamp-2">{card.name}</div>
+                          <div className="mt-0.5 text-[11px] text-white/60">Fee: {formatMoney(card.annualFee)}</div>
                         </div>
                       </div>
                     );
