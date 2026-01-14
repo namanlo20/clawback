@@ -1,75 +1,231 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CARDS, DEFAULT_POINT_VALUES_USD, type Card } from "../../data/cards";
+
+type Modal =
+  | null
+  | { title: string; body: string; primaryText?: string; onPrimary?: () => void };
 
 function money(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 
-function sumCredits(card: Card) {
-  return card.credits.reduce((s, c) => s + (c.amountAnnual || 0), 0);
+function clampPct(n: number) {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(100, n));
 }
 
-export default function DashboardPage() {
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([
-    "platinum_card",
-    "chase_sapphire_reserve",
-  ]);
+function sumCreditsAnnual(card: Card) {
+  return (card.credits || []).reduce((s, c) => s + (c.amountAnnual || 0), 0);
+}
 
-  // used state is per-credit toggle for now (annualized)
-  const [used, setUsed] = useState<Record<string, boolean>>({
-    csr_dining: true, // example seed
-  });
+function estimateWelcomeValueUSD(card: Card) {
+  // Uses DEFAULT_POINT_VALUES_USD from data/cards.ts
+  // If unknown currency, returns null
+  const offer = card.welcomeOffer;
+  if (!offer) return null;
 
-  const [hiddenCredit, setHiddenCredit] = useState<Record<string, boolean>>({});
+  const map = DEFAULT_POINT_VALUES_USD as Record<string, number | undefined>;
+  const v = map[offer.currency];
+  if (!v) return null;
 
-  const [pointValue, setPointValue] = useState<Record<string, number>>(
-    DEFAULT_POINT_VALUES_USD
-  );
+  return Math.round(offer.amount * v);
+}
 
-  const selectedCards = useMemo(
-    () => CARDS.filter((c) => selectedKeys.includes(c.key)),
-    [selectedKeys]
-  );
+// ---------- Local “auth / plan” stubs (replace with Supabase later) ----------
+type Plan = "free" | "paid";
 
-  const totals = useMemo(() => {
-    const allCredits = selectedCards.flatMap((c) =>
-      c.credits.filter((cr) => !hiddenCredit[cr.id])
-    );
-    const totalPossible = allCredits.reduce((s, x) => s + x.amountAnnual, 0);
-    const totalUsed = allCredits.reduce(
-      (s, x) => s + (used[x.id] ? x.amountAnnual : 0),
-      0
-    );
-    return { totalPossible, totalUsed };
-  }, [selectedCards, used, hiddenCredit]);
-
-  function toggleSelected(cardKey: string) {
-    setSelectedKeys((prev) =>
-      prev.includes(cardKey) ? prev.filter((k) => k !== cardKey) : [...prev, cardKey]
-    );
+function loadLS<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
   }
+}
+
+function saveLS(key: string, value: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore
+  }
+}
+
+const LS = {
+  loggedIn: "clawback_logged_in_mock",
+  isFounder: "clawback_founder_mock",
+  plan: "clawback_plan_mock",
+  saved: "clawback_saved_cards",
+  used: "clawback_used_by_credit",
+  dontCare: "clawback_dontcare_by_credit",
+};
+
+export default function DashboardPage() {
+  // Mock auth states (swap to Supabase later)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isFounder, setIsFounder] = useState(false);
+  const [plan, setPlan] = useState<Plan>("free");
+
+  // Sidebar selection (preview mode)
+  const [query, setQuery] = useState("");
+  const [activeKey, setActiveKey] = useState<string>(() => CARDS[0]?.key ?? "");
+
+  // Saved dashboard cards
+  const [savedKeys, setSavedKeys] = useState<string[]>([]);
+
+  // Per-credit state (applies across cards)
+  const [usedByCredit, setUsedByCredit] = useState<Record<string, boolean>>({});
+  const [dontCareByCredit, setDontCareByCredit] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const [modal, setModal] = useState<Modal>(null);
+
+  // Load persisted state
+  useEffect(() => {
+    setIsLoggedIn(loadLS<boolean>(LS.loggedIn, false));
+    setIsFounder(loadLS<boolean>(LS.isFounder, false));
+    setPlan(loadLS<Plan>(LS.plan, "free"));
+    setSavedKeys(loadLS<string[]>(LS.saved, []));
+    setUsedByCredit(loadLS<Record<string, boolean>>(LS.used, {}));
+    setDontCareByCredit(loadLS<Record<string, boolean>>(LS.dontCare, {}));
+  }, []);
+
+  // Persist state
+  useEffect(() => saveLS(LS.loggedIn, isLoggedIn), [isLoggedIn]);
+  useEffect(() => saveLS(LS.isFounder, isFounder), [isFounder]);
+  useEffect(() => saveLS(LS.plan, plan), [plan]);
+  useEffect(() => saveLS(LS.saved, savedKeys), [savedKeys]);
+  useEffect(() => saveLS(LS.used, usedByCredit), [usedByCredit]);
+  useEffect(() => saveLS(LS.dontCare, dontCareByCredit), [dontCareByCredit]);
+
+  const filteredCards = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return CARDS;
+    return CARDS.filter((c) => {
+      const hay = `${c.name} ${c.key}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [query]);
+
+  const activeCard = useMemo(() => {
+    return CARDS.find((c) => c.key === activeKey) ?? CARDS[0];
+  }, [activeKey]);
+
+  const savedCards = useMemo(() => {
+    const map = new Map(CARDS.map((c) => [c.key, c]));
+    return savedKeys.map((k) => map.get(k)).filter(Boolean) as Card[];
+  }, [savedKeys]);
 
   function toggleUsed(creditId: string) {
-    setUsed((prev) => ({ ...prev, [creditId]: !prev[creditId] }));
+    setUsedByCredit((prev) => ({ ...prev, [creditId]: !prev[creditId] }));
   }
 
-  function toggleHidden(creditId: string) {
-    setHiddenCredit((prev) => ({ ...prev, [creditId]: !prev[creditId] }));
+  function toggleDontCare(creditId: string) {
+    setDontCareByCredit((prev) => {
+      const next = { ...prev, [creditId]: !prev[creditId] };
+      // If you mark "Don't care", automatically unmark "Used" to keep progress consistent
+      if (next[creditId]) {
+        setUsedByCredit((u) => ({ ...u, [creditId]: false }));
+      }
+      return next;
+    });
   }
 
-  function bonusValueUSD(card: Card) {
-    if (!card.welcomeOffer) return 0;
-    const v = pointValue[card.welcomeOffer.currency] ?? 0.01;
-    return card.welcomeOffer.amount * v;
+  function addToDashboard(cardKey: string) {
+    const already = savedKeys.includes(cardKey);
+    if (already) return;
+
+    // Must login unless founder
+    if (!isLoggedIn && !isFounder) {
+      setModal({
+        title: "Login required",
+        body: "To save cards and enable reminders, you need to log in (Supabase will handle this). For now, use Mock Login.",
+        primaryText: "Mock Login",
+        onPrimary: () => {
+          setIsLoggedIn(true);
+          setModal(null);
+        },
+      });
+      return;
+    }
+
+    // Paywall: multiple cards requires $5 (unless founder)
+    if (!isFounder && plan === "free" && savedKeys.length >= 1) {
+      setModal({
+        title: "Track multiple cards — $5 flat",
+        body: "Free plan lets you save 1 card. Upgrade $5 (flat) to save multiple cards and get reminders for all of them.",
+        primaryText: "Mock Upgrade ($5)",
+        onPrimary: () => {
+          setPlan("paid");
+          setModal(null);
+        },
+      });
+      return;
+    }
+
+    setSavedKeys((prev) => [...prev, cardKey]);
   }
 
+  function removeFromDashboard(cardKey: string) {
+    setSavedKeys((prev) => prev.filter((k) => k !== cardKey));
+  }
+
+  function calcProgressForCard(card: Card) {
+    const caredCredits = (card.credits || []).filter(
+      (c) => !dontCareByCredit[c.id]
+    );
+    const total = caredCredits.reduce((s, c) => s + (c.amountAnnual || 0), 0);
+    const used = caredCredits.reduce(
+      (s, c) => s + (usedByCredit[c.id] ? c.amountAnnual || 0 : 0),
+      0
+    );
+    const pct = total === 0 ? 0 : Math.round((used / total) * 100);
+    return { total, used, pct: clampPct(pct) };
+  }
+
+  const activeProgress = activeCard ? calcProgressForCard(activeCard) : { total: 0, used: 0, pct: 0 };
+
+  const totalAnnualFeesSelected = useMemo(() => {
+    return savedCards.reduce((s, c) => s + (c.annualFee || 0), 0);
+  }, [savedCards]);
+
+  // ---------- UI ----------
   return (
     <main className="min-h-screen bg-black text-white">
+      {/* Modal */}
+      {modal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-lg rounded-3xl border border-white/15 bg-zinc-950 p-6 shadow-2xl">
+            <div className="text-lg font-semibold">{modal.title}</div>
+            <div className="mt-2 text-sm text-white/70">{modal.body}</div>
+            <div className="mt-5 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setModal(null)}
+                className="rounded-2xl border border-white/15 px-4 py-2 text-sm hover:bg-white/5"
+              >
+                Close
+              </button>
+              {modal.primaryText && modal.onPrimary && (
+                <button
+                  onClick={modal.onPrimary}
+                  className="rounded-2xl bg-white px-4 py-2 text-sm font-semibold text-black hover:bg-white/90"
+                >
+                  {modal.primaryText}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mx-auto max-w-7xl px-6 py-10">
-        {/* header */}
-        <div className="flex items-center justify-between gap-6">
+        <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-semibold tracking-tight">ClawBack</div>
             <div className="text-sm text-white/60">
@@ -77,281 +233,363 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <a
-            href="/"
-            className="rounded-xl border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
-          >
-            ← Back
-          </a>
+          <div className="flex items-center gap-2">
+            {/* Mock controls (remove later) */}
+            <button
+              onClick={() => setIsLoggedIn((v) => !v)}
+              className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+              title="Mock login toggle (replace with Supabase)"
+            >
+              {isLoggedIn ? "Logged in (mock)" : "Login (mock)"}
+            </button>
+            <button
+              onClick={() => setIsFounder((v) => !v)}
+              className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+              title="Mock founder bypass toggle"
+            >
+              {isFounder ? "Founder ✓" : "Founder off"}
+            </button>
+            <button
+              onClick={() => setPlan((p) => (p === "free" ? "paid" : "free"))}
+              className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+              title="Mock plan toggle"
+            >
+              Plan: {plan === "free" ? "Free" : "Paid"}
+            </button>
+            <a
+              href="/"
+              className="ml-2 rounded-xl border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
+            >
+              ← Back
+            </a>
+          </div>
         </div>
 
-        {/* trackers */}
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
-            <div className="text-xs text-white/70">Credits Redeemed</div>
-            <div className="mt-1 text-2xl font-semibold">
-              ${money(totals.totalUsed)}
+        <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr]">
+          {/* LEFT SIDEBAR */}
+          <aside className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="text-sm font-semibold text-white/85">
+              Choose your card
             </div>
-            <div className="mt-2 h-2 w-full rounded-full bg-white/10">
-              <div
-                className="h-2 rounded-full bg-emerald-400"
-                style={{
-                  width:
-                    totals.totalPossible === 0
-                      ? "0%"
-                      : `${Math.round((totals.totalUsed / totals.totalPossible) * 100)}%`,
-                }}
-              />
+            <div className="mt-2 text-xs text-white/60">
+              Browse any card free. “Notify me” saves it to your dashboard.
             </div>
-            <div className="mt-1 text-xs text-white/60">
-              {totals.totalPossible === 0
-                ? "—"
-                : `${Math.round((totals.totalUsed / totals.totalPossible) * 100)}% used`}
-            </div>
-          </div>
 
-          <div className="rounded-3xl border border-white/15 bg-white/5 p-5">
-            <div className="text-xs text-white/60">Total Credits Available</div>
-            <div className="mt-1 text-2xl font-semibold">
-              ${money(totals.totalPossible)}
-            </div>
-            <div className="mt-1 text-xs text-white/50">
-              (based on selected cards + credits tracked)
-            </div>
-          </div>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search cards..."
+              className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none focus:border-white/25"
+            />
 
-          <div className="rounded-3xl border border-red-400/20 bg-red-400/10 p-5">
-            <div className="text-xs text-white/70">Annual Fees (Selected Cards)</div>
-            <div className="mt-1 text-2xl font-semibold">
-              $
-              {money(
-                selectedCards.reduce((s, c) => s + (c.annualFee || 0), 0)
+            <div className="mt-4 max-h-[420px] overflow-auto rounded-2xl border border-white/10">
+              {filteredCards.map((c) => {
+                const isActive = c.key === activeKey;
+                const isSaved = savedKeys.includes(c.key);
+                return (
+                  <button
+                    key={c.key}
+                    onClick={() => setActiveKey(c.key)}
+                    className={[
+                      "w-full border-b border-white/10 px-4 py-3 text-left transition last:border-b-0",
+                      isActive ? "bg-white/10" : "hover:bg-white/5",
+                    ].join(" ")}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium">{c.name}</div>
+                        <div className="text-xs text-white/60">
+                          Fee: ${money(c.annualFee)} • Credits: ${money(sumCreditsAnnual(c))}
+                        </div>
+                      </div>
+                      <div className="text-xs text-white/60">
+                        {isSaved ? "Saved ✓" : isActive ? "Viewing" : ""}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredCards.length === 0 && (
+                <div className="px-4 py-6 text-sm text-white/60">
+                  No cards match that search.
+                </div>
               )}
             </div>
-            <div className="mt-1 text-xs text-white/60">
-              Later: pro-rate fees + show net value per month.
-            </div>
-          </div>
-        </div>
 
-        {/* Card picker */}
-        <div className="mt-8 rounded-3xl border border-white/15 bg-white/5 p-6">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="text-sm font-medium text-white/80">Your Cards</div>
-              <div className="text-xs text-white/50">
-                Select which cards show up on your dashboard.
+            <button
+              onClick={() => addToDashboard(activeKey)}
+              className="mt-4 w-full rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
+            >
+              Notify me for this card
+            </button>
+
+            <div className="mt-3 text-xs text-white/55">
+              {isFounder ? (
+                <span className="text-emerald-300">Founder bypass: unlimited cards</span>
+              ) : plan === "free" ? (
+                <span>Free: save 1 card • Multi-card is $5 flat</span>
+              ) : (
+                <span className="text-emerald-300">Paid: save multiple cards</span>
+              )}
+            </div>
+          </aside>
+
+          {/* MAIN PANEL */}
+          <section className="space-y-6">
+            {/* TOP TRACKERS (active card preview stats) */}
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Green tracker */}
+              <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+                <div className="text-xs text-white/70">Credits Redeemed (Active Card)</div>
+                <div className="mt-1 text-2xl font-semibold">
+                  ${money(activeProgress.used)}
+                </div>
+                <div className="mt-3 h-2 w-full rounded-full bg-white/10">
+                  <div
+                    className="h-2 rounded-full bg-emerald-400"
+                    style={{ width: `${activeProgress.pct}%` }}
+                  />
+                </div>
+                <div className="mt-1 text-xs text-white/60">
+                  {activeProgress.pct}% used
+                </div>
+              </div>
+
+              {/* Neutral tracker */}
+              <div className="rounded-3xl border border-white/15 bg-white/5 p-5">
+                <div className="text-xs text-white/60">Total Credits Available (Active Card)</div>
+                <div className="mt-1 text-2xl font-semibold">
+                  ${money(activeProgress.total)}
+                </div>
+                <div className="mt-1 text-xs text-white/50">
+                  based on credits you haven’t marked “don’t care”
+                </div>
+              </div>
+
+              {/* Red fee tracker */}
+              <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-5">
+                <div className="text-xs text-white/70">Annual Fee (Active Card)</div>
+                <div className="mt-1 text-2xl font-semibold">
+                  ${money(activeCard?.annualFee || 0)}
+                </div>
+                <div className="mt-1 text-xs text-white/50">
+                  later: pro-rate fee + net value per month
+                </div>
               </div>
             </div>
 
-            <a
-              href="/recommend"
-              className="inline-flex w-fit items-center justify-center rounded-xl border border-white/20 px-4 py-2 text-sm hover:bg-white/10"
-            >
-              🤖 AI Recommendation (next)
-            </a>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {CARDS.map((c) => {
-              const active = selectedKeys.includes(c.key);
-              const creditsTotal = sumCredits(c);
-              const bonusUSD = bonusValueUSD(c);
-              const firstYearNet = creditsTotal + bonusUSD - (c.annualFee || 0);
-
-              return (
-                <button
-                  key={c.key}
-                  onClick={() => toggleSelected(c.key)}
-                  className={[
-                    "rounded-3xl border p-5 text-left transition",
-                    active
-                      ? "border-white/30 bg-white/10"
-                      : "border-white/10 bg-black/20 hover:bg-white/5",
-                  ].join(" ")}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-lg font-semibold">{c.name}</div>
-                      <div className="mt-1 text-xs text-white/60">
-                        Annual fee: ${money(c.annualFee || 0)} • Credits tracked: $
-                        {money(creditsTotal)}
-                      </div>
-
-                      {c.welcomeOffer && (
-                        <div className="mt-2 text-xs text-white/70">
-                          <span className="font-medium">Welcome bonus:</span>{" "}
-                          {money(c.welcomeOffer.amount)} {c.welcomeOffer.currency} •{" "}
-                          {c.welcomeOffer.spend}
-                          <span className="text-white/50">
-                            {" "}
-                            • Est. ${money(bonusUSD)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <div className="text-xs text-white/60">
-                        First-year net (est.)
-                      </div>
-                      <div className="text-lg font-semibold">
-                        {firstYearNet >= 0 ? "+" : "−"}$
-                        {money(Math.abs(firstYearNet))}
-                      </div>
-                      <div className="text-[11px] text-white/45">
-                        credits + bonus − fee
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 text-xs text-white/50">
-                    {active ? "✅ On dashboard" : "Click to add to dashboard"}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Valuations */}
-        <div className="mt-8 rounded-3xl border border-white/15 bg-white/5 p-6">
-          <div className="text-sm font-medium text-white/80">
-            Point value assumptions
-          </div>
-          <div className="mt-1 text-xs text-white/50">
-            Editable. Used only for bonus $ estimates.
-          </div>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {Object.entries(pointValue).map(([k, v]) => (
-              <label
-                key={k}
-                className="rounded-2xl border border-white/10 bg-black/20 p-4"
-              >
-                <div className="text-xs text-white/60">{k} value (USD per point)</div>
-                <input
-                  value={String(v)}
-                  onChange={(e) =>
-                    setPointValue((prev) => ({
-                      ...prev,
-                      [k]: Math.max(0, Number(e.target.value || 0)),
-                    }))
-                  }
-                  className="mt-2 w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm outline-none"
-                  inputMode="decimal"
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Card dashboards */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          {selectedCards.map((card) => {
-            const cardCredits = card.credits.filter((cr) => !hiddenCredit[cr.id]);
-            const cardTotal = cardCredits.reduce((s, x) => s + x.amountAnnual, 0);
-            const cardUsed = cardCredits.reduce(
-              (s, x) => s + (used[x.id] ? x.amountAnnual : 0),
-              0
-            );
-            const pct = cardTotal === 0 ? 0 : Math.round((cardUsed / cardTotal) * 100);
-
-            return (
-              <div
-                key={card.key}
-                className="rounded-3xl border border-white/15 bg-gradient-to-b from-white/10 to-white/5 p-6"
-              >
+            {/* ACTIVE CARD PREVIEW */}
+            {activeCard && (
+              <div className="rounded-3xl border border-white/12 bg-gradient-to-b from-white/10 to-white/5 p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-lg font-semibold">{card.name}</div>
-                    <div className="text-xs text-white/60">
-                      Annual fee: ${money(card.annualFee || 0)} • Credits tracked: $
-                      {money(cardTotal)}
+                    <div className="text-xl font-semibold">{activeCard.name}</div>
+                    <div className="mt-1 text-sm text-white/60">
+                      Annual fee: ${money(activeCard.annualFee)} • Credits tracked: $
+                      {money(sumCreditsAnnual(activeCard))}
                     </div>
 
-                    {card.welcomeOffer && (
-                      <div className="mt-2 text-xs text-white/70">
-                        <span className="font-medium">Welcome bonus:</span>{" "}
-                        {money(card.welcomeOffer.amount)} {card.welcomeOffer.currency} •{" "}
-                        {card.welcomeOffer.spend}
-                        <span className="text-white/50">
-                          {" "}
-                          • Est. ${money(bonusValueUSD(card))}
-                        </span>
+                    {activeCard.welcomeOffer && (
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+                        <div className="text-sm font-semibold">Welcome bonus</div>
+                        <div className="mt-1 text-sm text-white/70">
+                          {activeCard.welcomeOffer.amount.toLocaleString()}{" "}
+                          {activeCard.welcomeOffer.currency} •{" "}
+                          {activeCard.welcomeOffer.spend}
+                        </div>
+                        <div className="mt-1 text-xs text-white/55">
+                          Est. value:{" "}
+                          <span className="text-white/85">
+                            {estimateWelcomeValueUSD(activeCard)
+                              ? `$${money(estimateWelcomeValueUSD(activeCard) as number)}`
+                              : "—"}
+                          </span>{" "}
+                          <span className="text-white/40">(editable later)</span>
+                        </div>
+                        <div className="mt-2 text-xs text-white/50">
+                          Source: {activeCard.welcomeOffer.sourceLabel}
+                          {activeCard.welcomeOffer.notes ? ` • ${activeCard.welcomeOffer.notes}` : ""}
+                        </div>
                       </div>
                     )}
                   </div>
 
                   <div className="text-right">
-                    <div className="text-xs text-white/60">Redeemed</div>
-                    <div className="text-lg font-semibold">
-                      ${money(cardUsed)} / ${money(cardTotal)}
+                    <div className="text-xs text-white/60">Status</div>
+                    <div className="mt-1 text-sm">
+                      {savedKeys.includes(activeCard.key) ? (
+                        <span className="text-emerald-300">On dashboard ✓</span>
+                      ) : (
+                        <span className="text-white/50">Preview only</span>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <div className="h-2 w-full rounded-full bg-white/10">
-                    <div
-                      className="h-2 rounded-full bg-emerald-400"
-                      style={{ width: `${pct}%` }}
-                    />
+                {/* Credits list (active card) */}
+                <div className="mt-5">
+                  <div className="text-sm font-semibold text-white/85">
+                    Credits (Active Card)
                   </div>
-                  <div className="mt-1 text-xs text-white/60">{pct}% used</div>
+                  <div className="mt-3 space-y-3">
+                    {(activeCard.credits || []).map((credit) => {
+                      const used = !!usedByCredit[credit.id];
+                      const dc = !!dontCareByCredit[credit.id];
+
+                      return (
+                        <div
+                          key={credit.id}
+                          className={[
+                            "rounded-2xl border p-4",
+                            dc
+                              ? "border-white/10 bg-white/5 opacity-70"
+                              : used
+                              ? "border-emerald-400/25 bg-emerald-400/10"
+                              : "border-white/10 bg-black/25",
+                          ].join(" ")}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <div className="text-sm font-medium">
+                                {credit.name}
+                              </div>
+                              <div className="mt-1 text-xs text-white/60">
+                                {credit.frequency} • Annualized: $
+                                {money(credit.amountAnnual || 0)}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => toggleDontCare(credit.id)}
+                                className={[
+                                  "rounded-xl border px-3 py-2 text-xs",
+                                  dc
+                                    ? "border-white/15 bg-white/10"
+                                    : "border-white/10 hover:bg-white/5",
+                                ].join(" ")}
+                              >
+                                {dc ? "Don’t care ✓" : "Don’t care"}
+                              </button>
+
+                              <button
+                                onClick={() => toggleUsed(credit.id)}
+                                disabled={dc}
+                                className={[
+                                  "rounded-xl border px-3 py-2 text-xs",
+                                  dc
+                                    ? "cursor-not-allowed border-white/10 text-white/40"
+                                    : used
+                                    ? "border-emerald-400/30 bg-emerald-400/15"
+                                    : "border-white/10 hover:bg-white/5",
+                                ].join(" ")}
+                              >
+                                {used ? "Used ✓" : "Mark used"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 text-xs text-white/50">
+                    “Don’t care” removes a credit from progress + reminders.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SAVED DASHBOARD CARDS LIST (vertical) */}
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold text-white/85">
+                    Your Dashboard Cards
+                  </div>
+                  <div className="mt-1 text-xs text-white/60">
+                    Saved cards are what you’ll get reminders for (once Supabase + SMS/email is added).
+                  </div>
                 </div>
 
-                <div className="mt-5 space-y-3">
-                  {card.credits.map((credit) => {
-                    const isHidden = !!hiddenCredit[credit.id];
-                    const checked = !!used[credit.id];
+                <div className="text-right">
+                  <div className="text-xs text-white/60">Annual Fees (Saved)</div>
+                  <div className="mt-1 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-2 text-sm font-semibold">
+                    ${money(totalAnnualFeesSelected)}
+                  </div>
+                </div>
+              </div>
+
+              {savedCards.length === 0 ? (
+                <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-5 text-sm text-white/60">
+                  No saved cards yet. Pick a card on the left and click “Notify me for this card”.
+                </div>
+              ) : (
+                <div className="mt-5 space-y-4">
+                  {savedCards.map((card) => {
+                    const prog = calcProgressForCard(card);
+                    const welcomeUSD = estimateWelcomeValueUSD(card);
 
                     return (
                       <div
-                        key={credit.id}
-                        className={[
-                          "w-full rounded-2xl border px-4 py-3 transition",
-                          checked
-                            ? "border-emerald-400/30 bg-emerald-400/10"
-                            : "border-white/10 bg-black/30",
-                          isHidden ? "opacity-50" : "",
-                        ].join(" ")}
+                        key={card.key}
+                        className="rounded-3xl border border-white/12 bg-black/25 p-5"
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <button
-                            onClick={() => toggleUsed(credit.id)}
-                            className="flex-1 text-left"
-                            disabled={isHidden}
-                            title={isHidden ? "Unhide this credit to track it" : "Toggle used"}
-                          >
-                            <div className="text-sm">{credit.name}</div>
-                            <div className="text-xs text-white/60">
-                              {credit.frequency} • Annual value: $
-                              {money(credit.amountAnnual)}
+                          <div>
+                            <div className="text-lg font-semibold">{card.name}</div>
+                            <div className="mt-1 text-xs text-white/60">
+                              Fee: ${money(card.annualFee)} • Credits (care): ${money(prog.total)}
                             </div>
-                            <div className="mt-1 text-xs">
-                              {isHidden ? "Hidden" : checked ? "Used ✅" : "Not used"}
-                            </div>
-                          </button>
+                            {card.welcomeOffer && (
+                              <div className="mt-2 text-xs text-white/60">
+                                Bonus: {card.welcomeOffer.amount.toLocaleString()}{" "}
+                                {card.welcomeOffer.currency} • {card.welcomeOffer.spend}
+                                {welcomeUSD ? (
+                                  <>
+                                    {" "}
+                                    • Est: <span className="text-white/85">${money(welcomeUSD)}</span>
+                                  </>
+                                ) : null}
+                              </div>
+                            )}
+                          </div>
 
-                          <button
-                            onClick={() => toggleHidden(credit.id)}
-                            className="rounded-xl border border-white/15 bg-black/40 px-3 py-2 text-xs hover:bg-white/10"
-                          >
-                            {isHidden ? "Unhide" : "Hide"}
-                          </button>
+                          <div className="text-right">
+                            <button
+                              onClick={() => removeFromDashboard(card.key)}
+                              className="rounded-2xl border border-white/15 px-3 py-2 text-xs hover:bg-white/5"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between text-xs text-white/60">
+                            <span>Credits redeemed</span>
+                            <span>
+                              ${money(prog.used)} / ${money(prog.total)} ({prog.pct}%)
+                            </span>
+                          </div>
+                          <div className="mt-2 h-2 w-full rounded-full bg-white/10">
+                            <div
+                              className="h-2 rounded-full bg-emerald-400"
+                              style={{ width: `${prog.pct}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              )}
 
-        <div className="mt-10 text-xs text-white/50">
-          Next upgrades: per-month/quarter tracking + reminders (email/SMS) + AI quiz recommendations.
+              <div className="mt-6 text-xs text-white/50">
+                Next: Supabase login + persistence, then reminder scheduling (email + SMS).
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </main>
