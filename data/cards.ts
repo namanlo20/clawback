@@ -1,28 +1,26 @@
 // data/cards.ts
 
-export type CreditFrequency = "monthly" | "quarterly" | "semiannual" | "annual" | "one-time";
+export type CreditFrequency =
+  | "monthly"
+  | "quarterly"
+  | "semiannual"
+  | "annual"
+  | "every4years"
+  | "every5years"
+  | "onetime";
 
 export type Credit = {
   id: string;
-  name: string;
-
-  // How often it resets
+  title: string;
+  amount: number; // amount PER period (NOT annualized)
   frequency: CreditFrequency;
-
-  // Amount PER period (e.g. Quarterly $75)
-  amount: number;
-
-  // Optional renewal label (simple v1)
-  renews?: { month: number; day: number };
-
-  // Optional note for clarity
-  note?: string;
+  notes?: string; // any extra detail / label
+  renews?: string; // display-only like "Renews Jan 1"
 };
 
 export type Multiplier = {
-  label: string; // e.g. "Dining"
-  rate: string;  // e.g. "4x"
-  note?: string;
+  label: string;
+  x: number;
 };
 
 export type Card = {
@@ -30,260 +28,236 @@ export type Card = {
   name: string;
   issuer: string;
   annualFee: number;
-
-  // Card art image path
-  logo?: string; // e.g. "/logos/amex-platinum.png"
-
-  // Pin top 3 at top
-  isTopPick?: boolean;
-
-  credits: Credit[];
-  multipliers?: Multiplier[];
-
-  welcomeOffer?: {
-    amount: number;
-    currency: string; // e.g. "MR", "UR", "Miles"
-    spend: string;
-    sourceLabel: string;
-    notes?: string;
+  creditsTrackedAnnualized: number; // display hint only (optional)
+  logo: string; // "/logos/xxx.png"
+  welcomeBonus?: {
+    headline: string;
+    details?: string;
+    valueEstimateUsd?: number;
+    note?: string;
   };
+  multipliers: Multiplier[];
+  credits: Credit[];
 };
 
-// Default point value assumptions (editable later)
-export const DEFAULT_POINT_VALUES_USD: Record<string, number> = {
-  MR: 0.015,     // Amex Membership Rewards (rough baseline)
-  UR: 0.015,     // Chase Ultimate Rewards (rough baseline)
-  Miles: 0.012,  // Generic miles baseline
-  Hilton: 0.006,
-  Marriott: 0.008,
-  AA: 0.014,
+export const DEFAULT_POINT_VALUES_USD = {
+  amex_mr: 0.015,
+  chase_ur: 0.015,
+  cap1_miles: 0.01,
+  citi_typ: 0.012,
+  aa_miles: 0.013,
+  delta_miles: 0.012,
+  marriott_points: 0.008,
+  hilton_points: 0.006,
 };
-
-const JAN1 = { month: 1, day: 1 };
 
 export const CARDS: Card[] = [
-  // ---------------- TOP 3 (pinned) ----------------
   {
     key: "amex-platinum",
     name: "Platinum Card",
     issuer: "American Express",
     annualFee: 895,
+    creditsTrackedAnnualized: 3074,
     logo: "/logos/amex-platinum.png",
-    isTopPick: true,
-    welcomeOffer: {
-      amount: 175000,
-      currency: "MR",
-      spend: "Spend $8,000 in 6 months",
-      sourceLabel: "Amex page (offers vary)",
-      notes: "Offer varies by applicant/time.",
+    welcomeBonus: {
+      headline: "175,000 MR",
+      details: "Spend $8,000 in 6 months",
+      valueEstimateUsd: 2625,
+      note: "Offers vary by applicant/time.",
     },
-    credits: [
-      { id: "plat-airline", name: "Airline incidental fees", frequency: "annual", amount: 200, renews: JAN1 },
-      { id: "plat-hotel", name: "Hotel credit (FHR/THC)", frequency: "semiannual", amount: 200, renews: JAN1 },
-      { id: "plat-digital", name: "Digital entertainment", frequency: "monthly", amount: 25, renews: JAN1 },
-      { id: "plat-uber", name: "Uber Cash", frequency: "monthly", amount: 15, renews: JAN1 },
-      { id: "plat-saks", name: "Saks", frequency: "semiannual", amount: 50, renews: JAN1 },
-      { id: "plat-clear", name: "CLEAR Plus", frequency: "annual", amount: 209, renews: JAN1 },
-      { id: "plat-lulu", name: "Lululemon", frequency: "quarterly", amount: 75, renews: JAN1 },
-      { id: "plat-walmart", name: "Walmart+ (statement credit)", frequency: "monthly", amount: 12.95, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Flights booked direct / Amex Travel", rate: "5x" },
-      { label: "Prepaid hotels on AmexTravel", rate: "5x" },
-      { label: "Everything else", rate: "1x" },
+      { label: "Booked directly through flight or Amex Travel", x: 5 },
+      { label: "Prepaid hotels on AmexTravel", x: 5 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "plat-airline-incidental", title: "Airline Incidental Fees", amount: 200, frequency: "annual" },
+      { id: "plat-clear", title: "Clear Plus", amount: 209, frequency: "annual" },
+      { id: "plat-digital-entertainment", title: "Digital Entertainment", amount: 25, frequency: "monthly", renews: "Renews Jan 1" },
+      { id: "plat-fhr-hotel-collection", title: "Fine Hotels + Resorts® / Hotel Collection", amount: 300, frequency: "semiannual" },
+      { id: "plat-lululemon", title: "Lululemon", amount: 75, frequency: "quarterly" },
+      { id: "plat-oura", title: "Oura Ring", amount: 200, frequency: "annual" },
+      { id: "plat-resy", title: "Resy Restaurants", amount: 100, frequency: "quarterly" },
+      { id: "plat-saks", title: "Saks", amount: 50, frequency: "semiannual" },
+      { id: "plat-uber-one", title: "Uber One Subscription", amount: 120, frequency: "annual" },
+      { id: "plat-uber-cash-jan-nov", title: "Uber Cash (Jan–Nov)", amount: 15, frequency: "monthly" },
+      { id: "plat-uber-cash-dec", title: "Uber Cash (Dec)", amount: 35, frequency: "monthly", notes: "December only" },
+      { id: "plat-equinox", title: "Equinox", amount: 300, frequency: "annual" },
+      { id: "plat-walmartplus", title: "Walmart+ Subscription", amount: 12.95, frequency: "monthly" },
     ],
   },
+
   {
     key: "chase-sapphire-reserve",
     name: "Chase Sapphire Reserve",
     issuer: "Chase",
     annualFee: 795,
+    creditsTrackedAnnualized: 2817,
     logo: "/logos/chase-sapphire-reserve.png",
-    isTopPick: true,
-    welcomeOffer: {
-      amount: 60000,
-      currency: "UR",
-      spend: "Spend $4,000 in 3 months",
-      sourceLabel: "Chase page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "csr-travel", name: "Travel credit", frequency: "annual", amount: 300, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Chase Travel", rate: "8x" },
-      { label: "Dining", rate: "3x" },
-      { label: "Travel", rate: "3x" },
-      { label: "Everything else", rate: "1x" },
+      { label: "Chase travel", x: 8 },
+      { label: "Flights booked direct / Amex Travel (sheet)", x: 4 },
+      { label: "Hotels booked direct (sheet)", x: 4 },
+      { label: "Dining", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "csr-apple-tv", title: "Apple TV+", amount: 288, frequency: "annual", notes: "Sheet: points" },
+      { id: "csr-dining-credit", title: "Dining Credit", amount: 150, frequency: "semiannual" },
+      { id: "csr-doordash-dashpass", title: "DoorDash DashPass Subscription", amount: 120, frequency: "annual" },
+      { id: "csr-doordash-restaurants", title: "DoorDash Restaurant", amount: 5, frequency: "monthly" },
+      { id: "csr-doordash-retail-10a", title: "DoorDash Retail", amount: 10, frequency: "monthly" },
+      { id: "csr-doordash-retail-10b", title: "DoorDash Retail (2nd $10 line in sheet)", amount: 10, frequency: "monthly" },
+      { id: "csr-hotel-the-edit", title: "Hotel (The Edit)", amount: 250, frequency: "semiannual" },
+      { id: "csr-lyft", title: "Lyft", amount: 10, frequency: "monthly" },
+      { id: "csr-stubhub", title: "StubHub", amount: 150, frequency: "semiannual" },
+      { id: "csr-travel", title: "Travel", amount: 300, frequency: "annual" },
+      { id: "csr-peloton", title: "Peloton", amount: 10, frequency: "monthly" },
+      { id: "csr-global-entry", title: "Global Entry / TSA PreCheck / NEXUS fee", amount: 120, frequency: "every4years" },
+      { id: "csr-priority-pass", title: "Priority Pass", amount: 469, frequency: "annual", notes: "Value line in sheet" },
     ],
   },
+
   {
     key: "capitalone-venture-x",
     name: "Venture X",
     issuer: "Capital One",
     annualFee: 395,
+    creditsTrackedAnnualized: 400,
     logo: "/logos/capitalone-venture-x.png",
-    isTopPick: true,
-    welcomeOffer: {
-      amount: 75000,
-      currency: "Miles",
-      spend: "Spend $4,000 in 3 months",
-      sourceLabel: "Capital One page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "vx-travel", name: "Capital One Travel credit", frequency: "annual", amount: 300, renews: JAN1 },
-      {
-        id: "vx-anniversary",
-        name: "Anniversary bonus miles",
-        frequency: "annual",
-        amount: 10000,
-        renews: JAN1,
-        note: "This is miles (not dollars). We’ll add a miles→$ toggle later.",
-      },
-    ],
     multipliers: [
-      { label: "Hotels & rental cars (Capital One Travel)", rate: "10x" },
-      { label: "Flights (Capital One Travel)", rate: "5x" },
-      { label: "Everything else", rate: "2x" },
+      { label: "Hotels & rental cars booked through Capital One Travel", x: 10 },
+      { label: "Flights & vacation rentals booked through Capital One Travel", x: 5 },
+      { label: "Everything else", x: 2 },
+    ],
+    credits: [
+      { id: "vx-travel", title: "Travel", amount: 300, frequency: "annual" },
+      { id: "vx-global-entry", title: "Global Entry / TSA PreCheck / NEXUS fee", amount: 120, frequency: "every4years" },
+      // REQUIRED CHANGE: $100 anniversary bonus miles credit
+      { id: "vx-anniversary-bonus", title: "Anniversary Bonus Miles", amount: 100, frequency: "annual" },
     ],
   },
 
-  // ---------------- OTHER 6 ----------------
   {
     key: "amex-gold",
     name: "American Express Gold",
     issuer: "American Express",
     annualFee: 325,
+    creditsTrackedAnnualized: 424,
     logo: "/logos/amex-gold.png",
-    welcomeOffer: {
-      amount: 60000,
-      currency: "MR",
-      spend: "Spend $6,000 in 6 months",
-      sourceLabel: "Amex page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "gold-dining", name: "Dining credit", frequency: "monthly", amount: 10, renews: JAN1 },
-      { id: "gold-uber", name: "Uber Cash", frequency: "monthly", amount: 10, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Restaurants", rate: "4x" },
-      { label: "U.S. supermarkets", rate: "4x" },
-      { label: "Flights", rate: "3x" },
-      { label: "Everything else", rate: "1x" },
+      { label: "Restaurant", x: 4 },
+      { label: "Groceries", x: 4 },
+      { label: "Booked directly through flight or Amex travel (sheet)", x: 3 },
+      { label: "Prepaid hotels (sheet)", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "gold-uber-cash", title: "Uber Cash", amount: 10, frequency: "monthly" },
+      { id: "gold-dunkin", title: "Dunkin", amount: 7, frequency: "monthly" },
+      { id: "gold-resy", title: "Resy Restaurants", amount: 50, frequency: "semiannual" },
+      { id: "gold-dining", title: "Dining", amount: 10, frequency: "monthly" },
     ],
   },
+
   {
-    key: "hilton-honors",
+    key: "hilton-honors-aspire",
     name: "Hilton Honors Aspire",
     issuer: "American Express",
     annualFee: 550,
+    creditsTrackedAnnualized: 909,
     logo: "/logos/hilton-honors.png",
-    welcomeOffer: {
-      amount: 175000,
-      currency: "Hilton",
-      spend: "Spend $6,000 in 6 months",
-      sourceLabel: "Amex/Hilton page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "aspire-resort", name: "Hilton resort credit", frequency: "semiannual", amount: 200, renews: JAN1 },
-      { id: "aspire-airline", name: "Airline fee credit", frequency: "quarterly", amount: 50, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Hilton purchases", rate: "14x" },
-      { label: "Flights", rate: "7x" },
-      { label: "Dining", rate: "7x" },
-      { label: "Everything else", rate: "3x" },
+      { label: "Hilton hotels & resorts (portfolio)", x: 14 },
+      { label: "Booked through flight/Amex travel/car rentals (sheet)", x: 7 },
+      { label: "Dining", x: 7 },
+      { label: "Everything else", x: 3 },
+    ],
+    credits: [
+      { id: "aspire-flights", title: "Flights", amount: 50, frequency: "quarterly" },
+      { id: "aspire-clear", title: "Clear Plus", amount: 209, frequency: "annual" },
+      { id: "aspire-conrad-waldorf-2night", title: "Conrad/Waldorf Astoria (2 Night)", amount: 100, frequency: "annual" },
+      { id: "aspire-hilton-resort", title: "Hilton Resort", amount: 200, frequency: "semiannual" },
     ],
   },
+
   {
     key: "delta-reserve",
-    name: "Delta SkyMiles Reserve (Amex)",
+    name: "Delta SkyMiles® Reserve (Amex)",
     issuer: "American Express",
     annualFee: 650,
+    creditsTrackedAnnualized: 560,
     logo: "/logos/delta-reserve.png",
-    welcomeOffer: {
-      amount: 60000,
-      currency: "Miles",
-      spend: "Spend $5,000 in 6 months",
-      sourceLabel: "Delta/Amex page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "delta-rideshare", name: "Rideshare credit", frequency: "monthly", amount: 10, renews: JAN1 },
-      { id: "delta-resy", name: "Resy dining credit", frequency: "monthly", amount: 20, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Delta purchases", rate: "3x" },
-      { label: "Everything else", rate: "1x" },
+      { label: "Delta purchases directly", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "delta-reserve-resy", title: "Resy Restaurants", amount: 20, frequency: "monthly" },
+      { id: "delta-reserve-rideshare", title: "Rideshare", amount: 10, frequency: "monthly" },
+      { id: "delta-reserve-delta-stays", title: "Delta Stays", amount: 200, frequency: "annual" },
     ],
   },
+
   {
     key: "marriott-brilliant",
-    name: "Marriott Bonvoy Brilliant (Amex)",
+    name: "Marriott Bonvoy Brilliant® (Amex)",
     issuer: "American Express",
     annualFee: 650,
+    creditsTrackedAnnualized: 400,
     logo: "/logos/marriott-brilliant.png",
-    welcomeOffer: {
-      amount: 95000,
-      currency: "Marriott",
-      spend: "Spend $6,000 in 6 months",
-      sourceLabel: "Amex/Marriott page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "brilliant-dining", name: "Dining credit", frequency: "monthly", amount: 25, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Marriott purchases", rate: "6x" },
-      { label: "Dining", rate: "3x" },
-      { label: "Flights", rate: "3x" },
-      { label: "Everything else", rate: "2x" },
+      { label: "Marriott hotels & resorts", x: 6 },
+      { label: "Restaurant", x: 3 },
+      { label: "Flights", x: 3 },
+      { label: "Everything else", x: 2 },
+    ],
+    credits: [
+      { id: "brilliant-dining", title: "Dining", amount: 25, frequency: "monthly" },
+      { id: "brilliant-ritz-stregis", title: "Ritz-Carlton® / St. Regis®", amount: 100, frequency: "annual" },
+      { id: "brilliant-global-entry", title: "Global Entry", amount: 120, frequency: "every4years" },
+      { id: "brilliant-tsa-precheck", title: "TSA PreCheck / NEXUS fee", amount: 85, frequency: "every5years" },
     ],
   },
+
   {
     key: "citi-strata-elite",
-    name: "Citi Strata Elite",
+    name: "Citi Strata Elite℠",
     issuer: "Citi",
     annualFee: 595,
+    creditsTrackedAnnualized: 1169,
     logo: "/logos/citi-strata-elite.png",
-    welcomeOffer: {
-      amount: 75000,
-      currency: "Miles",
-      spend: "Spend $4,000 in 3 months",
-      sourceLabel: "Citi page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "strata-hotel", name: "Hotel credit (Citi Travel)", frequency: "annual", amount: 300, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "Travel", rate: "3x" },
-      { label: "Dining", rate: "3x" },
-      { label: "Everything else", rate: "1x" },
+      { label: "Hotels/Car Rentals/Attractions on Citi travel", x: 12 },
+      { label: "Air Travel on Citi travel", x: 6 },
+      { label: "Restaurants on Citi Nights (Fri/Sat 6pm–6am ET)", x: 6 },
+      { label: "Restaurants other times", x: 3 },
+      { label: "Everything else", x: 1.5 },
+    ],
+    credits: [
+      { id: "strata-hotel", title: "Hotel", amount: 300, frequency: "annual" },
+      { id: "strata-splurge", title: "Splurge (1stDibs / AA / Best Buy / Future / Live Nation)", amount: 200, frequency: "annual" },
+      { id: "strata-blacklane", title: "Annual Blacklane", amount: 200, frequency: "annual" },
+      { id: "strata-priority-pass", title: "Priority Pass", amount: 469, frequency: "annual", notes: "Value line in sheet" },
     ],
   },
+
   {
     key: "citi-aa-executive",
-    name: "Citi / AAdvantage Executive World Elite",
+    name: "Citi® / AAdvantage® Executive",
     issuer: "Citi",
     annualFee: 595,
+    creditsTrackedAnnualized: 440,
     logo: "/logos/citi-aa-executive.png",
-    welcomeOffer: {
-      amount: 70000,
-      currency: "AA",
-      spend: "Spend $7,000 in 3 months",
-      sourceLabel: "AA/Citi page (offers vary)",
-      notes: "Offer varies by applicant/time.",
-    },
-    credits: [
-      { id: "aa-wifi", name: "In-flight Wi-Fi credit", frequency: "annual", amount: 120, renews: JAN1 },
-    ],
     multipliers: [
-      { label: "American Airlines purchases", rate: "4x" },
-      { label: "Everything else", rate: "1x" },
+      { label: "American Airlines purchases", x: 4 },
+      { label: "Hotels & car rentals via AA portal", x: 10 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "aaexec-lyft", title: "Lyft (after 3 rides exception)", amount: 10, frequency: "monthly" },
+      { id: "aaexec-grubhub", title: "Grubhub", amount: 10, frequency: "monthly" },
+      { id: "aaexec-car-rentals", title: "Car rentals", amount: 120, frequency: "annual", notes: "Sheet annualized shown as $200; keep per-sheet line amount=120" },
     ],
   },
 ];
