@@ -18,6 +18,35 @@ function clampPct(n: number) {
   return Math.max(0, Math.min(100, n));
 }
 
+const FREQ_ORDER: Record<string, number> = {
+  monthly: 1,
+  quarterly: 2,
+  semiannual: 3,
+  annual: 4,
+  "one-time": 5,
+  every_4_years: 6,
+  every_5_years: 7,
+};
+
+function capFirst(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
+function freqLabel(freq: string) {
+  if (freq === "semiannual") return "Semiannual";
+  if (freq === "one-time") return "One-time";
+  if (freq === "every_4_years") return "Every 4 years";
+  if (freq === "every_5_years") return "Every 5 years";
+  return capFirst(freq); // Monthly, Quarterly, Annual
+}
+
+function renewLabel(renews?: { month: number; day: number }) {
+  if (!renews?.month || !renews?.day) return null;
+  const d = new Date(2026, renews.month - 1, renews.day);
+  const mon = d.toLocaleString(undefined, { month: "short" });
+  return `Renews ${mon} ${renews.day}`;
+}
+
 function sumCreditsAnnual(card: Card) {
   return (card.credits || []).reduce((s, c) => s + (c.amountAnnual || 0), 0);
 }
@@ -33,7 +62,6 @@ function estimateWelcomeValueUSD(card: Card) {
   return Math.round(offer.amount * v);
 }
 
-// ---------- LocalStorage helpers ----------
 function loadLS<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
   try {
@@ -61,27 +89,11 @@ const LS = {
   saved: "clawback_saved_cards",
   used: "clawback_used_by_credit",
   dontCare: "clawback_dontcare_by_credit",
-  remind: "clawback_remind_by_credit", // NEW
+  remind: "clawback_remind_by_credit",
 };
 
-// ---------- Renewal date helpers (simple v1) ----------
-function nextRenewalDate(renews?: { month: number; day: number }) {
-  if (!renews) return null;
-  const now = new Date();
-  const y = now.getFullYear();
-
-  // months are 1-12 in our model
-  const candidate = new Date(y, renews.month - 1, renews.day, 12, 0, 0);
-  if (candidate.getTime() >= now.getTime()) return candidate;
-
-  return new Date(y + 1, renews.month - 1, renews.day, 12, 0, 0);
-}
-
-function fmtMonthDay(d: Date) {
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-const PINNED_TOP3_KEYS = ["amex_platinum", "chase_sapphire_reserve", "capitalone_venturex"];
+// ✅ Top 3 pinned
+const TOP_PICKS = ["amex_platinum", "chase_sapphire_reserve", "capitalone_venturex"];
 
 export default function DashboardPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -95,7 +107,7 @@ export default function DashboardPage() {
 
   const [usedByCredit, setUsedByCredit] = useState<Record<string, boolean>>({});
   const [dontCareByCredit, setDontCareByCredit] = useState<Record<string, boolean>>({});
-  const [remindByCredit, setRemindByCredit] = useState<Record<string, boolean>>({}); // NEW
+  const [remindByCredit, setRemindByCredit] = useState<Record<string, boolean>>({});
 
   const [modal, setModal] = useState<Modal>(null);
 
@@ -117,45 +129,33 @@ export default function DashboardPage() {
   useEffect(() => saveLS(LS.dontCare, dontCareByCredit), [dontCareByCredit]);
   useEffect(() => saveLS(LS.remind, remindByCredit), [remindByCredit]);
 
-  const cardsByKey = useMemo(() => new Map(CARDS.map((c) => [c.key, c])), []);
-  const activeCard = useMemo(() => cardsByKey.get(activeKey) ?? CARDS[0], [activeKey, cardsByKey]);
-
-  const pinned = useMemo(() => {
-    const arr = PINNED_TOP3_KEYS.map((k) => cardsByKey.get(k)).filter(Boolean) as Card[];
-    return arr;
-  }, [cardsByKey]);
-
-  const nonPinned = useMemo(() => {
-    const pinnedSet = new Set(PINNED_TOP3_KEYS);
-    return CARDS.filter((c) => !pinnedSet.has(c.key));
-  }, []);
-
-  const filteredNonPinned = useMemo(() => {
+  const filteredCards = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return nonPinned;
-    return nonPinned.filter((c) => `${c.name} ${c.key}`.toLowerCase().includes(q));
-  }, [query, nonPinned]);
+    if (!q) return CARDS;
+
+    return CARDS.filter((c) => {
+      const hay = `${c.name} ${c.key}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [query]);
+
+  const activeCard = useMemo(() => {
+    return CARDS.find((c) => c.key === activeKey) ?? CARDS[0];
+  }, [activeKey]);
 
   const savedCards = useMemo(() => {
-    return savedKeys.map((k) => cardsByKey.get(k)).filter(Boolean) as Card[];
-  }, [savedKeys, cardsByKey]);
+    const map = new Map(CARDS.map((c) => [c.key, c]));
+    return savedKeys.map((k) => map.get(k)).filter(Boolean) as Card[];
+  }, [savedKeys]);
 
   function toggleUsed(creditId: string) {
-    setUsedByCredit((prev) => {
-      const next = { ...prev, [creditId]: !prev[creditId] };
-      if (next[creditId]) {
-        // used => no remind
-        setRemindByCredit((r) => ({ ...r, [creditId]: false }));
-      }
-      return next;
-    });
+    setUsedByCredit((prev) => ({ ...prev, [creditId]: !prev[creditId] }));
   }
 
   function toggleDontCare(creditId: string) {
     setDontCareByCredit((prev) => {
       const next = { ...prev, [creditId]: !prev[creditId] };
       if (next[creditId]) {
-        // don't care => no used and no remind
         setUsedByCredit((u) => ({ ...u, [creditId]: false }));
         setRemindByCredit((r) => ({ ...r, [creditId]: false }));
       }
@@ -164,18 +164,25 @@ export default function DashboardPage() {
   }
 
   function toggleRemind(creditId: string) {
-    // remind only if not used / not dont care
-    if (dontCareByCredit[creditId] || usedByCredit[creditId]) return;
-    setRemindByCredit((prev) => ({ ...prev, [creditId]: !prev[creditId] }));
+    setRemindByCredit((prev) => {
+      const next = { ...prev, [creditId]: !prev[creditId] };
+      // If you set remind, also ensure it's not used/don't-care
+      if (next[creditId]) {
+        setUsedByCredit((u) => ({ ...u, [creditId]: false }));
+        setDontCareByCredit((d) => ({ ...d, [creditId]: false }));
+      }
+      return next;
+    });
   }
 
   function addToDashboard(cardKey: string) {
-    if (savedKeys.includes(cardKey)) return;
+    const already = savedKeys.includes(cardKey);
+    if (already) return;
 
     if (!isLoggedIn && !isFounder) {
       setModal({
         title: "Login required",
-        body: "To save cards and enable reminders, you need to log in (Supabase later). For now, use Mock Login.",
+        body: "To save cards and enable reminders, you need to log in (Supabase will handle this). For now, use Mock Login.",
         primaryText: "Mock Login",
         onPrimary: () => {
           setIsLoggedIn(true);
@@ -208,41 +215,50 @@ export default function DashboardPage() {
   function calcProgressForCard(card: Card) {
     const caredCredits = (card.credits || []).filter((c) => !dontCareByCredit[c.id]);
     const total = caredCredits.reduce((s, c) => s + (c.amountAnnual || 0), 0);
-    const used = caredCredits.reduce((s, c) => s + (usedByCredit[c.id] ? (c.amountAnnual || 0) : 0), 0);
+    const used = caredCredits.reduce(
+      (s, c) => s + (usedByCredit[c.id] ? c.amountAnnual || 0 : 0),
+      0
+    );
     const pct = total === 0 ? 0 : Math.round((used / total) * 100);
     return { total, used, pct: clampPct(pct) };
   }
 
-  const activeProgress = activeCard ? calcProgressForCard(activeCard) : { total: 0, used: 0, pct: 0 };
+  const activeProgress = activeCard
+    ? calcProgressForCard(activeCard)
+    : { total: 0, used: 0, pct: 0 };
 
+  // Suggested “net value” (credits you care about minus annual fee)
+  const activeNetValue = useMemo(() => {
+    if (!activeCard) return 0;
+    const caredTotal = (activeCard.credits || [])
+      .filter((c) => !dontCareByCredit[c.id])
+      .reduce((s, c) => s + (c.amountAnnual || 0), 0);
+    return caredTotal - (activeCard.annualFee || 0);
+  }, [activeCard, dontCareByCredit]);
+
+  const totalAnnualFeesSelected = useMemo(() => {
+    return savedCards.reduce((s, c) => s + (c.annualFee || 0), 0);
+  }, [savedCards]);
+
+  // Expiring soon (simple v1): only show credits marked Remind me,
+  // excluding Used / Don't care. Sort by month/day.
   const expiringSoon = useMemo(() => {
-    const rows: { cardName: string; creditName: string; amountAnnual: number; nextDate: Date }[] = [];
-    const cardsToScan = savedCards.length ? savedCards : activeCard ? [activeCard] : [];
+    if (!activeCard) return [];
+    return (activeCard.credits || [])
+      .filter((c) => remindByCredit[c.id])
+      .filter((c) => !usedByCredit[c.id] && !dontCareByCredit[c.id])
+      .sort((a, b) => {
+        const am = a.renews?.month ?? 99;
+        const ad = a.renews?.day ?? 99;
+        const bm = b.renews?.month ?? 99;
+        const bd = b.renews?.day ?? 99;
+        if (am !== bm) return am - bm;
+        return ad - bd;
+      });
+  }, [activeCard, remindByCredit, usedByCredit, dontCareByCredit]);
 
-    for (const card of cardsToScan) {
-      for (const credit of card.credits || []) {
-        const id = credit.id;
-        if (!remindByCredit[id]) continue;
-        if (usedByCredit[id]) continue;
-        if (dontCareByCredit[id]) continue;
-
-        const d = nextRenewalDate(credit.renews);
-        if (!d) continue;
-
-        rows.push({
-          cardName: card.name,
-          creditName: credit.name,
-          amountAnnual: credit.amountAnnual || 0,
-          nextDate: d,
-        });
-      }
-    }
-
-    rows.sort((a, b) => a.nextDate.getTime() - b.nextDate.getTime());
-    return rows.slice(0, 8);
-  }, [savedCards, activeCard, remindByCredit, usedByCredit, dontCareByCredit]);
-
-  const totalAnnualFeesSelected = useMemo(() => savedCards.reduce((s, c) => s + (c.annualFee || 0), 0), [savedCards]);
+  const topPickCards = useMemo(() => CARDS.filter((c) => TOP_PICKS.includes(c.key)), []);
+  const nonTopPickCards = useMemo(() => CARDS.filter((c) => !TOP_PICKS.includes(c.key)), []);
 
   // ---------- UI ----------
   return (
@@ -273,14 +289,13 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* tighter outer padding so sidebar feels more left */}
-      <div className="mx-auto max-w-[1500px] px-4 py-8">
-        <div className="flex items-start justify-between gap-4">
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <div className="flex items-center justify-between">
           <div>
             <div className="text-2xl font-semibold tracking-tight">ClawBack</div>
             <div className="text-sm text-white/60">
               Track credits. Mark used. Never waste money again.{" "}
-              <span className="text-white/45">No banking info or SSN required.</span>
+              <span className="text-white/50">No banking info or SSN required.</span>
             </div>
           </div>
 
@@ -288,18 +303,21 @@ export default function DashboardPage() {
             <button
               onClick={() => setIsLoggedIn((v) => !v)}
               className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+              title="Mock login toggle (replace with Supabase)"
             >
               {isLoggedIn ? "Logged in (mock)" : "Login (mock)"}
             </button>
             <button
               onClick={() => setIsFounder((v) => !v)}
               className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+              title="Mock founder bypass toggle"
             >
               {isFounder ? "Founder ✓" : "Founder off"}
             </button>
             <button
               onClick={() => setPlan((p) => (p === "free" ? "paid" : "free"))}
               className="rounded-xl border border-white/15 px-3 py-2 text-xs text-white/80 hover:bg-white/5"
+              title="Mock plan toggle"
             >
               Plan: {plan === "free" ? "Free" : "Paid"}
             </button>
@@ -312,38 +330,46 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* 3-column layout */}
-        <div className="mt-6 grid gap-4 lg:grid-cols-[280px_1fr_360px]">
-          {/* LEFT: Catalog */}
-          <aside className="rounded-3xl border border-white/10 bg-white/5 p-4">
+        <div className="mt-8 grid gap-6 lg:grid-cols-[320px_1fr_360px]">
+          {/* LEFT SIDEBAR */}
+          <aside className="rounded-3xl border border-white/10 bg-white/5 p-5">
             <div className="text-sm font-semibold text-white/85">Choose your card</div>
-            <div className="mt-1 text-xs text-white/60">
+            <div className="mt-2 text-xs text-white/60">
               Browse any card free. “Notify me” saves it to your dashboard.
             </div>
 
-            <div className="mt-3">
-              <div className="text-[11px] uppercase tracking-wide text-white/40">Top picks</div>
-              <div className="mt-2 overflow-hidden rounded-2xl border border-white/10">
-                {pinned.map((c) => {
+            {/* Top Picks */}
+            <div className="mt-4">
+              <div className="mb-2 text-xs font-semibold text-white/70">TOP PICKS</div>
+              <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/20">
+                {topPickCards.map((c) => {
                   const isActive = c.key === activeKey;
-                  const isSaved = savedKeys.includes(c.key);
                   return (
                     <button
                       key={c.key}
                       onClick={() => setActiveKey(c.key)}
                       className={[
-                        "w-full border-b border-white/10 px-3 py-3 text-left transition last:border-b-0",
+                        "w-full border-b border-white/10 px-4 py-3 text-left transition last:border-b-0",
                         isActive ? "bg-white/10" : "hover:bg-white/5",
                       ].join(" ")}
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-medium">{c.name}</div>
+                      <div className="flex items-center gap-3">
+                        {c.logo ? (
+                          <img src={c.logo} alt="" className="h-8 w-8 rounded-xl object-cover" />
+                        ) : (
+                          <div className="h-8 w-8 rounded-xl bg-white/10" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="truncate text-sm font-medium">{c.name}</div>
+                            <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[10px] font-semibold text-black">
+                              Top
+                            </span>
+                          </div>
                           <div className="text-xs text-white/60">
                             Fee: ${money(c.annualFee)} • Credits: ${money(sumCreditsAnnual(c))}
                           </div>
                         </div>
-                        <div className="text-[11px] text-white/55">{isSaved ? "Saved ✓" : isActive ? "Viewing" : ""}</div>
                       </div>
                     </button>
                   );
@@ -358,32 +384,42 @@ export default function DashboardPage() {
               className="mt-4 w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-white/40 outline-none focus:border-white/25"
             />
 
-            <div className="mt-3 max-h-[520px] overflow-auto rounded-2xl border border-white/10">
-              {filteredNonPinned.map((c) => {
-                const isActive = c.key === activeKey;
-                const isSaved = savedKeys.includes(c.key);
-                return (
-                  <button
-                    key={c.key}
-                    onClick={() => setActiveKey(c.key)}
-                    className={[
-                      "w-full border-b border-white/10 px-3 py-3 text-left transition last:border-b-0",
-                      isActive ? "bg-white/10" : "hover:bg-white/5",
-                    ].join(" ")}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <div className="text-sm font-medium">{c.name}</div>
-                        <div className="text-xs text-white/60">
-                          Fee: ${money(c.annualFee)} • Credits: ${money(sumCreditsAnnual(c))}
+            <div className="mt-4 max-h-[420px] overflow-auto rounded-2xl border border-white/10">
+              {filteredCards
+                .filter((c) => !TOP_PICKS.includes(c.key))
+                .map((c) => {
+                  const isActive = c.key === activeKey;
+                  const isSaved = savedKeys.includes(c.key);
+                  return (
+                    <button
+                      key={c.key}
+                      onClick={() => setActiveKey(c.key)}
+                      className={[
+                        "w-full border-b border-white/10 px-4 py-3 text-left transition last:border-b-0",
+                        isActive ? "bg-white/10" : "hover:bg-white/5",
+                      ].join(" ")}
+                    >
+                      <div className="flex items-center gap-3">
+                        {c.logo ? (
+                          <img src={c.logo} alt="" className="h-8 w-8 rounded-xl object-cover" />
+                        ) : (
+                          <div className="h-8 w-8 rounded-xl bg-white/10" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="truncate text-sm font-medium">{c.name}</div>
+                            <div className="text-xs text-white/60">{isSaved ? "Saved ✓" : ""}</div>
+                          </div>
+                          <div className="text-xs text-white/60">
+                            Fee: ${money(c.annualFee)} • Credits: ${money(sumCreditsAnnual(c))}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-[11px] text-white/55">{isSaved ? "Saved ✓" : ""}</div>
-                    </div>
-                  </button>
-                );
-              })}
-              {filteredNonPinned.length === 0 && (
+                    </button>
+                  );
+                })}
+
+              {filteredCards.length === 0 && (
                 <div className="px-4 py-6 text-sm text-white/60">No cards match that search.</div>
               )}
             </div>
@@ -406,15 +442,18 @@ export default function DashboardPage() {
             </div>
           </aside>
 
-          {/* MIDDLE: Credits for active card */}
-          <section className="space-y-4">
-            {/* top trackers */}
-            <div className="grid gap-3 md:grid-cols-3">
+          {/* MIDDLE */}
+          <section className="space-y-6">
+            {/* TOP TRACKERS */}
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
                 <div className="text-xs text-white/70">Credits Redeemed (Active)</div>
                 <div className="mt-1 text-2xl font-semibold">${money(activeProgress.used)}</div>
                 <div className="mt-3 h-2 w-full rounded-full bg-white/10">
-                  <div className="h-2 rounded-full bg-emerald-400" style={{ width: `${activeProgress.pct}%` }} />
+                  <div
+                    className="h-2 rounded-full bg-emerald-400"
+                    style={{ width: `${activeProgress.pct}%` }}
+                  />
                 </div>
                 <div className="mt-1 text-xs text-white/60">{activeProgress.pct}% used</div>
               </div>
@@ -422,48 +461,37 @@ export default function DashboardPage() {
               <div className="rounded-3xl border border-white/15 bg-white/5 p-5">
                 <div className="text-xs text-white/60">Total Credits Available (Active)</div>
                 <div className="mt-1 text-2xl font-semibold">${money(activeProgress.total)}</div>
-                <div className="mt-1 text-xs text-white/50">excludes credits marked “don’t care”</div>
+                <div className="mt-1 text-xs text-white/50">excludes credits marked “Don’t care”</div>
               </div>
 
               <div className="rounded-3xl border border-red-400/20 bg-red-500/10 p-5">
                 <div className="text-xs text-white/70">Annual Fee (Active)</div>
                 <div className="mt-1 text-2xl font-semibold">${money(activeCard?.annualFee || 0)}</div>
-                <div className="mt-1 text-xs text-white/50">later: net value vs fee</div>
+                <div className="mt-1 text-xs text-white/50">later: pro-rate fee + net per month</div>
               </div>
             </div>
 
-            {/* active card header */}
+            {/* ACTIVE CARD PREVIEW */}
             {activeCard && (
               <div className="rounded-3xl border border-white/12 bg-gradient-to-b from-white/10 to-white/5 p-6">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-xl font-semibold">{activeCard.name}</div>
-                    <div className="mt-1 text-sm text-white/60">
-                      Annual fee: ${money(activeCard.annualFee)} • Credits tracked: ${money(sumCreditsAnnual(activeCard))}
-                    </div>
-
-                    {activeCard.welcomeOffer && (
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-black/30 p-4">
-                        <div className="text-sm font-semibold">Welcome bonus</div>
-                        <div className="mt-1 text-sm text-white/70">
-                          {activeCard.welcomeOffer.amount.toLocaleString()} {activeCard.welcomeOffer.currency} •{" "}
-                          {activeCard.welcomeOffer.spend}
-                        </div>
-                        <div className="mt-1 text-xs text-white/55">
-                          Est. value:{" "}
-                          <span className="text-white/85">
-                            {estimateWelcomeValueUSD(activeCard)
-                              ? `$${money(estimateWelcomeValueUSD(activeCard) as number)}`
-                              : "—"}
-                          </span>{" "}
-                          <span className="text-white/40">(editable later)</span>
-                        </div>
-                        <div className="mt-2 text-xs text-white/50">
-                          Source: {activeCard.welcomeOffer.sourceLabel}
-                          {activeCard.welcomeOffer.notes ? ` • ${activeCard.welcomeOffer.notes}` : ""}
-                        </div>
-                      </div>
+                  <div className="flex items-start gap-3">
+                    {activeCard.logo ? (
+                      <img
+                        src={activeCard.logo}
+                        alt=""
+                        className="mt-1 h-10 w-10 rounded-2xl object-cover"
+                      />
+                    ) : (
+                      <div className="mt-1 h-10 w-10 rounded-2xl bg-white/10" />
                     )}
+                    <div>
+                      <div className="text-xl font-semibold">{activeCard.name}</div>
+                      <div className="mt-1 text-sm text-white/60">
+                        Annual fee: ${money(activeCard.annualFee)} • Credits tracked: $
+                        {money(sumCreditsAnnual(activeCard))}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="text-right">
@@ -480,106 +508,114 @@ export default function DashboardPage() {
 
                 {/* Credits list */}
                 <div className="mt-5">
-                  <div className="flex items-end justify-between gap-4">
-                    <div>
-                      <div className="text-sm font-semibold text-white/85">Credits</div>
-                      <div className="mt-1 text-xs text-white/55">
-                        Use <span className="text-white/80">Remind me</span> to show up in “Expiring soon”.
-                      </div>
-                    </div>
+                  <div className="text-sm font-semibold text-white/85">Credits</div>
+                  <div className="mt-1 text-xs text-white/55">
+                    Use <span className="text-white/80">Remind me</span> to show up in{" "}
+                    <span className="text-white/80">Expiring soon</span>.
                   </div>
 
                   <div className="mt-3 space-y-3">
-                    {(activeCard.credits || []).map((credit) => {
-                      const used = !!usedByCredit[credit.id];
-                      const dc = !!dontCareByCredit[credit.id];
-                      const rm = !!remindByCredit[credit.id];
-                      const next = nextRenewalDate(credit.renews);
+                    {[...(activeCard.credits || [])]
+                      .sort((a, b) => (FREQ_ORDER[a.frequency] ?? 999) - (FREQ_ORDER[b.frequency] ?? 999))
+                      .map((credit) => {
+                        const used = !!usedByCredit[credit.id];
+                        const dc = !!dontCareByCredit[credit.id];
+                        const rm = !!remindByCredit[credit.id];
 
-                      return (
-                        <div
-                          key={credit.id}
-                          className={[
-                            "rounded-2xl border p-4",
-                            dc
-                              ? "border-white/10 bg-white/5 opacity-70"
-                              : used
-                              ? "border-emerald-400/25 bg-emerald-400/10"
-                              : rm
-                              ? "border-sky-400/25 bg-sky-400/10"
-                              : "border-white/10 bg-black/25",
-                          ].join(" ")}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <div className="text-sm font-medium">{credit.name}</div>
-                              <div className="mt-1 text-xs text-white/60">
-                                {credit.frequency} • Annualized: ${money(credit.amountAnnual || 0)}
-                                {next ? <span className="text-white/45"> • Renews {fmtMonthDay(next)}</span> : null}
+                        const rLabel = renewLabel(credit.renews);
+
+                        return (
+                          <div
+                            key={credit.id}
+                            className={[
+                              "rounded-2xl border p-4 transition",
+                              "hover:border-white/20 hover:bg-white/5", // ✅ hover glow feel
+                              dc
+                                ? "border-white/10 bg-white/5 opacity-70"
+                                : used
+                                ? "border-emerald-400/25 bg-emerald-400/10"
+                                : rm
+                                ? "border-yellow-400/25 bg-yellow-400/10"
+                                : "border-white/10 bg-black/25",
+                            ].join(" ")}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium">{credit.name}</div>
+                                <div className="mt-1 text-xs text-white/60">
+                                  {freqLabel(credit.frequency)} • ${money(credit.amount)}
+                                  {rLabel ? ` • ${rLabel}` : ""}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <div className="hidden sm:block rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white/70">
+                                  Annualized:{" "}
+                                  <span className="text-white/90">${money(credit.amountAnnual || 0)}</span>
+                                </div>
+
+                                <button
+                                  onClick={() => toggleRemind(credit.id)}
+                                  disabled={dc}
+                                  className={[
+                                    "rounded-xl border px-3 py-2 text-xs",
+                                    dc
+                                      ? "cursor-not-allowed border-white/10 text-white/40"
+                                      : rm
+                                      ? "border-yellow-400/30 bg-yellow-400/15"
+                                      : "border-white/10 hover:bg-white/5",
+                                  ].join(" ")}
+                                >
+                                  {rm ? "Remind ✓" : "Remind me"}
+                                </button>
+
+                                <button
+                                  onClick={() => toggleDontCare(credit.id)}
+                                  className={[
+                                    "rounded-xl border px-3 py-2 text-xs",
+                                    dc
+                                      ? "border-white/15 bg-white/10"
+                                      : "border-white/10 hover:bg-white/5",
+                                  ].join(" ")}
+                                >
+                                  {dc ? "Don’t care ✓" : "Don’t care"}
+                                </button>
+
+                                <button
+                                  onClick={() => toggleUsed(credit.id)}
+                                  disabled={dc}
+                                  className={[
+                                    "rounded-xl border px-3 py-2 text-xs",
+                                    dc
+                                      ? "cursor-not-allowed border-white/10 text-white/40"
+                                      : used
+                                      ? "border-emerald-400/30 bg-emerald-400/15"
+                                      : "border-white/10 hover:bg-white/5",
+                                  ].join(" ")}
+                                >
+                                  {used ? "Used ✓" : "Mark used"}
+                                </button>
                               </div>
                             </div>
-
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleRemind(credit.id)}
-                                disabled={dc || used}
-                                className={[
-                                  "rounded-xl border px-3 py-2 text-xs",
-                                  dc || used
-                                    ? "cursor-not-allowed border-white/10 text-white/40"
-                                    : rm
-                                    ? "border-sky-400/30 bg-sky-400/15"
-                                    : "border-white/10 hover:bg-white/5",
-                                ].join(" ")}
-                              >
-                                {rm ? "Remind ✓" : "Remind me"}
-                              </button>
-
-                              <button
-                                onClick={() => toggleDontCare(credit.id)}
-                                className={[
-                                  "rounded-xl border px-3 py-2 text-xs",
-                                  dc ? "border-white/15 bg-white/10" : "border-white/10 hover:bg-white/5",
-                                ].join(" ")}
-                              >
-                                {dc ? "Don’t care ✓" : "Don’t care"}
-                              </button>
-
-                              <button
-                                onClick={() => toggleUsed(credit.id)}
-                                disabled={dc}
-                                className={[
-                                  "rounded-xl border px-3 py-2 text-xs",
-                                  dc
-                                    ? "cursor-not-allowed border-white/10 text-white/40"
-                                    : used
-                                    ? "border-emerald-400/30 bg-emerald-400/15"
-                                    : "border-white/10 hover:bg-white/5",
-                                ].join(" ")}
-                              >
-                                {used ? "Used ✓" : "Mark used"}
-                              </button>
-                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
 
                   <div className="mt-4 text-xs text-white/50">
-                    “Don’t care” removes a credit from progress + reminders. “Used” marks it done for this cycle.
+                    “Don’t care” removes a credit from progress + reminders.
                   </div>
                 </div>
               </div>
             )}
 
-            {/* saved cards list */}
+            {/* SAVED DASHBOARD CARDS LIST */}
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="text-sm font-semibold text-white/85">Your Dashboard Cards</div>
                   <div className="mt-1 text-xs text-white/60">
-                    Saved cards are what you’ll get reminders for (once Supabase + email/SMS is added).
+                    Saved cards are what you’ll get reminders for (once Supabase + SMS/email is added).
                   </div>
                 </div>
 
@@ -604,31 +640,40 @@ export default function DashboardPage() {
                     return (
                       <div key={card.key} className="rounded-3xl border border-white/12 bg-black/25 p-5">
                         <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <div className="text-lg font-semibold">{card.name}</div>
-                            <div className="mt-1 text-xs text-white/60">
-                              Fee: ${money(card.annualFee)} • Credits (care): ${money(prog.total)}
-                            </div>
-                            {card.welcomeOffer && (
-                              <div className="mt-2 text-xs text-white/60">
-                                Bonus: {card.welcomeOffer.amount.toLocaleString()} {card.welcomeOffer.currency} •{" "}
-                                {card.welcomeOffer.spend}
-                                {welcomeUSD ? (
-                                  <>
-                                    {" "}
-                                    • Est: <span className="text-white/85">${money(welcomeUSD)}</span>
-                                  </>
-                                ) : null}
-                              </div>
+                          <div className="flex items-start gap-3">
+                            {card.logo ? (
+                              <img src={card.logo} alt="" className="mt-1 h-9 w-9 rounded-2xl object-cover" />
+                            ) : (
+                              <div className="mt-1 h-9 w-9 rounded-2xl bg-white/10" />
                             )}
+                            <div>
+                              <div className="text-lg font-semibold">{card.name}</div>
+                              <div className="mt-1 text-xs text-white/60">
+                                Fee: ${money(card.annualFee)} • Credits (care): ${money(prog.total)}
+                              </div>
+                              {card.welcomeOffer && (
+                                <div className="mt-2 text-xs text-white/60">
+                                  Bonus: {card.welcomeOffer.amount.toLocaleString()} {card.welcomeOffer.currency} •{" "}
+                                  {card.welcomeOffer.spend}
+                                  {welcomeUSD ? (
+                                    <>
+                                      {" "}
+                                      • Est: <span className="text-white/85">${money(welcomeUSD)}</span>
+                                    </>
+                                  ) : null}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
-                          <button
-                            onClick={() => removeFromDashboard(card.key)}
-                            className="rounded-2xl border border-white/15 px-3 py-2 text-xs hover:bg-white/5"
-                          >
-                            Remove
-                          </button>
+                          <div className="text-right">
+                            <button
+                              onClick={() => removeFromDashboard(card.key)}
+                              className="rounded-2xl border border-white/15 px-3 py-2 text-xs hover:bg-white/5"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
 
                         <div className="mt-4">
@@ -654,66 +699,79 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* RIGHT: Expiring soon + Multipliers */}
-          <aside className="space-y-4">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+          {/* RIGHT */}
+          <aside className="space-y-6">
+            {/* Expiring Soon */}
+            <div className="rounded-3xl border border-white/12 bg-white/5 p-5">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-white/85">Expiring soon</div>
-                <div className="text-[11px] text-white/45">{savedCards.length ? "Saved cards" : "Active card"}</div>
+                <div className="text-sm font-semibold text-white/90">Expiring soon</div>
+                <div className="text-xs text-white/50">Active card</div>
               </div>
               <div className="mt-2 text-xs text-white/60">
-                Shows credits marked <span className="text-white/80">Remind me</span>, excluding Used / Don’t care.
+                Shows credits marked Remind me, excluding Used / Don’t care.
               </div>
 
               {expiringSoon.length === 0 ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/60">
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/70">
                   Nothing queued. Set “Remind me” on a credit to see it here.
                 </div>
               ) : (
-                <div className="mt-4 space-y-3">
-                  {expiringSoon.map((r, idx) => (
-                    <div key={idx} className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-sm font-medium">{r.creditName}</div>
-                          <div className="mt-1 text-xs text-white/55">{r.cardName}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs text-white/60">Renews</div>
-                          <div className="text-sm font-semibold">{fmtMonthDay(r.nextDate)}</div>
-                        </div>
+                <div className="mt-4 space-y-2">
+                  {expiringSoon.slice(0, 6).map((c) => (
+                    <div
+                      key={c.id}
+                      className="rounded-2xl border border-yellow-400/15 bg-yellow-400/10 px-4 py-3"
+                    >
+                      <div className="text-sm text-white/90">{c.name}</div>
+                      <div className="mt-1 text-xs text-white/70">
+                        {freqLabel(c.frequency)} • ${money(c.amount)} • {renewLabel(c.renews) ?? "Renew date TBD"}
                       </div>
-                      <div className="mt-2 text-xs text-white/60">Value: ${money(r.amountAnnual)}</div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-              <div className="text-sm font-semibold text-white/85">Points / cash back</div>
-              <div className="mt-2 text-xs text-white/60">
-                Add category multipliers per card (Dining, Travel, Grocery, etc).
+            {/* ✅ Net Value (high impact) */}
+            <div className="rounded-3xl border border-emerald-400/20 bg-emerald-400/10 p-5">
+              <div className="text-xs text-white/70">Net value (Active)</div>
+              <div className="mt-1 text-2xl font-semibold">
+                {activeNetValue >= 0 ? "+" : "−"}${money(Math.abs(activeNetValue))}
+              </div>
+              <div className="mt-1 text-xs text-white/60">
+                (Credits you care about) − (Annual fee)
+              </div>
+            </div>
+
+            {/* ✅ Yellow multipliers box */}
+            <div className="rounded-3xl border border-yellow-400/25 bg-yellow-400/10 p-5">
+              <div className="text-sm font-semibold text-white/90">Points / cash back</div>
+              <div className="mt-1 text-xs text-white/70">
+                Category multipliers for this card.
               </div>
 
-              {activeCard?.multipliers?.length ? (
-                <div className="mt-4 space-y-2">
-                  {activeCard.multipliers.map((m, idx) => (
-                    <div key={idx} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 px-4 py-3">
-                      <div className="text-sm">{m.label}</div>
-                      <div className="text-sm font-semibold text-white/85">{m.rate}</div>
+              <div className="mt-4 space-y-2">
+                {(activeCard?.multipliers || []).map((m, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between rounded-2xl border border-yellow-400/15 bg-black/30 px-4 py-3"
+                  >
+                    <div className="text-sm text-white/85">{m.label}</div>
+                    <div className="rounded-xl bg-yellow-400 px-3 py-1 text-xs font-semibold text-black">
+                      {m.rate}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/30 p-4 text-sm text-white/60">
-                  No multipliers yet for this card. Add <code className="text-white/70">multipliers</code> in{" "}
-                  <code className="text-white/70">data/cards.ts</code>.
-                </div>
-              )}
+                  </div>
+                ))}
 
-              <div className="mt-4 text-xs text-white/45">
-                Next: add “Estimated yearly points” once you collect monthly spend inputs.
+                {(activeCard?.multipliers || []).length === 0 && (
+                  <div className="rounded-2xl border border-yellow-400/15 bg-black/30 p-4 text-sm text-white/70">
+                    No multipliers added yet.
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 text-xs text-white/60">
+                Next: add “Estimated yearly points” once you collect spend inputs.
               </div>
             </div>
           </aside>
