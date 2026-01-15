@@ -22,24 +22,49 @@ export type Multiplier = {
   x: number;
 };
 
+export type PointsProgram =
+  | "cashback"
+  | "amex_mr"
+  | "chase_ur"
+  | "cap1_miles"
+  | "citi_typ"
+  | "aa_miles"
+  | "delta_miles"
+  | "marriott_points"
+  | "hilton_points";
+
+export type SpendCategory = "dining" | "travel" | "groceries" | "gas" | "online" | "other";
+
+export type EarnRates = Partial<Record<SpendCategory, number>>;
+
 export type Card = {
   key: string;
   name: string;
   issuer: string;
   annualFee: number;
-  creditsTrackedAnnualized: number; // optional display hint
+  creditsTrackedAnnualized: number;
   logo: string; // "/logos/xxx.png"
+
+  pointsProgram: PointsProgram;
+
+  // Deterministic quiz engine input (v1: broad categories)
+  earnRates: EarnRates;
+
+  // Optional: for premium feel + “Top Bonus” badge
+  signupBonusEstUsd?: number;
+
   welcomeBonus?: {
     headline: string;
     details?: string;
     valueEstimateUsd?: number;
     note?: string;
   };
+
   multipliers: Multiplier[];
   credits: Credit[];
 };
 
-export const DEFAULT_POINT_VALUES_USD = {
+export const DEFAULT_POINT_VALUES_USD: Record<Exclude<PointsProgram, "cashback">, number> = {
   amex_mr: 0.015,
   chase_ur: 0.015,
   cap1_miles: 0.01,
@@ -50,7 +75,15 @@ export const DEFAULT_POINT_VALUES_USD = {
   hilton_points: 0.006,
 };
 
+export function pointValueUsd(program: PointsProgram): number {
+  if (program === "cashback") return 1.0;
+  return DEFAULT_POINT_VALUES_USD[program];
+}
+
 export const CARDS: Card[] = [
+  // -------------------------
+  // TOP PREMIUM
+  // -------------------------
   {
     key: "amex-platinum",
     name: "Platinum Card",
@@ -58,6 +91,9 @@ export const CARDS: Card[] = [
     annualFee: 895,
     creditsTrackedAnnualized: 3074,
     logo: "/logos/amex-platinum.png",
+    pointsProgram: "amex_mr",
+    earnRates: { travel: 5, other: 1 },
+    signupBonusEstUsd: 2625,
     welcomeBonus: {
       headline: "175,000 MR",
       details: "Spend $8,000 in 6 months",
@@ -93,6 +129,9 @@ export const CARDS: Card[] = [
     annualFee: 795,
     creditsTrackedAnnualized: 2817,
     logo: "/logos/chase-sapphire-reserve.png",
+    pointsProgram: "chase_ur",
+    earnRates: { travel: 4, dining: 3, other: 1 },
+    signupBonusEstUsd: 900,
     multipliers: [
       { label: "Chase travel", x: 8 },
       { label: "Flights booked direct", x: 4 },
@@ -124,6 +163,9 @@ export const CARDS: Card[] = [
     annualFee: 395,
     creditsTrackedAnnualized: 400,
     logo: "/logos/capitalone-venture-x.png",
+    pointsProgram: "cap1_miles",
+    earnRates: { travel: 5, other: 2 },
+    signupBonusEstUsd: 750,
     multipliers: [
       { label: "Hotels & rental cars via Capital One Travel", x: 10 },
       { label: "Flights & vacation rentals via Capital One Travel", x: 5 },
@@ -136,6 +178,75 @@ export const CARDS: Card[] = [
     ],
   },
 
+  // -------------------------
+  // NEW (from Credits.xlsx)
+  // -------------------------
+  {
+    key: "chase-sapphire-preferred",
+    name: "Chase Sapphire Preferred",
+    issuer: "Chase",
+    annualFee: 95,
+    creditsTrackedAnnualized: 170,
+    // TEMP: reuse CSR logo until you upload preferred art
+    logo: "/logos/chase-sapphire-reserve.png",
+    pointsProgram: "chase_ur",
+    earnRates: { travel: 5, dining: 3, groceries: 3, online: 3, other: 1 },
+    multipliers: [
+      { label: "Chase Travel", x: 5 },
+      { label: "Other Travel", x: 2 },
+      { label: "Dining", x: 3 },
+      { label: "Online groceries", x: 3 },
+      { label: "Select streaming services", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "csp-dashpass", title: "DoorDash DashPass Subscription", amount: 120, frequency: "annual" },
+      { id: "csp-hotel-credit", title: "Hotels booked via Chase Travel portal", amount: 50, frequency: "annual" },
+    ],
+  },
+
+  {
+    key: "amex-green",
+    name: "American Express Green",
+    issuer: "American Express",
+    annualFee: 150,
+    creditsTrackedAnnualized: 209,
+    // TEMP: reuse Gold logo until you upload Green art
+    logo: "/logos/amex-gold.png",
+    pointsProgram: "amex_mr",
+    earnRates: { travel: 3, dining: 3, other: 1 },
+    multipliers: [
+      { label: "Travel", x: 3 },
+      { label: "Transit", x: 3 },
+      { label: "Dining", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [{ id: "green-clear", title: "Clear Plus", amount: 209, frequency: "annual" }],
+  },
+
+  {
+    key: "hilton-surpass",
+    name: "Hilton Honors Surpass",
+    issuer: "American Express",
+    annualFee: 150,
+    creditsTrackedAnnualized: 200,
+    logo: "/logos/hilton-honors.png",
+    pointsProgram: "hilton_points",
+    earnRates: { travel: 12, dining: 6, groceries: 6, gas: 6, online: 4, other: 3 },
+    multipliers: [
+      { label: "Purchases at Hilton", x: 12 },
+      { label: "Dining", x: 6 },
+      { label: "US Supermarkets", x: 6 },
+      { label: "Gas", x: 6 },
+      { label: "US Online Retail", x: 4 },
+      { label: "Everything else", x: 3 },
+    ],
+    credits: [{ id: "surpass-hilton-credit", title: "Hilton credit", amount: 50, frequency: "quarterly" }],
+  },
+
+  // -------------------------
+  // EXISTING
+  // -------------------------
   {
     key: "amex-gold",
     name: "American Express Gold",
@@ -143,6 +254,9 @@ export const CARDS: Card[] = [
     annualFee: 325,
     creditsTrackedAnnualized: 424,
     logo: "/logos/amex-gold.png",
+    pointsProgram: "amex_mr",
+    earnRates: { dining: 4, groceries: 4, travel: 3, other: 1 },
+    signupBonusEstUsd: 900,
     multipliers: [
       { label: "Restaurant", x: 4 },
       { label: "Groceries", x: 4 },
@@ -165,6 +279,9 @@ export const CARDS: Card[] = [
     annualFee: 550,
     creditsTrackedAnnualized: 909,
     logo: "/logos/hilton-honors.png",
+    pointsProgram: "hilton_points",
+    earnRates: { travel: 7, dining: 7, other: 3 },
+    signupBonusEstUsd: 700,
     multipliers: [
       { label: "Hilton hotels & resorts", x: 14 },
       { label: "Flights/AmexTravel/Car rentals", x: 7 },
@@ -186,6 +303,9 @@ export const CARDS: Card[] = [
     annualFee: 650,
     creditsTrackedAnnualized: 560,
     logo: "/logos/delta-reserve.png",
+    pointsProgram: "delta_miles",
+    earnRates: { travel: 3, other: 1 },
+    signupBonusEstUsd: 600,
     multipliers: [
       { label: "Delta purchases directly", x: 3 },
       { label: "Everything else", x: 1 },
@@ -204,6 +324,9 @@ export const CARDS: Card[] = [
     annualFee: 650,
     creditsTrackedAnnualized: 400,
     logo: "/logos/marriott-brilliant.png",
+    pointsProgram: "marriott_points",
+    earnRates: { travel: 6, dining: 3, other: 2 },
+    signupBonusEstUsd: 650,
     multipliers: [
       { label: "Marriott hotels & resorts", x: 6 },
       { label: "Restaurant", x: 3 },
@@ -225,6 +348,9 @@ export const CARDS: Card[] = [
     annualFee: 595,
     creditsTrackedAnnualized: 1169,
     logo: "/logos/citi-strata-elite.png",
+    pointsProgram: "citi_typ",
+    earnRates: { travel: 6, dining: 3, other: 1.5 },
+    signupBonusEstUsd: 750,
     multipliers: [
       { label: "Hotels/Car Rentals/Attractions on Citi travel", x: 12 },
       { label: "Air Travel on Citi travel", x: 6 },
@@ -247,6 +373,9 @@ export const CARDS: Card[] = [
     annualFee: 595,
     creditsTrackedAnnualized: 440,
     logo: "/logos/citi-aa-executive.png",
+    pointsProgram: "aa_miles",
+    earnRates: { travel: 4, other: 1 },
+    signupBonusEstUsd: 650,
     multipliers: [
       { label: "American Airlines purchases", x: 4 },
       { label: "Hotels & car rentals via AA portal", x: 10 },
