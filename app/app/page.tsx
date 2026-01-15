@@ -89,7 +89,9 @@ function freqSort(freq: CreditFrequency): number {
 
 function creditSubtitle(c: Credit): string {
   const a = annualize(c.amount, c.frequency);
-  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
+  return `${freqLabel(c.frequency)} • ${formatMoney(
+    c.amount
+  )} • Annualized: ${formatMoney(a)}`;
 }
 
 function pillClass(kind: "off" | "on" | "warn" | "good"): string {
@@ -137,11 +139,6 @@ function nextResetDateForCredit(params: {
   if (credit.frequency === "monthly") {
     const y = now.getFullYear();
     const m0 = now.getMonth();
-    const candidate = makeDate(y, m0, startDay);
-    if (candidate >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-      // If today is before/at this month’s "day", use this month candidate if still ahead.
-      // But requirement says "next month same day". We'll follow strict requirement:
-    }
     // Strict "next month":
     const nextM0 = m0 + 1;
     const nextY = y + Math.floor(nextM0 / 12);
@@ -178,7 +175,6 @@ function nextResetDateForCredit(params: {
   }
 
   // For quarterly/semiannual/annual:
-  // Build the cycle start in current year (or previous) then step forward by monthsStep until > today.
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   // Find an initial cycle date near "now"
@@ -292,7 +288,8 @@ export default function AppDashboardPage() {
 
   // Founder logic (simple): treat a specific email as founder (optional)
   const FOUNDER_EMAIL = "namanlohia02@gmail.com";
-  const isFounder = (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+  const isFounder =
+    (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
 
   // Your Top Picks (pinned)
   const pinnedOrder: Card["key"][] = [
@@ -302,8 +299,9 @@ export default function AppDashboardPage() {
   ];
 
   const [search, setSearch] = useState("");
-  const [activeCardKey, setActiveCardKey] =
-    useState<Card["key"]>("chase-sapphire-reserve");
+
+  // ✅ Platinum default
+  const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("amex-platinum");
 
   const [savedCards, setSavedCards] = useState<string[]>([]);
   const [cardStartDates, setCardStartDates] = useState<Record<string, string>>({}); // cardKey -> yyyy-mm-dd
@@ -353,7 +351,9 @@ export default function AppDashboardPage() {
     }
 
     const pct =
-      totalAvail <= 0 ? 0 : Math.min(100, Math.round((totalRedeemed / totalAvail) * 100));
+      totalAvail <= 0
+        ? 0
+        : Math.min(100, Math.round((totalRedeemed / totalAvail) * 100));
     return { totalAvail, totalRedeemed, pct };
   }, [creditsSorted, activeCard.key, dontCare, used]);
 
@@ -570,7 +570,9 @@ export default function AppDashboardPage() {
       return;
     }
 
-    setSavedCards((prev) => (prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]));
+    setSavedCards((prev) =>
+      prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]
+    );
 
     // Persist
     try {
@@ -665,7 +667,8 @@ export default function AppDashboardPage() {
             ) : null}
           </div>
           <div className="mt-0.5 text-xs text-white/55">
-            Fee: {formatMoney(card.annualFee)} • Credits: {formatMoney(card.creditsTrackedAnnualized)}
+            Fee: {formatMoney(card.annualFee)} • Credits:{" "}
+            {formatMoney(card.creditsTrackedAnnualized)}
           </div>
         </div>
 
@@ -717,6 +720,34 @@ export default function AppDashboardPage() {
   // -------------------------
   // AUTH ACTIONS
   // -------------------------
+  async function sendPasswordReset() {
+    setAuthBusy(true);
+    setAuthMsg(null);
+
+    const email = authEmail.trim();
+    if (!email) {
+      setAuthBusy(false);
+      setAuthMsg("Enter your email first, then click Forgot password.");
+      return;
+    }
+
+    try {
+      const redirectTo =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/reset`
+          : undefined;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+
+      if (error) setAuthMsg(error.message);
+      else setAuthMsg("Password reset email sent. Check your inbox.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function signIn() {
     setAuthBusy(true);
     setAuthMsg(null);
@@ -763,9 +794,7 @@ export default function AppDashboardPage() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-lg font-semibold text-white/95">Account</div>
-              <div className="mt-1 text-xs text-white/55">
-                Save cards + toggles + start dates.
-              </div>
+              <div className="mt-1 text-xs text-white/55">Save cards + toggles + start dates.</div>
             </div>
             {user ? (
               <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
@@ -780,9 +809,7 @@ export default function AppDashboardPage() {
 
           {user ? (
             <div className="mt-3 space-y-2">
-              <div className="text-xs text-white/60 break-all">
-                {user.email}
-              </div>
+              <div className="text-xs text-white/60 break-all">{user.email}</div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={signOut}
@@ -834,6 +861,21 @@ export default function AppDashboardPage() {
                   Sign up
                 </button>
               </div>
+
+              {/* ✅ Forgot password */}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={sendPasswordReset}
+                  disabled={authBusy}
+                  className="text-xs text-white/55 hover:text-white/80 disabled:opacity-60"
+                  type="button"
+                >
+                  Forgot password?
+                </button>
+
+                <span className="text-[11px] text-white/35">We’ll email you a reset link</span>
+              </div>
+
               {authMsg ? (
                 <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
                   {authMsg}
@@ -846,9 +888,7 @@ export default function AppDashboardPage() {
         {/* Your Cards */}
         <div className="mt-4 rounded-2xl border border-white/10 bg-[#0F1218] p-4">
           <div className="text-lg font-semibold text-white/95">Your Cards</div>
-          <div className="mt-1 text-xs text-white/55">
-            Saved cards appear here.
-          </div>
+          <div className="mt-1 text-xs text-white/55">Saved cards appear here.</div>
 
           <div className="mt-3 space-y-2">
             {savedCards.length === 0 ? (
@@ -861,10 +901,7 @@ export default function AppDashboardPage() {
                 if (!card) return null;
                 const start = cardStartDates[k] ?? "";
                 return (
-                  <div
-                    key={k}
-                    className="rounded-xl border border-white/10 bg-black/25 p-3"
-                  >
+                  <div key={k} className="rounded-xl border border-white/10 bg-black/25 p-3">
                     <div className="flex items-start gap-3">
                       <div className="relative mt-0.5 h-9 w-9 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
                         <Image src={card.logo} alt={card.name} fill className="object-cover" />
@@ -1072,9 +1109,7 @@ export default function AppDashboardPage() {
               <Image src={activeCard.logo} alt={activeCard.name} fill className="object-cover" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xl font-semibold text-white/95">
-                {activeCard.name}
-              </div>
+              <div className="truncate text-xl font-semibold text-white/95">{activeCard.name}</div>
               <div className="mt-0.5 truncate text-sm text-white/55">
                 Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked:{" "}
                 {formatMoney(activeCard.creditsTrackedAnnualized)}
@@ -1099,15 +1134,10 @@ export default function AppDashboardPage() {
               const remindOn = !!remind[key];
 
               return (
-                <div
-                  key={c.id}
-                  className="rounded-2xl border border-white/10 bg-[#0F1218] p-4"
-                >
+                <div key={c.id} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-white/95">
-                        {c.title}
-                      </div>
+                      <div className="truncate text-sm font-semibold text-white/95">{c.title}</div>
                       <div className="mt-0.5 truncate text-xs text-white/55">
                         {creditSubtitle(c)}
                         {c.notes ? ` • ${c.notes}` : ""}
@@ -1173,9 +1203,7 @@ export default function AppDashboardPage() {
               <div className="text-sm font-medium text-amber-50/90 leading-5 line-clamp-2">
                 {m.label}
               </div>
-              <div className="shrink-0 text-sm font-semibold text-amber-50">
-                {m.x}x
-              </div>
+              <div className="shrink-0 text-sm font-semibold text-amber-50">{m.x}x</div>
             </div>
           ))}
         </div>
@@ -1308,9 +1336,7 @@ export default function AppDashboardPage() {
             <input
               type="checkbox"
               checked={quiz.includeWelcomeBonus}
-              onChange={(e) =>
-                setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))
-              }
+              onChange={(e) => setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))}
             />
             Include welcome bonus value (if any)
           </label>
@@ -1322,11 +1348,10 @@ export default function AppDashboardPage() {
                 <div key={r.card.key} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold leading-5 line-clamp-2">
-                        {r.card.name}
-                      </div>
+                      <div className="text-sm font-semibold leading-5 line-clamp-2">{r.card.name}</div>
                       <div className="mt-1 text-sm text-white/60">
-                        Est annual value: {formatMoney(r.estAnnualValue)} • Score: {formatMoney(r.score)}
+                        Est annual value: {formatMoney(r.estAnnualValue)} • Score:{" "}
+                        {formatMoney(r.score)}
                       </div>
                     </div>
                     <div className="shrink-0 text-xs text-white/50">
@@ -1406,15 +1431,33 @@ export default function AppDashboardPage() {
 
         {/* Desktop grid */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>
+          <div
+            className={[
+              "lg:block",
+              mobileView === "cards" ? "block" : "hidden",
+              "lg:col-span-4",
+            ].join(" ")}
+          >
             {LeftPanel}
           </div>
 
-          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>
+          <div
+            className={[
+              "lg:block",
+              mobileView === "credits" ? "block" : "hidden",
+              "lg:col-span-5",
+            ].join(" ")}
+          >
             {MiddlePanel}
           </div>
 
-          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>
+          <div
+            className={[
+              "lg:block",
+              mobileView === "insights" ? "block" : "hidden",
+              "lg:col-span-3",
+            ].join(" ")}
+          >
             {RightPanel}
           </div>
         </div>
