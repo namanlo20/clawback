@@ -56,7 +56,7 @@ export type Card = {
   // Deterministic quiz engine input (v1: broad categories)
   earnRates: EarnRates;
 
-  // Optional: for premium feel + “Top Bonus” badge
+  // Optional: premium feel + badges
   signupBonusEstUsd?: number;
 
   welcomeBonus?: {
@@ -90,9 +90,6 @@ export function pointValueUsd(program: PointsProgram): number {
 }
 
 export const CARDS: Card[] = [
-  // -------------------------
-  // TOP PREMIUM
-  // -------------------------
   {
     key: "amex-platinum",
     name: "Platinum Card",
@@ -115,25 +112,10 @@ export const CARDS: Card[] = [
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      {
-        id: "plat-airline-incidental",
-        title: "Airline Incidental Fees",
-        amount: 200,
-        frequency: "annual",
-      },
+      { id: "plat-airline-incidental", title: "Airline Incidental Fees", amount: 200, frequency: "annual" },
       { id: "plat-clear", title: "Clear Plus", amount: 209, frequency: "annual" },
-      {
-        id: "plat-digital-entertainment",
-        title: "Digital Entertainment",
-        amount: 25,
-        frequency: "monthly",
-      },
-      {
-        id: "plat-fhr-hotel-collection",
-        title: "Fine Hotels + Resorts / Hotel Collection",
-        amount: 300,
-        frequency: "semiannual",
-      },
+      { id: "plat-digital-entertainment", title: "Digital Entertainment", amount: 25, frequency: "monthly" },
+      { id: "plat-fhr-hotel-collection", title: "Fine Hotels + Resorts / Hotel Collection", amount: 300, frequency: "semiannual" },
       { id: "plat-lululemon", title: "Lululemon", amount: 75, frequency: "quarterly" },
       { id: "plat-oura", title: "Oura Ring", amount: 200, frequency: "annual" },
       { id: "plat-resy", title: "Resy Restaurants", amount: 100, frequency: "quarterly" },
@@ -202,25 +184,21 @@ export const CARDS: Card[] = [
     ],
   },
 
-  // -------------------------
-  // NEW (from Credits.xlsx)
-  // -------------------------
   {
     key: "chase-sapphire-preferred",
     name: "Chase Sapphire Preferred",
     issuer: "Chase",
     annualFee: 95,
     creditsTrackedAnnualized: 170,
-    // ✅ REAL logo added
     logo: "/logos/chase-sapphire-preferred.png",
     pointsProgram: "chase_ur",
     earnRates: { travel: 5, dining: 3, groceries: 3, online: 3, other: 1 },
     multipliers: [
       { label: "Chase Travel", x: 5 },
-      { label: "Other Travel", x: 2 },
+      { label: "Other travel", x: 2 },
       { label: "Dining", x: 3 },
       { label: "Online groceries", x: 3 },
-      { label: "Select streaming services", x: 3 },
+      { label: "Select streaming", x: 3 },
       { label: "Everything else", x: 1 },
     ],
     credits: [
@@ -235,7 +213,6 @@ export const CARDS: Card[] = [
     issuer: "American Express",
     annualFee: 150,
     creditsTrackedAnnualized: 209,
-    // ✅ REAL logo added
     logo: "/logos/amex-green.png",
     pointsProgram: "amex_mr",
     earnRates: { travel: 3, dining: 3, other: 1 },
@@ -254,7 +231,6 @@ export const CARDS: Card[] = [
     issuer: "American Express",
     annualFee: 150,
     creditsTrackedAnnualized: 200,
-    // ✅ REAL logo added
     logo: "/logos/hilton-honors-surpass.png",
     pointsProgram: "hilton_points",
     earnRates: { travel: 12, dining: 6, groceries: 6, gas: 6, online: 4, other: 3 },
@@ -269,9 +245,6 @@ export const CARDS: Card[] = [
     credits: [{ id: "surpass-hilton-credit", title: "Hilton credit", amount: 50, frequency: "quarterly" }],
   },
 
-  // -------------------------
-  // EXISTING
-  // -------------------------
   {
     key: "amex-gold",
     name: "American Express Gold",
@@ -303,7 +276,6 @@ export const CARDS: Card[] = [
     issuer: "American Express",
     annualFee: 550,
     creditsTrackedAnnualized: 909,
-    // ✅ leave Aspire alone
     logo: "/logos/hilton-honors.png",
     pointsProgram: "hilton_points",
     earnRates: { travel: 7, dining: 7, other: 3 },
