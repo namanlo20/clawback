@@ -19,8 +19,9 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) return setStatus(`Error: ${error.message}`);
-      if (!data.session)
+      if (!data.session) {
         return setStatus("Reset link not valid (no session). Request a new reset email.");
+      }
       setStatus("Enter a new password.");
     });
   }, []);
@@ -42,15 +43,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <div
-        style={{
-          width: "100%",
-          maxWidth: 420,
-          padding: 20,
-          border: "1px solid #333",
-          borderRadius: 12,
-        }}
-      >
+      <div style={{ width: "100%", maxWidth: 420, padding: 20, border: "1px solid #333", borderRadius: 12 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Reset password</h1>
         <p style={{ opacity: 0.85, marginBottom: 16 }}>{status}</p>
 
@@ -60,24 +53,14 @@ export default function ResetPasswordPage() {
             placeholder="New password"
             value={pw1}
             onChange={(e) => setPw1(e.target.value)}
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              border: "1px solid #333",
-              background: "transparent",
-            }}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid #333", background: "transparent" }}
           />
           <input
             type="password"
             placeholder="Confirm new password"
             value={pw2}
             onChange={(e) => setPw2(e.target.value)}
-            style={{
-              padding: 10,
-              borderRadius: 10,
-              border: "1px solid #333",
-              background: "transparent",
-            }}
+            style={{ padding: 10, borderRadius: 10, border: "1px solid #333", background: "transparent" }}
           />
           <button
             onClick={onSubmit}
