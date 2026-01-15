@@ -4,8 +4,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
-import { Bell, EyeOff, CheckCircle2 } from "lucide-react";
-
 import {
   CARDS,
   pointValueUsd,
@@ -40,6 +38,82 @@ type DbCreditState = {
 };
 
 // -----------------------------
+// ICONS (no dependencies)
+// -----------------------------
+function IconBell({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className ?? "h-4 w-4"}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M15 17H9m10-2V11a7 7 0 10-14 0v4l-2 2h18l-2-2z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 19a2 2 0 01-4 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+function IconEyeOff({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className ?? "h-4 w-4"}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 3l18 18"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.6 10.6a3 3 0 004.24 4.24"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9.9 5.2A10.5 10.5 0 0122 12c-.8 1.8-2.2 3.9-4.3 5.5M6.2 6.2C4.1 7.8 2.8 10 2 12c1.7 3.9 6 8 10 8 1.3 0 2.6-.3 3.8-.8"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function IconCheck({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className ?? "h-4 w-4"}
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 6L9 17l-5-5"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// -----------------------------
 // HELPERS
 // -----------------------------
 function formatMoney(n: number): string {
@@ -51,7 +125,6 @@ function formatMoney(n: number): string {
 }
 
 function clampDayToEndOfMonth(year: number, monthIndex0: number, day: number) {
-  // monthIndex0: 0..11
   const lastDay = new Date(year, monthIndex0 + 1, 0).getDate();
   return Math.min(day, lastDay);
 }
@@ -107,8 +180,6 @@ function formatDateShort(d: Date): string {
 
 // -----------------------------
 // EXPIRING SOON DATE MATH (v2)
-// ✅ per saved card cardStartDates[cardKey]
-// ✅ computes nextResetDate by frequency
 // -----------------------------
 function nextResetDateForCredit(params: {
   credit: Credit;
@@ -148,7 +219,6 @@ function nextResetDateForCredit(params: {
 
     let candY = startY + k * years;
     let cand = makeDate(candY, startMonth, startDay);
-
     if (cand <= today) {
       candY += years;
       cand = makeDate(candY, startMonth, startDay);
@@ -164,11 +234,9 @@ function nextResetDateForCredit(params: {
       ? 6
       : 12;
 
-  // pick a base candidate around now
   let candidate = makeDate(now.getFullYear(), startMonth, startDay);
   if (candidate > today) candidate = makeDate(now.getFullYear() - 1, startMonth, startDay);
 
-  // step until strictly > today
   while (candidate <= today) {
     const next = new Date(candidate);
     next.setMonth(next.getMonth() + monthsStep);
@@ -258,6 +326,11 @@ export default function AppDashboardPage() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authMsg, setAuthMsg] = useState<string | null>(null);
 
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup" | "reset">("signin");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetMsg, setResetMsg] = useState<string | null>(null);
+
   // Founder logic
   const FOUNDER_EMAIL = "namanlohia02@gmail.com";
   const isFounder = (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
@@ -266,11 +339,12 @@ export default function AppDashboardPage() {
   const pinnedOrder: Card["key"][] = ["amex-platinum", "chase-sapphire-reserve", "capitalone-venture-x"];
 
   const [search, setSearch] = useState("");
+
   // ✅ Platinum default
   const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("amex-platinum");
 
   const [savedCards, setSavedCards] = useState<string[]>([]);
-  const [cardStartDates, setCardStartDates] = useState<Record<string, string>>({}); // cardKey -> yyyy-mm-dd
+  const [cardStartDates, setCardStartDates] = useState<Record<string, string>>({});
   const [used, setUsed] = useState<ToggleState>({});
   const [dontCare, setDontCare] = useState<ToggleState>({});
   const [remind, setRemind] = useState<ToggleState>({});
@@ -353,7 +427,7 @@ export default function AppDashboardPage() {
   }, []);
 
   // -----------------------------
-  // LOAD USER DATA (saved cards + toggles)
+  // LOAD USER DATA
   // -----------------------------
   const didInitialLoad = useRef(false);
 
@@ -413,7 +487,7 @@ export default function AppDashboardPage() {
         setUsed(usedMap);
         setDontCare(dcMap);
         setRemind(remindMap);
-      } catch (e: any) {
+      } catch {
         setDbWarning("Supabase tables/policies might not be set up yet. App will still run (no persistence).");
       }
     })();
@@ -421,8 +495,6 @@ export default function AppDashboardPage() {
 
   // -----------------------------
   // ✅ EXPIRING SOON (date-based v2)
-  // ✅ shows only if within 14 days
-  // ✅ obeys remind=true and not used/dontCare
   // -----------------------------
   const expiringSoon = useMemo(() => {
     const out: Array<{ credit: Credit; due: Date }> = [];
@@ -452,7 +524,7 @@ export default function AppDashboardPage() {
   }, [creditsSorted, activeCard.key, remind, used, dontCare, cardStartDates]);
 
   // -----------------------------
-  // UI ACTIONS + PERSIST
+  // PERSIST HELPERS
   // -----------------------------
   async function upsertCreditState(stateKey: string, patch: Partial<DbCreditState>) {
     if (!user) return;
@@ -499,8 +571,11 @@ export default function AppDashboardPage() {
   async function notifyMeForThisCard() {
     if (!user) {
       setAuthMsg("Sign in to save a card.");
+      setAuthModalOpen(true);
+      setAuthMode("signin");
       return;
     }
+
     if (!isFounder && savedCards.length >= 1 && !savedCards.includes(activeCard.key)) {
       setAuthMsg("Free tier saves 1 card. Multi-card is $5 flat (coming soon).");
       return;
@@ -509,7 +584,10 @@ export default function AppDashboardPage() {
     setSavedCards((prev) => (prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]));
 
     try {
-      await supabase.from("user_cards").upsert({ user_id: user.id, card_key: activeCard.key }, { onConflict: "user_id,card_key" });
+      await supabase.from("user_cards").upsert(
+        { user_id: user.id, card_key: activeCard.key },
+        { onConflict: "user_id,card_key" }
+      );
     } catch {
       // ignore
     }
@@ -518,6 +596,7 @@ export default function AppDashboardPage() {
   async function updateCardStartDate(cardKey: string, iso: string) {
     setCardStartDates((p) => ({ ...p, [cardKey]: iso }));
     if (!user) return;
+
     try {
       await supabase.from("user_cards").upsert(
         { user_id: user.id, card_key: cardKey, card_start_date: iso },
@@ -529,15 +608,12 @@ export default function AppDashboardPage() {
   }
 
   // -----------------------------
-  // BROWSE LIST (search + fee filter)
-  // ✅ Alphabetical
+  // BROWSE LIST (Alphabetical)
   // -----------------------------
   const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const inFeeRange = CARDS.filter((c) => c.annualFee >= feeMin && c.annualFee <= feeMax);
-    const list = q
-      ? inFeeRange.filter((c) => (c.name + " " + c.issuer).toLowerCase().includes(q))
-      : inFeeRange.slice();
+    const list = q ? inFeeRange.filter((c) => (c.name + " " + c.issuer).toLowerCase().includes(q)) : inFeeRange.slice();
     return list.sort((a, b) => a.name.localeCompare(b.name));
   }, [search, feeMin, feeMax]);
 
@@ -547,7 +623,9 @@ export default function AppDashboardPage() {
     return q.length === 0 && isDefaultFeeRange;
   }, [search, feeMin, feeMax, feeBounds.min, feeBounds.max]);
 
-  const topPicks = useMemo(() => pinnedOrder.map((k) => CARDS.find((c) => c.key === k)).filter(Boolean) as Card[], [pinnedOrder]);
+  const topPicks = useMemo(() => {
+    return pinnedOrder.map((k) => CARDS.find((c) => c.key === k)).filter(Boolean) as Card[];
+  }, [pinnedOrder]);
 
   const tier3 = useMemo(() => baseFiltered.filter((c) => inTier(c, 500, 999999)), [baseFiltered]);
   const tier2 = useMemo(() => baseFiltered.filter((c) => inTier(c, 250, 499.99)), [baseFiltered]);
@@ -565,7 +643,10 @@ export default function AppDashboardPage() {
         password: authPassword,
       });
       if (error) setAuthMsg(error.message);
-      else setAuthMsg(null);
+      else {
+        setAuthMsg(null);
+        setAuthModalOpen(false);
+      }
     } finally {
       setAuthBusy(false);
     }
@@ -586,10 +667,32 @@ export default function AppDashboardPage() {
     }
   }
 
+  async function sendPasswordReset() {
+    setAuthBusy(true);
+    setResetMsg(null);
+    try {
+      const email = (resetEmail || authEmail).trim();
+      if (!email) {
+        setResetMsg("Enter your email first.");
+        return;
+      }
+
+      const redirectTo =
+        typeof window !== "undefined" ? `${window.location.origin}/app/auth/reset` : undefined;
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+
+      if (error) setResetMsg(error.message);
+      else setResetMsg("Password reset email sent. Check your inbox.");
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function signOut() {
     setAuthMsg(null);
 
-    // Optimistic UI update
+    // optimistic UI update (no refresh needed)
     setSession(null);
     setSavedCards([]);
     setCardStartDates({});
@@ -603,7 +706,7 @@ export default function AppDashboardPage() {
   }
 
   // -----------------------------
-  // PREMIUM UI BITS
+  // UI helpers
   // -----------------------------
   function badgePill(text: string, tone: "gold" | "slate" | "neutral") {
     const cls =
@@ -626,8 +729,7 @@ export default function AppDashboardPage() {
     icon: React.ReactNode;
     tone: "neutral" | "good" | "warn";
   }) {
-    const base =
-      "inline-flex items-center justify-center rounded-full border px-2.5 py-2 text-xs transition select-none";
+    const base = "inline-flex items-center justify-center rounded-full border px-2.5 py-2 text-xs transition select-none";
     const cls =
       props.tone === "good"
         ? props.on
@@ -666,7 +768,9 @@ export default function AppDashboardPage() {
         <div
           className={[
             "relative mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-black/30",
-            active ? "border-amber-300/30 shadow-[0_0_0_2px_rgba(245,158,11,0.12),0_0_40px_rgba(245,158,11,0.10)]" : "border-white/10",
+            active
+              ? "border-amber-300/30 shadow-[0_0_0_2px_rgba(245,158,11,0.12),0_0_40px_rgba(245,158,11,0.10)]"
+              : "border-white/10",
           ].join(" ")}
         >
           <Image src={card.logo} alt={card.name} fill className="object-cover" />
@@ -676,7 +780,7 @@ export default function AppDashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <div className="text-sm font-semibold leading-5 line-clamp-2 text-white/95">{card.name}</div>
 
-            {/* ✅ welcome bonus est badge */}
+            {/* welcome bonus est badge */}
             {typeof card.signupBonusEstUsd === "number" && card.signupBonusEstUsd > 0 ? (
               <span className="shrink-0 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
                 Bonus est: {formatMoney(card.signupBonusEstUsd)}
@@ -720,22 +824,17 @@ export default function AppDashboardPage() {
         ? "bg-sky-400/10 border-sky-400/20"
         : "bg-white/5 border-white/10";
 
-    const titleColor =
-      accent === "gold" ? "text-amber-100" : accent === "slate" ? "text-sky-100" : "text-white/90";
+    const titleColor = accent === "gold" ? "text-amber-100" : accent === "slate" ? "text-sky-100" : "text-white/90";
 
     return (
       <div className="border-t border-white/10">
-        {/* ✅ tier headers bigger + count badge */}
         <div className={["px-3 py-3 border-b flex items-center justify-between gap-3", headerBg].join(" ")}>
           <div>
             <div className={["text-lg font-semibold leading-6", titleColor].join(" ")}>{title}</div>
             <div className="text-xs text-white/55">{subtitle}</div>
           </div>
-          <div className="flex items-center gap-2">
-            {badgePill(`${cards.length} cards`, accent === "neutral" ? "neutral" : accent)}
-          </div>
+          <div className="flex items-center gap-2">{badgePill(`${cards.length} cards`, accent === "neutral" ? "neutral" : accent)}</div>
         </div>
-
         {cards.map((c) => (
           <CardRow key={c.key} card={c} />
         ))}
@@ -744,52 +843,91 @@ export default function AppDashboardPage() {
   }
 
   // -------------------------
-  // LEFT PANEL
+  // TOP-RIGHT AUTH + QUIZ
   // -------------------------
-  const LeftPanel = (
-    <aside className="lg:col-span-4">
-      <div className={surfaceCardClass("p-4 lg:sticky lg:top-5")}>
-        {/* Auth Box */}
-        <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
+  const TopRight = (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {user ? (
+        <>
+          <div className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-4 py-2 text-emerald-100">
+            {isFounder ? "Founder" : "Signed in"}
+          </div>
+          <div className="hidden sm:block rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/70 max-w-[320px] truncate">
+            {user.email}
+          </div>
+          <button
+            onClick={signOut}
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/80 hover:bg-white/10"
+            type="button"
+          >
+            Sign out
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/70">Preview mode</div>
+          <button
+            onClick={() => {
+              setAuthModalOpen(true);
+              setAuthMode("signin");
+              setAuthMsg(null);
+              setResetMsg(null);
+            }}
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/80 hover:bg-white/10"
+            type="button"
+          >
+            Sign in
+          </button>
+          <button
+            onClick={() => {
+              setAuthModalOpen(true);
+              setAuthMode("signup");
+              setAuthMsg(null);
+              setResetMsg(null);
+            }}
+            className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-4 py-2 text-emerald-100 hover:bg-emerald-300/15"
+            type="button"
+          >
+            Sign up
+          </button>
+        </>
+      )}
+
+      <button
+        onClick={() => setQuizOpen(true)}
+        className="rounded-full border border-amber-300/25 bg-amber-300/10 px-4 py-2 text-amber-100 hover:bg-amber-300/15"
+        type="button"
+      >
+        Quiz
+      </button>
+    </div>
+  );
+
+  const AuthModal = !authModalOpen ? null : (
+    <div className="fixed inset-0 z-50">
+      <button className="absolute inset-0 bg-black/60" onClick={() => setAuthModalOpen(false)} aria-label="Close auth modal backdrop" />
+      <div className="absolute left-1/2 top-10 w-[92vw] max-w-xl -translate-x-1/2">
+        <div className={surfaceCardClass("p-5")}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-lg font-semibold text-white/95">Account</div>
-              <div className="mt-1 text-xs text-white/55">Save cards + toggles + start dates.</div>
+              <div className="text-xl font-semibold text-white/95">
+                {authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}
+              </div>
+              <div className="mt-1 text-sm text-white/55">
+                {authMode === "reset" ? "We’ll email you a reset link." : "Email/password. No anonymous accounts."}
+              </div>
             </div>
-            {user ? (
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
-                Signed in
-              </span>
-            ) : (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                Signed out
-              </span>
-            )}
+            <button
+              onClick={() => setAuthModalOpen(false)}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+              type="button"
+            >
+              Close
+            </button>
           </div>
 
-          {user ? (
-            <div className="mt-3 space-y-2">
-              <div className="text-xs text-white/60 break-all">{user.email}</div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={signOut}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
-                  type="button"
-                >
-                  Sign out
-                </button>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
-                  Plan: {isFounder ? "Founder" : "Free"}
-                </div>
-              </div>
-              {dbWarning ? (
-                <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">
-                  {dbWarning}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="mt-3 space-y-2">
+          {authMode !== "reset" ? (
+            <div className="mt-4 space-y-2">
               <input
                 value={authEmail}
                 onChange={(e) => setAuthEmail(e.target.value)}
@@ -803,26 +941,139 @@ export default function AppDashboardPage() {
                 type="password"
                 className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none placeholder:text-white/30"
               />
-              <div className="flex gap-2">
-                <button
-                  onClick={signIn}
-                  disabled={authBusy}
-                  className="flex-1 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
-                  type="button"
-                >
-                  Sign in
-                </button>
-                <button
-                  onClick={signUp}
-                  disabled={authBusy}
-                  className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
-                  type="button"
-                >
-                  Sign up
-                </button>
+
+              <div className="flex gap-2 pt-1">
+                {authMode === "signin" ? (
+                  <>
+                    <button
+                      onClick={signIn}
+                      disabled={authBusy}
+                      className="flex-1 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
+                      type="button"
+                    >
+                      Sign in
+                    </button>
+                    <button
+                      onClick={() => setAuthMode("signup")}
+                      disabled={authBusy}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
+                      type="button"
+                    >
+                      Sign up
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={signUp}
+                      disabled={authBusy}
+                      className="flex-1 rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
+                      type="button"
+                    >
+                      Create account
+                    </button>
+                    <button
+                      onClick={() => setAuthMode("signin")}
+                      disabled={authBusy}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm font-semibold text-white/80 hover:bg-white/10 disabled:opacity-60"
+                      type="button"
+                    >
+                      Back to sign in
+                    </button>
+                  </>
+                )}
               </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  onClick={() => {
+                    setAuthMode("reset");
+                    setResetEmail(authEmail);
+                    setResetMsg(null);
+                  }}
+                  className="text-xs text-white/55 hover:text-white/80"
+                  type="button"
+                >
+                  Forgot password?
+                </button>
+                <div className="text-xs text-white/40">Tip: confirm email can be OFF during testing.</div>
+              </div>
+
               {authMsg ? (
-                <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
+                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 space-y-2">
+              <input
+                value={resetEmail}
+                onChange={(e) => setResetEmail(e.target.value)}
+                placeholder="Email"
+                className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none placeholder:text-white/30"
+              />
+              <button
+                onClick={sendPasswordReset}
+                disabled={authBusy}
+                className="w-full rounded-xl bg-white px-3 py-2 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
+                type="button"
+              >
+                Send reset email
+              </button>
+
+              <div className="flex items-center justify-between pt-2">
+                <button onClick={() => setAuthMode("signin")} className="text-xs text-white/55 hover:text-white/80" type="button">
+                  Back to sign in
+                </button>
+                <div className="text-xs text-white/40">Reset link opens /app/auth/reset</div>
+              </div>
+
+              {resetMsg ? (
+                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{resetMsg}</div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // -------------------------
+  // LEFT PANEL (NO SIGN IN UI)
+  // -------------------------
+  const LeftPanel = (
+    <aside className="lg:col-span-4">
+      <div className={surfaceCardClass("p-4 lg:sticky lg:top-5")}>
+        <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-lg font-semibold text-white/95">Account</div>
+              <div className="mt-1 text-xs text-white/55">Sign in top-right to save cards + toggles.</div>
+            </div>
+            {user ? (
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
+                Synced
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                Preview
+              </span>
+            )}
+          </div>
+
+          {!user ? (
+            <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
+              You can browse everything free. Sign in (top-right) to save 1 card + your reminders.
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2">
+              <div className="text-xs text-white/60 break-all">{user.email}</div>
+              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
+                Plan: {isFounder ? "Founder" : "Free"}
+              </div>
+              {dbWarning ? (
+                <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">
+                  {dbWarning}
+                </div>
               ) : null}
             </div>
           )}
@@ -986,6 +1237,10 @@ export default function AppDashboardPage() {
           </button>
 
           <div className="mt-2 text-xs text-white/40">Free: save 1 card • Multi-card is $5 flat (coming soon)</div>
+
+          {authMsg ? (
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
+          ) : null}
         </div>
       </div>
     </aside>
@@ -1019,7 +1274,7 @@ export default function AppDashboardPage() {
         </div>
       </div>
 
-      {/* ✅ active card glow */}
+      {/* Active card glow */}
       <div className={surfaceCardClass("mt-6 p-5 border-amber-300/15 shadow-[0_0_0_2px_rgba(245,158,11,0.10),0_0_90px_rgba(245,158,11,0.08)]")}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -1061,27 +1316,27 @@ export default function AppDashboardPage() {
                       </div>
                     </div>
 
-                    {/* ✅ Icon toggles: bell / eye-off / check */}
+                    {/* Icon toggles */}
                     <div className="flex items-center gap-2 sm:justify-end">
                       <IconToggleButton
                         on={remindOn}
                         onClick={() => toggleRemind(activeCard.key, c.id)}
                         title="Remind"
-                        icon={<Bell className="h-4 w-4" />}
+                        icon={<IconBell className="h-4 w-4" />}
                         tone="neutral"
                       />
                       <IconToggleButton
                         on={dontCareOn}
                         onClick={() => toggleDontCare(activeCard.key, c.id)}
                         title="Don’t care"
-                        icon={<EyeOff className="h-4 w-4" />}
+                        icon={<IconEyeOff className="h-4 w-4" />}
                         tone="warn"
                       />
                       <IconToggleButton
                         on={usedOn}
                         onClick={() => toggleUsed(activeCard.key, c.id)}
                         title="Mark used"
-                        icon={<CheckCircle2 className="h-4 w-4" />}
+                        icon={<IconCheck className="h-4 w-4" />}
                         tone="good"
                       />
                     </div>
@@ -1165,7 +1420,7 @@ export default function AppDashboardPage() {
   );
 
   // -------------------------
-  // QUIZ MODAL (kept)
+  // QUIZ MODAL
   // -------------------------
   const QuizModal = !quizOpen ? null : (
     <div className="fixed inset-0 z-50">
@@ -1282,19 +1537,7 @@ export default function AppDashboardPage() {
             <div className="text-sm text-white/55">No bank logins. Just credits, reminders, and savings.</div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/70">
-              {user ? (isFounder ? "Founder" : "Signed in") : "Preview mode"}
-            </div>
-
-            <button
-              onClick={() => setQuizOpen(true)}
-              className="rounded-full border border-amber-300/25 bg-amber-300/10 px-4 py-2 text-amber-100 hover:bg-amber-300/15"
-              type="button"
-            >
-              Quiz
-            </button>
-          </div>
+          {TopRight}
         </div>
 
         {/* Mobile tabs */}
@@ -1334,6 +1577,7 @@ export default function AppDashboardPage() {
         </div>
       </div>
 
+      {AuthModal}
       {QuizModal}
     </div>
   );
