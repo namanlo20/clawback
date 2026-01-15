@@ -42,12 +42,7 @@ type DbCreditState = {
 // -----------------------------
 function IconBell({ className }: { className?: string }) {
   return (
-    <svg
-      className={className ?? "h-4 w-4"}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
+    <svg className={className ?? "h-4 w-4"} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
         d="M15 17H9m10-2V11a7 7 0 10-14 0v4l-2 2h18l-2-2z"
         stroke="currentColor"
@@ -55,35 +50,15 @@ function IconBell({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path
-        d="M14 19a2 2 0 01-4 0"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+      <path d="M14 19a2 2 0 01-4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }
 function IconEyeOff({ className }: { className?: string }) {
   return (
-    <svg
-      className={className ?? "h-4 w-4"}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M3 3l18 18"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <path
-        d="M10.6 10.6a3 3 0 004.24 4.24"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
+    <svg className={className ?? "h-4 w-4"} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M10.6 10.6a3 3 0 004.24 4.24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
       <path
         d="M9.9 5.2A10.5 10.5 0 0122 12c-.8 1.8-2.2 3.9-4.3 5.5M6.2 6.2C4.1 7.8 2.8 10 2 12c1.7 3.9 6 8 10 8 1.3 0 2.6-.3 3.8-.8"
         stroke="currentColor"
@@ -96,19 +71,8 @@ function IconEyeOff({ className }: { className?: string }) {
 }
 function IconCheck({ className }: { className?: string }) {
   return (
-    <svg
-      className={className ?? "h-4 w-4"}
-      viewBox="0 0 24 24"
-      fill="none"
-      aria-hidden="true"
-    >
-      <path
-        d="M20 6L9 17l-5-5"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg className={className ?? "h-4 w-4"} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -150,24 +114,15 @@ function freqLabel(freq: CreditFrequency): string {
 }
 
 function freqSort(freq: CreditFrequency): number {
-  const order: CreditFrequency[] = [
-    "monthly",
-    "quarterly",
-    "semiannual",
-    "annual",
-    "every4years",
-    "every5years",
-    "onetime",
-  ];
+  // Monthly -> Quarterly -> Semiannual -> Annual -> Other (everyXyears/onetime)
+  const order: CreditFrequency[] = ["monthly", "quarterly", "semiannual", "annual", "every4years", "every5years", "onetime"];
   const idx = order.indexOf(freq);
   return idx === -1 ? 999 : idx;
 }
 
 function creditSubtitle(c: Credit): string {
   const a = annualize(c.amount, c.frequency);
-  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(
-    a
-  )}`;
+  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
 }
 
 function surfaceCardClass(extra?: string): string {
@@ -230,12 +185,7 @@ function nextResetDateForCredit(params: {
   }
 
   // quarterly / semiannual / annual
-  const monthsStep =
-    credit.frequency === "quarterly"
-      ? 3
-      : credit.frequency === "semiannual"
-      ? 6
-      : 12;
+  const monthsStep = credit.frequency === "quarterly" ? 3 : credit.frequency === "semiannual" ? 6 : 12;
 
   let candidate = makeDate(now.getFullYear(), startMonth, startDay);
   if (candidate > today) candidate = makeDate(now.getFullYear() - 1, startMonth, startDay);
@@ -336,15 +286,10 @@ export default function AppDashboardPage() {
 
   // Founder logic
   const FOUNDER_EMAIL = "namanlohia02@gmail.com";
-  const isFounder =
-    (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+  const isFounder = (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
 
   // Top Picks pinned
-  const pinnedOrder: Card["key"][] = [
-    "amex-platinum",
-    "chase-sapphire-reserve",
-    "capitalone-venture-x",
-  ];
+  const pinnedOrder: Card["key"][] = ["amex-platinum", "chase-sapphire-reserve", "capitalone-venture-x"];
 
   const [search, setSearch] = useState("");
 
@@ -368,14 +313,33 @@ export default function AppDashboardPage() {
   const [feeMin, setFeeMin] = useState<number>(feeBounds.min);
   const [feeMax, setFeeMax] = useState<number>(feeBounds.max);
 
-  const activeCard = useMemo(
-    () => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0],
-    [activeCardKey]
-  );
+  const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
-  // ✅ Credits order:
-  // 1) frequency group: monthly, quarterly, semiannual, annual, other (every4years/every5years/onetime)
-  // 2) alphabetical within group (by title)
+  // -----------------------------
+  // remember last active card (premium feel)
+  // -----------------------------
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("clawback_active_card");
+      if (saved && CARDS.some((c) => c.key === saved)) {
+        setActiveCardKey(saved);
+      }
+    } catch {
+      // ignore
+    }
+    // run once
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("clawback_active_card", activeCardKey);
+    } catch {
+      // ignore
+    }
+  }, [activeCardKey]);
+
+  // ✅ Credits: frequency bucket THEN alphabetize by title
   const creditsSorted = useMemo(() => {
     return activeCard.credits
       .slice()
@@ -383,16 +347,9 @@ export default function AppDashboardPage() {
         const fa = freqSort(a.frequency);
         const fb = freqSort(b.frequency);
         if (fa !== fb) return fa - fb;
-
         const at = (a.title ?? "").toLowerCase();
         const bt = (b.title ?? "").toLowerCase();
-        const byTitle = at.localeCompare(bt);
-        if (byTitle !== 0) return byTitle;
-
-        // stable-ish tie breakers
-        const aid = (a.id ?? "").toLowerCase();
-        const bid = (b.id ?? "").toLowerCase();
-        return aid.localeCompare(bid);
+        return at.localeCompare(bt);
       });
   }, [activeCard]);
 
@@ -410,33 +367,21 @@ export default function AppDashboardPage() {
       if (!isDontCareOn && isUsedOn) totalRedeemed += a;
     }
 
-    const pct =
-      totalAvail <= 0
-        ? 0
-        : Math.min(100, Math.round((totalRedeemed / totalAvail) * 100));
+    const pct = totalAvail <= 0 ? 0 : Math.min(100, Math.round((totalRedeemed / totalAvail) * 100));
     return { totalAvail, totalRedeemed, pct };
   }, [creditsSorted, activeCard.key, dontCare, used]);
 
   // Quiz
   const [quizOpen, setQuizOpen] = useState(false);
   const [quiz, setQuiz] = useState<QuizInputs>({
-    spend: {
-      dining: 600,
-      travel: 400,
-      groceries: 400,
-      gas: 120,
-      online: 200,
-      other: 800,
-    },
+    spend: { dining: 600, travel: 400, groceries: 400, gas: 120, online: 200, other: 800 },
     annualFeeTolerance: 200,
     creditUtilizationPct: 0.5,
     includeWelcomeBonus: true,
   });
 
   const quizResults = useMemo(() => {
-    const scored = CARDS.map((c) => ({ card: c, ...scoreCard(c, quiz) })).sort(
-      (a, b) => b.score - a.score
-    );
+    const scored = CARDS.map((c) => ({ card: c, ...scoreCard(c, quiz) })).sort((a, b) => b.score - a.score);
     return scored.slice(0, 3);
   }, [quiz]);
 
@@ -522,10 +467,18 @@ export default function AppDashboardPage() {
         setUsed(usedMap);
         setDontCare(dcMap);
         setRemind(remindMap);
+
+        // premium feel: if user has saved cards, prefer last viewed; otherwise first saved
+        try {
+          const last = localStorage.getItem("clawback_active_card");
+          const lastValid = last && typedCards.some((x) => x.card_key === last);
+          if (lastValid) setActiveCardKey(last as string);
+          else if (typedCards.length > 0) setActiveCardKey(typedCards[0].card_key);
+        } catch {
+          // ignore
+        }
       } catch {
-        setDbWarning(
-          "Supabase tables/policies might not be set up yet. App will still run (no persistence)."
-        );
+        setDbWarning("Supabase tables/policies might not be set up yet. App will still run (no persistence).");
       }
     })();
   }, [user]);
@@ -582,11 +535,7 @@ export default function AppDashboardPage() {
     const k = `${cardKey}:${creditId}`;
     setUsed((prev) => {
       const next = { ...prev, [k]: !prev[k] };
-      void upsertCreditState(k, {
-        used: next[k],
-        dont_care: !!dontCare[k],
-        remind: !!remind[k],
-      });
+      void upsertCreditState(k, { used: next[k], dont_care: !!dontCare[k], remind: !!remind[k] });
       return next;
     });
   }
@@ -595,11 +544,7 @@ export default function AppDashboardPage() {
     const k = `${cardKey}:${creditId}`;
     setDontCare((prev) => {
       const next = { ...prev, [k]: !prev[k] };
-      void upsertCreditState(k, {
-        used: !!used[k],
-        dont_care: next[k],
-        remind: !!remind[k],
-      });
+      void upsertCreditState(k, { used: !!used[k], dont_care: next[k], remind: !!remind[k] });
       return next;
     });
   }
@@ -608,11 +553,7 @@ export default function AppDashboardPage() {
     const k = `${cardKey}:${creditId}`;
     setRemind((prev) => {
       const next = { ...prev, [k]: !prev[k] };
-      void upsertCreditState(k, {
-        used: !!used[k],
-        dont_care: !!dontCare[k],
-        remind: next[k],
-      });
+      void upsertCreditState(k, { used: !!used[k], dont_care: !!dontCare[k], remind: next[k] });
       return next;
     });
   }
@@ -630,15 +571,10 @@ export default function AppDashboardPage() {
       return;
     }
 
-    setSavedCards((prev) =>
-      prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]
-    );
+    setSavedCards((prev) => (prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]));
 
     try {
-      await supabase.from("user_cards").upsert(
-        { user_id: user.id, card_key: activeCard.key },
-        { onConflict: "user_id,card_key" }
-      );
+      await supabase.from("user_cards").upsert({ user_id: user.id, card_key: activeCard.key }, { onConflict: "user_id,card_key" });
     } catch {
       // ignore
     }
@@ -664,9 +600,7 @@ export default function AppDashboardPage() {
   const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const inFeeRange = CARDS.filter((c) => c.annualFee >= feeMin && c.annualFee <= feeMax);
-    const list = q
-      ? inFeeRange.filter((c) => (c.name + " " + c.issuer).toLowerCase().includes(q))
-      : inFeeRange.slice();
+    const list = q ? inFeeRange.filter((c) => (c.name + " " + c.issuer).toLowerCase().includes(q)) : inFeeRange.slice();
     return list.sort((a, b) => a.name.localeCompare(b.name));
   }, [search, feeMin, feeMax]);
 
@@ -677,9 +611,7 @@ export default function AppDashboardPage() {
   }, [search, feeMin, feeMax, feeBounds.min, feeBounds.max]);
 
   const topPicks = useMemo(() => {
-    return pinnedOrder
-      .map((k) => CARDS.find((c) => c.key === k))
-      .filter(Boolean) as Card[];
+    return pinnedOrder.map((k) => CARDS.find((c) => c.key === k)).filter(Boolean) as Card[];
   }, [pinnedOrder]);
 
   const tier3 = useMemo(() => baseFiltered.filter((c) => inTier(c, 500, 999999)), [baseFiltered]);
@@ -732,14 +664,8 @@ export default function AppDashboardPage() {
         return;
       }
 
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/app/auth/reset`
-          : undefined;
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/app/auth/reset` : undefined;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
       if (error) setResetMsg(error.message);
       else setResetMsg("Password reset email sent. Check your inbox.");
@@ -774,13 +700,7 @@ export default function AppDashboardPage() {
         : tone === "slate"
         ? "border-sky-300/20 bg-sky-300/10 text-sky-100"
         : "border-white/10 bg-white/5 text-white/70";
-    return (
-      <span
-        className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}
-      >
-        {text}
-      </span>
-    );
+    return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>{text}</span>;
   }
 
   function IconToggleButton(props: {
@@ -790,8 +710,7 @@ export default function AppDashboardPage() {
     icon: React.ReactNode;
     tone: "neutral" | "good" | "warn";
   }) {
-    const base =
-      "inline-flex items-center justify-center rounded-full border px-2.5 py-2 text-xs transition select-none";
+    const base = "inline-flex items-center justify-center rounded-full border px-2.5 py-2 text-xs transition select-none";
     const cls =
       props.tone === "good"
         ? props.on
@@ -806,24 +725,13 @@ export default function AppDashboardPage() {
         : "border-white/10 bg-white/5 text-white/65 hover:bg-white/10";
 
     return (
-      <button
-        type="button"
-        onClick={props.onClick}
-        title={props.title}
-        className={`${base} ${cls}`}
-      >
+      <button type="button" onClick={props.onClick} title={props.title} className={`${base} ${cls}`}>
         {props.icon}
       </button>
     );
   }
 
-  function CardRow({
-    card,
-    showTopPickBadge,
-  }: {
-    card: Card;
-    showTopPickBadge?: boolean;
-  }) {
+  function CardRow({ card, showTopPickBadge }: { card: Card; showTopPickBadge?: boolean }) {
     const active = card.key === activeCard.key;
 
     return (
@@ -832,10 +740,7 @@ export default function AppDashboardPage() {
           setActiveCardKey(card.key);
           setMobileView("credits");
         }}
-        className={[
-          "flex w-full items-start gap-3 px-3 py-3 text-left transition",
-          active ? "bg-white/8" : "hover:bg-white/5",
-        ].join(" ")}
+        className={["flex w-full items-start gap-3 px-3 py-3 text-left transition", active ? "bg-white/8" : "hover:bg-white/5"].join(" ")}
         type="button"
       >
         <div
@@ -851,13 +756,9 @@ export default function AppDashboardPage() {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-sm font-semibold leading-5 line-clamp-2 text-white/95">
-              {card.name}
-            </div>
+            <div className="text-sm font-semibold leading-5 line-clamp-2 text-white/95">{card.name}</div>
 
-            {/* welcome bonus est badge */}
-            {typeof card.signupBonusEstUsd === "number" &&
-            card.signupBonusEstUsd > 0 ? (
+            {typeof card.signupBonusEstUsd === "number" && card.signupBonusEstUsd > 0 ? (
               <span className="shrink-0 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
                 Bonus est: {formatMoney(card.signupBonusEstUsd)}
               </span>
@@ -871,8 +772,7 @@ export default function AppDashboardPage() {
           </div>
 
           <div className="mt-0.5 text-xs text-white/55">
-            Fee: {formatMoney(card.annualFee)} • Credits:{" "}
-            {formatMoney(card.creditsTrackedAnnualized)}
+            Fee: {formatMoney(card.annualFee)} • Credits: {formatMoney(card.creditsTrackedAnnualized)}
           </div>
         </div>
 
@@ -895,39 +795,18 @@ export default function AppDashboardPage() {
     if (cards.length === 0) return null;
 
     const headerBg =
-      accent === "gold"
-        ? "bg-amber-400/10 border-amber-400/20"
-        : accent === "slate"
-        ? "bg-sky-400/10 border-sky-400/20"
-        : "bg-white/5 border-white/10";
+      accent === "gold" ? "bg-amber-400/10 border-amber-400/20" : accent === "slate" ? "bg-sky-400/10 border-sky-400/20" : "bg-white/5 border-white/10";
 
-    const titleColor =
-      accent === "gold"
-        ? "text-amber-100"
-        : accent === "slate"
-        ? "text-sky-100"
-        : "text-white/90";
+    const titleColor = accent === "gold" ? "text-amber-100" : accent === "slate" ? "text-sky-100" : "text-white/90";
 
     return (
       <div className="border-t border-white/10">
-        <div
-          className={[
-            "px-3 py-3 border-b flex items-center justify-between gap-3",
-            headerBg,
-          ].join(" ")}
-        >
+        <div className={["px-3 py-3 border-b flex items-center justify-between gap-3", headerBg].join(" ")}>
           <div>
-            <div className={["text-lg font-semibold leading-6", titleColor].join(" ")}>
-              {title}
-            </div>
+            <div className={["text-lg font-semibold leading-6", titleColor].join(" ")}>{title}</div>
             <div className="text-xs text-white/55">{subtitle}</div>
           </div>
-          <div className="flex items-center gap-2">
-            {badgePill(
-              `${cards.length} cards`,
-              accent === "neutral" ? "neutral" : accent
-            )}
-          </div>
+          <div className="flex items-center gap-2">{badgePill(`${cards.length} cards`, accent === "neutral" ? "neutral" : accent)}</div>
         </div>
         {cards.map((c) => (
           <CardRow key={c.key} card={c} />
@@ -959,9 +838,7 @@ export default function AppDashboardPage() {
         </>
       ) : (
         <>
-          <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/70">
-            Preview mode
-          </div>
+          <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/70">Preview mode</div>
           <button
             onClick={() => {
               setAuthModalOpen(true);
@@ -1001,27 +878,15 @@ export default function AppDashboardPage() {
 
   const AuthModal = !authModalOpen ? null : (
     <div className="fixed inset-0 z-50">
-      <button
-        className="absolute inset-0 bg-black/60"
-        onClick={() => setAuthModalOpen(false)}
-        aria-label="Close auth modal backdrop"
-      />
+      <button className="absolute inset-0 bg-black/60" onClick={() => setAuthModalOpen(false)} aria-label="Close auth modal backdrop" />
       <div className="absolute left-1/2 top-10 w-[92vw] max-w-xl -translate-x-1/2">
         <div className={surfaceCardClass("p-5")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xl font-semibold text-white/95">
-                {authMode === "signin"
-                  ? "Sign in"
-                  : authMode === "signup"
-                  ? "Create account"
-                  : "Reset password"}
+                {authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}
               </div>
-              <div className="mt-1 text-sm text-white/55">
-                {authMode === "reset"
-                  ? "We’ll email you a reset link."
-                  : "Email/password. No anonymous accounts."}
-              </div>
+              <div className="mt-1 text-sm text-white/55">{authMode === "reset" ? "We’ll email you a reset link." : "Email/password. No anonymous accounts."}</div>
             </div>
             <button
               onClick={() => setAuthModalOpen(false)}
@@ -1102,16 +967,10 @@ export default function AppDashboardPage() {
                 >
                   Forgot password?
                 </button>
-                <div className="text-xs text-white/40">
-                  Tip: confirm email can be OFF during testing.
-                </div>
+                <div className="text-xs text-white/40">Tip: confirm email can be OFF during testing.</div>
               </div>
 
-              {authMsg ? (
-                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
-                  {authMsg}
-                </div>
-              ) : null}
+              {authMsg ? <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div> : null}
             </div>
           ) : (
             <div className="mt-4 space-y-2">
@@ -1131,23 +990,13 @@ export default function AppDashboardPage() {
               </button>
 
               <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={() => setAuthMode("signin")}
-                  className="text-xs text-white/55 hover:text-white/80"
-                  type="button"
-                >
+                <button onClick={() => setAuthMode("signin")} className="text-xs text-white/55 hover:text-white/80" type="button">
                   Back to sign in
                 </button>
-                <div className="text-xs text-white/40">
-                  Reset link opens /app/auth/reset
-                </div>
+                <div className="text-xs text-white/40">Reset link opens /app/auth/reset</div>
               </div>
 
-              {resetMsg ? (
-                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
-                  {resetMsg}
-                </div>
-              ) : null}
+              {resetMsg ? <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{resetMsg}</div> : null}
             </div>
           )}
         </div>
@@ -1156,53 +1005,29 @@ export default function AppDashboardPage() {
   );
 
   // -------------------------
-  // LEFT PANEL (NO SIGN IN UI)
+  // LEFT PANEL (Account box removed)
   // -------------------------
   const LeftPanel = (
     <aside className="lg:col-span-4">
       <div className={surfaceCardClass("p-4 lg:sticky lg:top-5")}>
+        {/* Your Cards (now top) */}
         <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-lg font-semibold text-white/95">Account</div>
-              <div className="mt-1 text-xs text-white/55">
-                Sign in top-right to save cards + toggles.
-              </div>
+              <div className="text-lg font-semibold text-white/95">Your Cards</div>
+              <div className="mt-1 text-xs text-white/55">Saved cards appear here.</div>
             </div>
+
             {user ? (
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
-                Synced
-              </span>
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">Synced</span>
             ) : (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                Preview
-              </span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">Preview</span>
             )}
           </div>
 
-          {!user ? (
-            <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
-              You can browse everything free. Sign in (top-right) to save 1 card + your reminders.
-            </div>
-          ) : (
-            <div className="mt-3 space-y-2">
-              <div className="text-xs text-white/60 break-all">{user.email}</div>
-              <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/70">
-                Plan: {isFounder ? "Founder" : "Free"}
-              </div>
-              {dbWarning ? (
-                <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">
-                  {dbWarning}
-                </div>
-              ) : null}
-            </div>
-          )}
-        </div>
-
-        {/* Your Cards */}
-        <div className="mt-4 rounded-2xl border border-white/10 bg-[#0F1218] p-4">
-          <div className="text-lg font-semibold text-white/95">Your Cards</div>
-          <div className="mt-1 text-xs text-white/55">Saved cards appear here.</div>
+          {dbWarning ? (
+            <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">{dbWarning}</div>
+          ) : null}
 
           <div className="mt-3 space-y-2">
             {savedCards.length === 0 ? (
@@ -1221,19 +1046,13 @@ export default function AppDashboardPage() {
                         <Image src={card.logo} alt={card.name} fill className="object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold leading-5 line-clamp-2">
-                          {card.name}
-                        </div>
-                        <div className="mt-0.5 text-xs text-white/55">
-                          Fee: {formatMoney(card.annualFee)}
-                        </div>
+                        <div className="text-sm font-semibold leading-5 line-clamp-2">{card.name}</div>
+                        <div className="mt-0.5 text-xs text-white/55">Fee: {formatMoney(card.annualFee)}</div>
                       </div>
                     </div>
 
                     <div className="mt-3">
-                      <div className="text-[11px] text-white/50">
-                        Cardmember year start (for Expiring Soon)
-                      </div>
+                      <div className="text-[11px] text-white/50">Cardmember year start (for Expiring Soon)</div>
                       <input
                         type="date"
                         value={start}
@@ -1241,11 +1060,7 @@ export default function AppDashboardPage() {
                         className="mt-1 w-full rounded-lg border border-white/10 bg-black/25 px-2 py-2 text-xs outline-none"
                         disabled={!user}
                       />
-                      {!user ? (
-                        <div className="mt-1 text-[11px] text-white/40">
-                          Sign in to save start dates.
-                        </div>
-                      ) : null}
+                      {!user ? <div className="mt-1 text-[11px] text-white/40">Sign in to save start dates.</div> : null}
                     </div>
                   </div>
                 );
@@ -1257,9 +1072,7 @@ export default function AppDashboardPage() {
         {/* Choose your card */}
         <div className="mt-4">
           <div className="text-lg font-semibold text-white/95">Choose your card</div>
-          <div className="mt-1 text-xs text-white/55">
-            Browse any card free. “Notify me” saves it to your dashboard.
-          </div>
+          <div className="mt-1 text-xs text-white/55">Browse any card free. “Notify me” saves it to your dashboard.</div>
 
           <div className="mt-3">
             <input
@@ -1273,9 +1086,7 @@ export default function AppDashboardPage() {
           {/* Fee filter */}
           <div className="mt-3 rounded-2xl border border-white/10 bg-[#0F1218] p-4">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-white/90">
-                Annual fee filter
-              </div>
+              <div className="text-sm font-semibold text-white/90">Annual fee filter</div>
               <button
                 className="text-xs text-white/45 hover:text-white/70"
                 onClick={() => {
@@ -1333,9 +1144,7 @@ export default function AppDashboardPage() {
               ))}
             </div>
 
-            <div className="mt-3 text-[11px] text-white/40">
-              Hard filter affects browsing only. Quiz uses soft fee penalty.
-            </div>
+            <div className="mt-3 text-[11px] text-white/40">Hard filter affects browsing only. Quiz uses soft fee penalty.</div>
           </div>
 
           {/* Tiered list */}
@@ -1345,12 +1154,8 @@ export default function AppDashboardPage() {
                 <div className="px-3 py-3 bg-amber-400/10">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-lg font-semibold text-amber-100">
-                        Top Picks
-                      </div>
-                      <div className="text-xs text-white/55">
-                        Your 3 highlighted cards
-                      </div>
+                      <div className="text-lg font-semibold text-amber-100">Top Picks</div>
+                      <div className="text-xs text-white/55">Your 3 highlighted cards</div>
                     </div>
                     {badgePill(`${topPicks.length} cards`, "gold")}
                   </div>
@@ -1365,11 +1170,7 @@ export default function AppDashboardPage() {
             <Section title="Tier 2" subtitle="$250–$500 annual fee" cards={tier2} accent="neutral" />
             <Section title="Tier 1" subtitle="$0–$250 annual fee" cards={tier1} accent="neutral" />
 
-            {baseFiltered.length === 0 ? (
-              <div className="p-4 text-sm text-white/60">
-                No cards match your search / fee filter.
-              </div>
-            ) : null}
+            {baseFiltered.length === 0 ? <div className="p-4 text-sm text-white/60">No cards match your search / fee filter.</div> : null}
           </div>
 
           <button
@@ -1380,15 +1181,9 @@ export default function AppDashboardPage() {
             Notify me for this card
           </button>
 
-          <div className="mt-2 text-xs text-white/40">
-            Free: save 1 card • Multi-card is $5 flat (coming soon)
-          </div>
+          <div className="mt-2 text-xs text-white/40">Free: save 1 card • Multi-card is $5 flat (coming soon)</div>
 
-          {authMsg ? (
-            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
-              {authMsg}
-            </div>
-          ) : null}
+          {authMsg ? <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div> : null}
         </div>
       </div>
     </aside>
@@ -1397,14 +1192,14 @@ export default function AppDashboardPage() {
   // -------------------------
   // MIDDLE: Credits
   // -------------------------
+  const netValue = totals.totalRedeemed - activeCard.annualFee;
+
   const MiddlePanel = (
     <main className="lg:col-span-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Credits Redeemed</div>
-          <div className="mt-2 text-3xl font-semibold text-emerald-100">
-            {formatMoney(totals.totalRedeemed)}
-          </div>
+          <div className="mt-2 text-3xl font-semibold text-emerald-100">{formatMoney(totals.totalRedeemed)}</div>
           <div className="mt-4 h-2 w-full rounded-full bg-black/30">
             <div className="h-2 rounded-full bg-emerald-400/80" style={{ width: `${totals.pct}%` }} />
           </div>
@@ -1413,41 +1208,30 @@ export default function AppDashboardPage() {
 
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Total Credits Available</div>
-          <div className="mt-2 text-3xl font-semibold text-white/95">
-            {formatMoney(totals.totalAvail)}
-          </div>
-          <div className="mt-2 text-xs text-white/50">
-            excludes credits marked “Don’t care”
-          </div>
+          <div className="mt-2 text-3xl font-semibold text-white/95">{formatMoney(totals.totalAvail)}</div>
+          <div className="mt-2 text-xs text-white/50">excludes credits marked “Don’t care”</div>
         </div>
 
         <div className={surfaceCardClass("p-4 border-red-400/15 bg-red-500/6")}>
-          <div className="text-xs text-white/55">Annual Fee</div>
-          <div className="mt-2 text-3xl font-semibold text-red-100">
-            {formatMoney(activeCard.annualFee)}
+          <div className="text-xs text-white/55">Net Value</div>
+          <div className="mt-2 text-3xl font-semibold text-red-100">{formatMoney(netValue)}</div>
+          <div className="mt-2 text-xs text-white/50">
+            redeemed {formatMoney(totals.totalRedeemed)} − fee {formatMoney(activeCard.annualFee)}
           </div>
-          <div className="mt-2 text-xs text-white/50">next: net value vs fee</div>
         </div>
       </div>
 
       {/* Active card glow */}
-      <div
-        className={surfaceCardClass(
-          "mt-6 p-5 border-amber-300/15 shadow-[0_0_0_2px_rgba(245,158,11,0.10),0_0_90px_rgba(245,158,11,0.08)]"
-        )}
-      >
+      <div className={surfaceCardClass("mt-6 p-5 border-amber-300/15 shadow-[0_0_0_2px_rgba(245,158,11,0.10),0_0_90px_rgba(245,158,11,0.08)]")}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/30">
               <Image src={activeCard.logo} alt={activeCard.name} fill className="object-cover" />
             </div>
             <div className="min-w-0">
-              <div className="text-xl font-semibold text-white/95 leading-6 line-clamp-2">
-                {activeCard.name}
-              </div>
+              <div className="text-xl font-semibold text-white/95 leading-6 line-clamp-2">{activeCard.name}</div>
               <div className="mt-1 text-sm text-white/55">
-                Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked:{" "}
-                {formatMoney(activeCard.creditsTrackedAnnualized)}
+                Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked: {formatMoney(activeCard.creditsTrackedAnnualized)}
               </div>
             </div>
           </div>
@@ -1468,14 +1252,21 @@ export default function AppDashboardPage() {
               const dontCareOn = !!dontCare[key];
               const remindOn = !!remind[key];
 
+              const rowTone = dontCareOn
+                ? "opacity-45"
+                : usedOn
+                ? "opacity-65"
+                : "opacity-100";
+
               return (
-                <div key={c.id} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
+                <div key={c.id} className={`rounded-2xl border border-white/10 bg-[#0F1218] p-4 ${rowTone}`}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">
-                        {c.title}
+                      <div className="flex items-center gap-2">
+                        {remindOn ? <span className="h-2 w-2 rounded-full bg-sky-300/80 shadow-[0_0_10px_rgba(125,211,252,0.35)]" /> : null}
+                        <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">{c.title}</div>
                       </div>
-                      <div className="mt-1 text-xs text-white/55">
+                      <div className="mt-1 text-xs text-white/55 line-clamp-1">
                         {creditSubtitle(c)}
                         {c.notes ? ` • ${c.notes}` : ""}
                       </div>
@@ -1511,9 +1302,7 @@ export default function AppDashboardPage() {
             })}
 
             {creditsSorted.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4 text-sm text-white/60">
-                No credits found for this card.
-              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4 text-sm text-white/60">No credits found for this card.</div>
             ) : null}
           </div>
         </div>
@@ -1528,19 +1317,12 @@ export default function AppDashboardPage() {
     <aside className="lg:col-span-3">
       <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-5 shadow-[0_0_70px_rgba(0,0,0,0.55)]">
         <div className="text-lg font-semibold text-amber-100">Points / Cash Back</div>
-        <div className="mt-1 text-xs text-amber-100/70">
-          Category multipliers for the active card
-        </div>
+        <div className="mt-1 text-xs text-amber-100/70">Category multipliers for the active card</div>
 
         <div className="mt-4 space-y-2">
           {activeCard.multipliers.map((m) => (
-            <div
-              key={m.label}
-              className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2"
-            >
-              <div className="text-sm font-medium text-amber-50/90 leading-5 line-clamp-2">
-                {m.label}
-              </div>
+            <div key={m.label} className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2">
+              <div className="text-sm font-medium text-amber-50/90 leading-5 line-clamp-2">{m.label}</div>
               <div className="shrink-0 text-sm font-semibold text-amber-50">{m.x}x</div>
             </div>
           ))}
@@ -1549,9 +1331,7 @@ export default function AppDashboardPage() {
 
       <div className={surfaceCardClass("mt-5 p-5 border-sky-300/12 bg-sky-500/5")}>
         <div className="text-lg font-semibold text-white/95">Expiring soon</div>
-        <div className="mt-1 text-xs text-white/55">
-          Date-based (needs your cardmember year start date).
-        </div>
+        <div className="mt-1 text-xs text-white/55">Date-based (needs your cardmember year start date).</div>
 
         {!cardStartDates[activeCard.key] ? (
           <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100/90">
@@ -1562,21 +1342,15 @@ export default function AppDashboardPage() {
         <div className="mt-4 space-y-2">
           {expiringSoon.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-white/60">
-              {cardStartDates[activeCard.key]
-                ? "No credits expiring in the next 14 days (with Remind on)."
-                : "No date set yet. Toggle Remind + set start date."}
+              {cardStartDates[activeCard.key] ? "No credits expiring in the next 14 days (with Remind on)." : "No date set yet. Toggle Remind + set start date."}
             </div>
           ) : (
             expiringSoon.map((x) => (
               <div key={x.credit.id} className="rounded-xl border border-white/10 bg-[#0F1218] p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold leading-5 line-clamp-2">
-                      {x.credit.title}
-                    </div>
-                    <div className="mt-1 text-xs text-white/55">
-                      {creditSubtitle(x.credit)}
-                    </div>
+                    <div className="text-sm font-semibold leading-5 line-clamp-2">{x.credit.title}</div>
+                    <div className="mt-1 text-xs text-white/55">{creditSubtitle(x.credit)}</div>
                   </div>
                   <div className="shrink-0 rounded-full border border-sky-300/20 bg-sky-300/10 px-2 py-0.5 text-[11px] text-sky-100">
                     due {formatDateShort(x.due)}
@@ -1587,9 +1361,7 @@ export default function AppDashboardPage() {
           )}
         </div>
 
-        <div className="mt-3 text-[11px] text-white/45">
-          Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.
-        </div>
+        <div className="mt-3 text-[11px] text-white/45">Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.</div>
       </div>
     </aside>
   );
@@ -1599,19 +1371,13 @@ export default function AppDashboardPage() {
   // -------------------------
   const QuizModal = !quizOpen ? null : (
     <div className="fixed inset-0 z-50">
-      <button
-        className="absolute inset-0 bg-black/60"
-        onClick={() => setQuizOpen(false)}
-        aria-label="Close quiz modal backdrop"
-      />
+      <button className="absolute inset-0 bg-black/60" onClick={() => setQuizOpen(false)} aria-label="Close quiz modal backdrop" />
       <div className="absolute left-1/2 top-8 w-[92vw] max-w-3xl -translate-x-1/2">
         <div className={surfaceCardClass("p-5")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xl font-semibold text-white/95">Quick Fit Quiz</div>
-              <div className="mt-1 text-sm text-white/55">
-                Recommendation math is deterministic (rule-based).
-              </div>
+              <div className="mt-1 text-sm text-white/55">Recommendation math is deterministic (rule-based).</div>
             </div>
             <button
               onClick={() => setQuizOpen(false)}
@@ -1623,9 +1389,7 @@ export default function AppDashboardPage() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {(
-              ["dining", "travel", "groceries", "gas", "online", "other"] as SpendCategory[]
-            ).map((cat) => (
+            {(["dining", "travel", "groceries", "gas", "online", "other"] as SpendCategory[]).map((cat) => (
               <div key={cat}>
                 <div className="text-xs text-white/50">{cat} / mo</div>
                 <input
@@ -1649,12 +1413,7 @@ export default function AppDashboardPage() {
               <input
                 type="number"
                 value={quiz.annualFeeTolerance}
-                onChange={(e) =>
-                  setQuiz((p) => ({
-                    ...p,
-                    annualFeeTolerance: Number(e.target.value || 0),
-                  }))
-                }
+                onChange={(e) => setQuiz((p) => ({ ...p, annualFeeTolerance: Number(e.target.value || 0) }))}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
               />
             </div>
@@ -1662,12 +1421,7 @@ export default function AppDashboardPage() {
               <div className="text-xs text-white/50">Credit usage %</div>
               <select
                 value={quiz.creditUtilizationPct}
-                onChange={(e) =>
-                  setQuiz((p) => ({
-                    ...p,
-                    creditUtilizationPct: Number(e.target.value),
-                  }))
-                }
+                onChange={(e) => setQuiz((p) => ({ ...p, creditUtilizationPct: Number(e.target.value) }))}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
               >
                 <option value={0.25}>25%</option>
@@ -1679,13 +1433,7 @@ export default function AppDashboardPage() {
           </div>
 
           <label className="mt-4 flex items-center gap-2 text-sm text-white/70">
-            <input
-              type="checkbox"
-              checked={quiz.includeWelcomeBonus}
-              onChange={(e) =>
-                setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))
-              }
-            />
+            <input type="checkbox" checked={quiz.includeWelcomeBonus} onChange={(e) => setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))} />
             Include welcome bonus value (if any)
           </label>
 
@@ -1696,17 +1444,12 @@ export default function AppDashboardPage() {
                 <div key={r.card.key} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold leading-5 line-clamp-2">
-                        {r.card.name}
-                      </div>
+                      <div className="text-sm font-semibold leading-5 line-clamp-2">{r.card.name}</div>
                       <div className="mt-1 text-sm text-white/60">
-                        Est annual value: {formatMoney(r.estAnnualValue)} • Score:{" "}
-                        {formatMoney(r.score)}
+                        Est annual value: {formatMoney(r.estAnnualValue)} • Score: {formatMoney(r.score)}
                       </div>
                     </div>
-                    <div className="shrink-0 text-xs text-white/50">
-                      Fee {formatMoney(r.card.annualFee)}
-                    </div>
+                    <div className="shrink-0 text-xs text-white/50">Fee {formatMoney(r.card.annualFee)}</div>
                   </div>
 
                   <div className="mt-3 space-y-1 text-xs text-white/55">
@@ -1718,9 +1461,7 @@ export default function AppDashboardPage() {
               ))}
             </div>
 
-            <div className="mt-3 text-xs text-white/45">
-              Next: “what to do this month” checklist + reminders UX.
-            </div>
+            <div className="mt-3 text-xs text-white/45">Next: “what to do this month” checklist + reminders UX.</div>
           </div>
         </div>
       </div>
@@ -1736,9 +1477,7 @@ export default function AppDashboardPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-2xl font-semibold text-white/95">ClawBack</div>
-            <div className="text-sm text-white/55">
-              No bank logins. Just credits, reminders, and savings.
-            </div>
+            <div className="text-sm text-white/55">No bank logins. Just credits, reminders, and savings.</div>
           </div>
 
           {TopRight}
@@ -1757,9 +1496,7 @@ export default function AppDashboardPage() {
               onClick={() => setMobileView(t.key as "cards" | "credits" | "insights")}
               className={[
                 "flex-1 rounded-full border px-3 py-2 text-sm font-semibold transition",
-                mobileView === t.key
-                  ? "border-white/20 bg-white/10 text-white"
-                  : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10",
+                mobileView === t.key ? "border-white/20 bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10",
               ].join(" ")}
             >
               {t.label}
@@ -1769,17 +1506,11 @@ export default function AppDashboardPage() {
 
         {/* Desktop grid */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>
-            {LeftPanel}
-          </div>
+          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>{LeftPanel}</div>
 
-          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>
-            {MiddlePanel}
-          </div>
+          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>{MiddlePanel}</div>
 
-          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>
-            {RightPanel}
-          </div>
+          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>{RightPanel}</div>
         </div>
       </div>
 
