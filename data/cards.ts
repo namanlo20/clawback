@@ -33,7 +33,13 @@ export type PointsProgram =
   | "marriott_points"
   | "hilton_points";
 
-export type SpendCategory = "dining" | "travel" | "groceries" | "gas" | "online" | "other";
+export type SpendCategory =
+  | "dining"
+  | "travel"
+  | "groceries"
+  | "gas"
+  | "online"
+  | "other";
 
 export type EarnRates = Partial<Record<SpendCategory, number>>;
 
@@ -64,7 +70,10 @@ export type Card = {
   credits: Credit[];
 };
 
-export const DEFAULT_POINT_VALUES_USD: Record<Exclude<PointsProgram, "cashback">, number> = {
+export const DEFAULT_POINT_VALUES_USD: Record<
+  Exclude<PointsProgram, "cashback">,
+  number
+> = {
   amex_mr: 0.015,
   chase_ur: 0.015,
   cap1_miles: 0.01,
@@ -106,10 +115,25 @@ export const CARDS: Card[] = [
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      { id: "plat-airline-incidental", title: "Airline Incidental Fees", amount: 200, frequency: "annual" },
+      {
+        id: "plat-airline-incidental",
+        title: "Airline Incidental Fees",
+        amount: 200,
+        frequency: "annual",
+      },
       { id: "plat-clear", title: "Clear Plus", amount: 209, frequency: "annual" },
-      { id: "plat-digital-entertainment", title: "Digital Entertainment", amount: 25, frequency: "monthly" },
-      { id: "plat-fhr-hotel-collection", title: "Fine Hotels + Resorts / Hotel Collection", amount: 300, frequency: "semiannual" },
+      {
+        id: "plat-digital-entertainment",
+        title: "Digital Entertainment",
+        amount: 25,
+        frequency: "monthly",
+      },
+      {
+        id: "plat-fhr-hotel-collection",
+        title: "Fine Hotels + Resorts / Hotel Collection",
+        amount: 300,
+        frequency: "semiannual",
+      },
       { id: "plat-lululemon", title: "Lululemon", amount: 75, frequency: "quarterly" },
       { id: "plat-oura", title: "Oura Ring", amount: 200, frequency: "annual" },
       { id: "plat-resy", title: "Resy Restaurants", amount: 100, frequency: "quarterly" },
@@ -187,8 +211,8 @@ export const CARDS: Card[] = [
     issuer: "Chase",
     annualFee: 95,
     creditsTrackedAnnualized: 170,
-    // TEMP: reuse CSR logo until you upload preferred art
-    logo: "/logos/chase-sapphire-reserve.png",
+    // ✅ REAL logo added
+    logo: "/logos/chase-sapphire-preferred.png",
     pointsProgram: "chase_ur",
     earnRates: { travel: 5, dining: 3, groceries: 3, online: 3, other: 1 },
     multipliers: [
@@ -211,8 +235,8 @@ export const CARDS: Card[] = [
     issuer: "American Express",
     annualFee: 150,
     creditsTrackedAnnualized: 209,
-    // TEMP: reuse Gold logo until you upload Green art
-    logo: "/logos/amex-gold.png",
+    // ✅ REAL logo added
+    logo: "/logos/amex-green.png",
     pointsProgram: "amex_mr",
     earnRates: { travel: 3, dining: 3, other: 1 },
     multipliers: [
@@ -230,7 +254,8 @@ export const CARDS: Card[] = [
     issuer: "American Express",
     annualFee: 150,
     creditsTrackedAnnualized: 200,
-    logo: "/logos/hilton-honors.png",
+    // ✅ REAL logo added
+    logo: "/logos/hilton-honors-surpass.png",
     pointsProgram: "hilton_points",
     earnRates: { travel: 12, dining: 6, groceries: 6, gas: 6, online: 4, other: 3 },
     multipliers: [
@@ -278,6 +303,7 @@ export const CARDS: Card[] = [
     issuer: "American Express",
     annualFee: 550,
     creditsTrackedAnnualized: 909,
+    // ✅ leave Aspire alone
     logo: "/logos/hilton-honors.png",
     pointsProgram: "hilton_points",
     earnRates: { travel: 7, dining: 7, other: 3 },
