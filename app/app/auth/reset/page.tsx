@@ -19,7 +19,8 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) return setStatus(`Error: ${error.message}`);
-      if (!data.session) return setStatus("Reset link not valid (no session). Request a new reset email.");
+      if (!data.session)
+        return setStatus("Reset link not valid (no session). Request a new reset email.");
       setStatus("Enter a new password.");
     });
   }, []);
@@ -59,14 +60,24 @@ export default function ResetPasswordPage() {
             placeholder="New password"
             value={pw1}
             onChange={(e) => setPw1(e.target.value)}
-            style={{ padding: 10, borderRadius: 10, border: "1px solid #333", background: "transparent" }}
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #333",
+              background: "transparent",
+            }}
           />
           <input
             type="password"
             placeholder="Confirm new password"
             value={pw2}
             onChange={(e) => setPw2(e.target.value)}
-            style={{ padding: 10, borderRadius: 10, border: "1px solid #333", background: "transparent" }}
+            style={{
+              padding: 10,
+              borderRadius: 10,
+              border: "1px solid #333",
+              background: "transparent",
+            }}
           />
           <button
             onClick={onSubmit}
