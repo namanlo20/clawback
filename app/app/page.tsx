@@ -4,6 +4,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
+import { Bell, EyeOff, CheckCircle2 } from "lucide-react";
+
 import {
   CARDS,
   pointValueUsd,
@@ -89,21 +91,7 @@ function freqSort(freq: CreditFrequency): number {
 
 function creditSubtitle(c: Credit): string {
   const a = annualize(c.amount, c.frequency);
-  return `${freqLabel(c.frequency)} • ${formatMoney(
-    c.amount
-  )} • Annualized: ${formatMoney(a)}`;
-}
-
-function pillClass(kind: "off" | "on" | "warn" | "good"): string {
-  const base =
-    "rounded-full border px-3 py-1 text-xs font-medium transition whitespace-nowrap";
-  if (kind === "on")
-    return `${base} border-emerald-400/30 bg-emerald-400/10 text-emerald-100 hover:bg-emerald-400/15`;
-  if (kind === "warn")
-    return `${base} border-amber-300/30 bg-amber-300/10 text-amber-100 hover:bg-amber-300/15`;
-  if (kind === "good")
-    return `${base} border-sky-400/30 bg-sky-400/10 text-sky-100 hover:bg-sky-400/15`;
-  return `${base} border-white/10 bg-white/5 text-white/75 hover:bg-white/10`;
+  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
 }
 
 function surfaceCardClass(extra?: string): string {
@@ -113,8 +101,14 @@ function surfaceCardClass(extra?: string): string {
   ].join(" ");
 }
 
+function formatDateShort(d: Date): string {
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 // -----------------------------
 // EXPIRING SOON DATE MATH (v2)
+// ✅ per saved card cardStartDates[cardKey]
+// ✅ computes nextResetDate by frequency
 // -----------------------------
 function nextResetDateForCredit(params: {
   credit: Credit;
@@ -123,10 +117,8 @@ function nextResetDateForCredit(params: {
 }): Date | null {
   const { credit, cardStartDate, now } = params;
 
-  // One-time: no reset date (usually hide)
   if (credit.frequency === "onetime") return null;
 
-  // Helper to create a date with clamped day
   const makeDate = (y: number, m0: number, d: number) => {
     const dd = clampDayToEndOfMonth(y, m0, d);
     return new Date(y, m0, dd, 0, 0, 0, 0);
@@ -134,39 +126,29 @@ function nextResetDateForCredit(params: {
 
   const startMonth = cardStartDate.getMonth();
   const startDay = cardStartDate.getDate();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // For monthly: next month same day (clamped)
+  // monthly → next month same day (clamp)
   if (credit.frequency === "monthly") {
     const y = now.getFullYear();
     const m0 = now.getMonth();
-    // Strict "next month":
     const nextM0 = m0 + 1;
     const nextY = y + Math.floor(nextM0 / 12);
     const normalizedM0 = ((nextM0 % 12) + 12) % 12;
     return makeDate(nextY, normalizedM0, startDay);
   }
 
-  // For quarterly/semiannual/annual: align to card start cadence
-  const monthsStep =
-    credit.frequency === "quarterly"
-      ? 3
-      : credit.frequency === "semiannual"
-      ? 6
-      : 12;
-
+  // every4years / every5years
   if (credit.frequency === "every4years" || credit.frequency === "every5years") {
     const years = credit.frequency === "every4years" ? 4 : 5;
-    // Find the next anniversary on that cadence relative to cardStartDate
     const startY = cardStartDate.getFullYear();
     const nowY = now.getFullYear();
     let k = Math.floor((nowY - startY) / years);
     if (k < 0) k = 0;
 
-    // Candidate anniversary
     let candY = startY + k * years;
     let cand = makeDate(candY, startMonth, startDay);
-    // If candidate <= today, move forward one cadence
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     if (cand <= today) {
       candY += years;
       cand = makeDate(candY, startMonth, startDay);
@@ -174,33 +156,26 @@ function nextResetDateForCredit(params: {
     return cand;
   }
 
-  // For quarterly/semiannual/annual:
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  // quarterly / semiannual / annual
+  const monthsStep =
+    credit.frequency === "quarterly"
+      ? 3
+      : credit.frequency === "semiannual"
+      ? 6
+      : 12;
 
-  // Find an initial cycle date near "now"
-  let y = now.getFullYear();
-  let m0 = startMonth;
-  let candidate = makeDate(y, m0, startDay);
+  // pick a base candidate around now
+  let candidate = makeDate(now.getFullYear(), startMonth, startDay);
+  if (candidate > today) candidate = makeDate(now.getFullYear() - 1, startMonth, startDay);
 
-  // Ensure candidate isn't too far in future/past by shifting year if needed
-  if (candidate > today) {
-    // maybe last year's start
-    candidate = makeDate(y - 1, m0, startDay);
-  }
-
-  // step forward by monthsStep until strictly > today
+  // step until strictly > today
   while (candidate <= today) {
     const next = new Date(candidate);
     next.setMonth(next.getMonth() + monthsStep);
-    // clamp day by reconstructing
     candidate = makeDate(next.getFullYear(), next.getMonth(), startDay);
   }
 
   return candidate;
-}
-
-function formatDateShort(d: Date): string {
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 // -----------------------------
@@ -272,10 +247,7 @@ function inTier(card: Card, min: number, max: number): boolean {
 // PAGE
 // -----------------------------
 export default function AppDashboardPage() {
-  const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">(
-    "credits"
-  );
-  const [quizOpen, setQuizOpen] = useState(false);
+  const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
 
   // Auth
   const [session, setSession] = useState<Session | null>(null);
@@ -286,20 +258,14 @@ export default function AppDashboardPage() {
   const [authBusy, setAuthBusy] = useState(false);
   const [authMsg, setAuthMsg] = useState<string | null>(null);
 
-  // Founder logic (simple): treat a specific email as founder (optional)
+  // Founder logic
   const FOUNDER_EMAIL = "namanlohia02@gmail.com";
-  const isFounder =
-    (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
+  const isFounder = (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
 
-  // Your Top Picks (pinned)
-  const pinnedOrder: Card["key"][] = [
-    "amex-platinum",
-    "chase-sapphire-reserve",
-    "capitalone-venture-x",
-  ];
+  // Top Picks pinned
+  const pinnedOrder: Card["key"][] = ["amex-platinum", "chase-sapphire-reserve", "capitalone-venture-x"];
 
   const [search, setSearch] = useState("");
-
   // ✅ Platinum default
   const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("amex-platinum");
 
@@ -320,10 +286,7 @@ export default function AppDashboardPage() {
   const [feeMin, setFeeMin] = useState<number>(feeBounds.min);
   const [feeMax, setFeeMax] = useState<number>(feeBounds.max);
 
-  const activeCard = useMemo(
-    () => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0],
-    [activeCardKey]
-  );
+  const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
   const creditsSorted = useMemo(() => {
     return activeCard.credits
@@ -350,14 +313,12 @@ export default function AppDashboardPage() {
       if (!isDontCareOn && isUsedOn) totalRedeemed += a;
     }
 
-    const pct =
-      totalAvail <= 0
-        ? 0
-        : Math.min(100, Math.round((totalRedeemed / totalAvail) * 100));
+    const pct = totalAvail <= 0 ? 0 : Math.min(100, Math.round((totalRedeemed / totalAvail) * 100));
     return { totalAvail, totalRedeemed, pct };
   }, [creditsSorted, activeCard.key, dontCare, used]);
 
-  // Quiz state
+  // Quiz
+  const [quizOpen, setQuizOpen] = useState(false);
   const [quiz, setQuiz] = useState<QuizInputs>({
     spend: { dining: 600, travel: 400, groceries: 400, gas: 120, online: 200, other: 800 },
     annualFeeTolerance: 200,
@@ -366,9 +327,7 @@ export default function AppDashboardPage() {
   });
 
   const quizResults = useMemo(() => {
-    const scored = CARDS.map((c) => ({ card: c, ...scoreCard(c, quiz) })).sort(
-      (a, b) => b.score - a.score
-    );
+    const scored = CARDS.map((c) => ({ card: c, ...scoreCard(c, quiz) })).sort((a, b) => b.score - a.score);
     return scored.slice(0, 3);
   }, [quiz]);
 
@@ -399,7 +358,6 @@ export default function AppDashboardPage() {
   const didInitialLoad = useRef(false);
 
   useEffect(() => {
-    // reset local when signed out
     if (!user) {
       setSavedCards([]);
       setCardStartDates({});
@@ -418,7 +376,6 @@ export default function AppDashboardPage() {
       try {
         setDbWarning(null);
 
-        // Load saved cards + start dates
         const { data: cards, error: cardsErr } = await supabase
           .from("user_cards")
           .select("card_key, card_start_date")
@@ -435,7 +392,6 @@ export default function AppDashboardPage() {
         }
         setCardStartDates(startMap);
 
-        // Load credit states
         const { data: states, error: statesErr } = await supabase
           .from("credit_states")
           .select("state_key, used, dont_care, remind");
@@ -458,21 +414,19 @@ export default function AppDashboardPage() {
         setDontCare(dcMap);
         setRemind(remindMap);
       } catch (e: any) {
-        // Don’t crash UI if tables/policies aren’t ready yet
-        setDbWarning(
-          "Supabase tables/policies might not be set up yet. App will still run locally (no persistence)."
-        );
+        setDbWarning("Supabase tables/policies might not be set up yet. App will still run (no persistence).");
       }
     })();
   }, [user]);
 
   // -----------------------------
-  // EXPIRING SOON (date-based v2)
+  // ✅ EXPIRING SOON (date-based v2)
+  // ✅ shows only if within 14 days
+  // ✅ obeys remind=true and not used/dontCare
   // -----------------------------
   const expiringSoon = useMemo(() => {
     const out: Array<{ credit: Credit; due: Date }> = [];
 
-    // Need a start date for the active card; if none, don’t show date-based items.
     const startStr = cardStartDates[activeCard.key];
     if (!startStr) return out;
 
@@ -490,12 +444,11 @@ export default function AppDashboardPage() {
 
       const due = nextResetDateForCredit({ credit: c, cardStartDate: start, now });
       if (!due) continue;
-
       if (due <= horizon) out.push({ credit: c, due });
     }
 
     out.sort((a, b) => a.due.getTime() - b.due.getTime());
-    return out.slice(0, 6);
+    return out.slice(0, 8);
   }, [creditsSorted, activeCard.key, remind, used, dontCare, cardStartDates]);
 
   // -----------------------------
@@ -503,32 +456,24 @@ export default function AppDashboardPage() {
   // -----------------------------
   async function upsertCreditState(stateKey: string, patch: Partial<DbCreditState>) {
     if (!user) return;
-    // Use upsert on unique(user_id, state_key)
-    await supabase
-      .from("credit_states")
-      .upsert(
-        {
-          user_id: user.id,
-          state_key: stateKey,
-          used: !!patch.used,
-          dont_care: !!patch.dont_care,
-          remind: !!patch.remind,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,state_key" }
-      );
+    await supabase.from("credit_states").upsert(
+      {
+        user_id: user.id,
+        state_key: stateKey,
+        used: !!patch.used,
+        dont_care: !!patch.dont_care,
+        remind: !!patch.remind,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,state_key" }
+    );
   }
 
   function toggleUsed(cardKey: string, creditId: string) {
     const k = `${cardKey}:${creditId}`;
     setUsed((prev) => {
       const next = { ...prev, [k]: !prev[k] };
-      // Persist best-effort
-      void upsertCreditState(k, {
-        used: next[k],
-        dont_care: !!dontCare[k],
-        remind: !!remind[k],
-      });
+      void upsertCreditState(k, { used: next[k], dont_care: !!dontCare[k], remind: !!remind[k] });
       return next;
     });
   }
@@ -537,11 +482,7 @@ export default function AppDashboardPage() {
     const k = `${cardKey}:${creditId}`;
     setDontCare((prev) => {
       const next = { ...prev, [k]: !prev[k] };
-      void upsertCreditState(k, {
-        used: !!used[k],
-        dont_care: next[k],
-        remind: !!remind[k],
-      });
+      void upsertCreditState(k, { used: !!used[k], dont_care: next[k], remind: !!remind[k] });
       return next;
     });
   }
@@ -550,17 +491,12 @@ export default function AppDashboardPage() {
     const k = `${cardKey}:${creditId}`;
     setRemind((prev) => {
       const next = { ...prev, [k]: !prev[k] };
-      void upsertCreditState(k, {
-        used: !!used[k],
-        dont_care: !!dontCare[k],
-        remind: next[k],
-      });
+      void upsertCreditState(k, { used: !!used[k], dont_care: !!dontCare[k], remind: next[k] });
       return next;
     });
   }
 
   async function notifyMeForThisCard() {
-    // Enforce free tier: 1 saved unless founder
     if (!user) {
       setAuthMsg("Sign in to save a card.");
       return;
@@ -570,18 +506,10 @@ export default function AppDashboardPage() {
       return;
     }
 
-    setSavedCards((prev) =>
-      prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]
-    );
+    setSavedCards((prev) => (prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]));
 
-    // Persist
     try {
-      await supabase
-        .from("user_cards")
-        .upsert(
-          { user_id: user.id, card_key: activeCard.key },
-          { onConflict: "user_id,card_key" }
-        );
+      await supabase.from("user_cards").upsert({ user_id: user.id, card_key: activeCard.key }, { onConflict: "user_id,card_key" });
     } catch {
       // ignore
     }
@@ -591,12 +519,10 @@ export default function AppDashboardPage() {
     setCardStartDates((p) => ({ ...p, [cardKey]: iso }));
     if (!user) return;
     try {
-      await supabase
-        .from("user_cards")
-        .upsert(
-          { user_id: user.id, card_key: cardKey, card_start_date: iso },
-          { onConflict: "user_id,card_key" }
-        );
+      await supabase.from("user_cards").upsert(
+        { user_id: user.id, card_key: cardKey, card_start_date: iso },
+        { onConflict: "user_id,card_key" }
+      );
     } catch {
       // ignore
     }
@@ -604,6 +530,7 @@ export default function AppDashboardPage() {
 
   // -----------------------------
   // BROWSE LIST (search + fee filter)
+  // ✅ Alphabetical
   // -----------------------------
   const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -620,134 +547,15 @@ export default function AppDashboardPage() {
     return q.length === 0 && isDefaultFeeRange;
   }, [search, feeMin, feeMax, feeBounds.min, feeBounds.max]);
 
-  const topPicks = useMemo(() => {
-    return pinnedOrder
-      .map((k) => CARDS.find((c) => c.key === k))
-      .filter(Boolean) as Card[];
-  }, [pinnedOrder]);
+  const topPicks = useMemo(() => pinnedOrder.map((k) => CARDS.find((c) => c.key === k)).filter(Boolean) as Card[], [pinnedOrder]);
 
   const tier3 = useMemo(() => baseFiltered.filter((c) => inTier(c, 500, 999999)), [baseFiltered]);
   const tier2 = useMemo(() => baseFiltered.filter((c) => inTier(c, 250, 499.99)), [baseFiltered]);
   const tier1 = useMemo(() => baseFiltered.filter((c) => inTier(c, 0, 249.99)), [baseFiltered]);
 
-  function CardRow({
-    card,
-    showTopPickBadge,
-  }: {
-    card: Card;
-    showTopPickBadge?: boolean;
-  }) {
-    const active = card.key === activeCard.key;
-
-    return (
-      <button
-        onClick={() => {
-          setActiveCardKey(card.key);
-          setMobileView("credits");
-        }}
-        className={[
-          "flex w-full items-start gap-3 px-3 py-3 text-left transition",
-          active ? "bg-white/8" : "hover:bg-white/5",
-        ].join(" ")}
-        type="button"
-      >
-        <div className="relative mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
-          <Image src={card.logo} alt={card.name} fill className="object-cover" />
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="text-sm font-semibold leading-5 line-clamp-2 text-white/95">
-              {card.name}
-            </div>
-            {showTopPickBadge ? (
-              <span className="shrink-0 rounded-full border border-amber-400/35 bg-amber-400/12 px-2 py-0.5 text-[10px] text-amber-100">
-                Top pick
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-0.5 text-xs text-white/55">
-            Fee: {formatMoney(card.annualFee)} • Credits:{" "}
-            {formatMoney(card.creditsTrackedAnnualized)}
-          </div>
-        </div>
-
-        <div className="pt-1 text-[10px] text-white/35">{active ? "Viewing" : ""}</div>
-      </button>
-    );
-  }
-
-  function Section({
-    title,
-    subtitle,
-    cards,
-    accent,
-  }: {
-    title: string;
-    subtitle: string;
-    cards: Card[];
-    accent: "gold" | "slate" | "neutral";
-  }) {
-    if (cards.length === 0) return null;
-
-    const headerBg =
-      accent === "gold"
-        ? "bg-amber-400/10 border-amber-400/20"
-        : accent === "slate"
-        ? "bg-sky-400/8 border-sky-400/18"
-        : "bg-white/5 border-white/10";
-
-    const titleColor =
-      accent === "gold"
-        ? "text-amber-100"
-        : accent === "slate"
-        ? "text-sky-100"
-        : "text-white/90";
-
-    return (
-      <div className="border-t border-white/10">
-        <div className={["px-3 py-2 border-b", headerBg].join(" ")}>
-          <div className={["text-base font-semibold", titleColor].join(" ")}>{title}</div>
-          <div className="text-xs text-white/50">{subtitle}</div>
-        </div>
-        {cards.map((c) => (
-          <CardRow key={c.key} card={c} />
-        ))}
-      </div>
-    );
-  }
-
   // -------------------------
   // AUTH ACTIONS
   // -------------------------
-  async function sendPasswordReset() {
-    setAuthBusy(true);
-    setAuthMsg(null);
-
-    const email = authEmail.trim();
-    if (!email) {
-      setAuthBusy(false);
-      setAuthMsg("Enter your email first, then click Forgot password.");
-      return;
-    }
-
-    try {
-      const redirectTo =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/auth/reset`
-          : undefined;
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      });
-
-      if (error) setAuthMsg(error.message);
-      else setAuthMsg("Password reset email sent. Check your inbox.");
-    } finally {
-      setAuthBusy(false);
-    }
-  }
-
   async function signIn() {
     setAuthBusy(true);
     setAuthMsg(null);
@@ -779,24 +587,161 @@ export default function AppDashboardPage() {
   }
 
   async function signOut() {
-  setAuthMsg(null);
+    setAuthMsg(null);
 
-  // ✅ Optimistic UI update so it immediately flips to signed-out
-  setSession(null);
+    // Optimistic UI update
+    setSession(null);
+    setSavedCards([]);
+    setCardStartDates({});
+    setUsed({});
+    setDontCare({});
+    setRemind({});
+    setDbWarning(null);
+    didInitialLoad.current = false;
 
-  // ✅ Also reset local app state immediately
-  setSavedCards([]);
-  setCardStartDates({});
-  setUsed({});
-  setDontCare({});
-  setRemind({});
-  setDbWarning(null);
-  didInitialLoad.current = false;
-
-  // ✅ Then actually sign out in Supabase
-  await supabase.auth.signOut({ scope: "local" });
+    await supabase.auth.signOut({ scope: "local" });
   }
 
+  // -----------------------------
+  // PREMIUM UI BITS
+  // -----------------------------
+  function badgePill(text: string, tone: "gold" | "slate" | "neutral") {
+    const cls =
+      tone === "gold"
+        ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+        : tone === "slate"
+        ? "border-sky-300/20 bg-sky-300/10 text-sky-100"
+        : "border-white/10 bg-white/5 text-white/70";
+    return (
+      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>
+        {text}
+      </span>
+    );
+  }
+
+  function IconToggleButton(props: {
+    on: boolean;
+    onClick: () => void;
+    title: string;
+    icon: React.ReactNode;
+    tone: "neutral" | "good" | "warn";
+  }) {
+    const base =
+      "inline-flex items-center justify-center rounded-full border px-2.5 py-2 text-xs transition select-none";
+    const cls =
+      props.tone === "good"
+        ? props.on
+          ? "border-emerald-300/30 bg-emerald-300/15 text-emerald-100"
+          : "border-white/10 bg-white/5 text-white/65 hover:bg-white/10"
+        : props.tone === "warn"
+        ? props.on
+          ? "border-amber-300/30 bg-amber-300/15 text-amber-100"
+          : "border-white/10 bg-white/5 text-white/65 hover:bg-white/10"
+        : props.on
+        ? "border-sky-300/30 bg-sky-300/15 text-sky-100"
+        : "border-white/10 bg-white/5 text-white/65 hover:bg-white/10";
+
+    return (
+      <button type="button" onClick={props.onClick} title={props.title} className={`${base} ${cls}`}>
+        {props.icon}
+      </button>
+    );
+  }
+
+  function CardRow({ card, showTopPickBadge }: { card: Card; showTopPickBadge?: boolean }) {
+    const active = card.key === activeCard.key;
+
+    return (
+      <button
+        onClick={() => {
+          setActiveCardKey(card.key);
+          setMobileView("credits");
+        }}
+        className={[
+          "flex w-full items-start gap-3 px-3 py-3 text-left transition",
+          active ? "bg-white/8" : "hover:bg-white/5",
+        ].join(" ")}
+        type="button"
+      >
+        <div
+          className={[
+            "relative mt-0.5 h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-black/30",
+            active ? "border-amber-300/30 shadow-[0_0_0_2px_rgba(245,158,11,0.12),0_0_40px_rgba(245,158,11,0.10)]" : "border-white/10",
+          ].join(" ")}
+        >
+          <Image src={card.logo} alt={card.name} fill className="object-cover" />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-sm font-semibold leading-5 line-clamp-2 text-white/95">{card.name}</div>
+
+            {/* ✅ welcome bonus est badge */}
+            {typeof card.signupBonusEstUsd === "number" && card.signupBonusEstUsd > 0 ? (
+              <span className="shrink-0 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-100">
+                Bonus est: {formatMoney(card.signupBonusEstUsd)}
+              </span>
+            ) : null}
+
+            {showTopPickBadge ? (
+              <span className="shrink-0 rounded-full border border-amber-400/35 bg-amber-400/12 px-2 py-0.5 text-[10px] font-semibold text-amber-100">
+                Top pick
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-0.5 text-xs text-white/55">
+            Fee: {formatMoney(card.annualFee)} • Credits: {formatMoney(card.creditsTrackedAnnualized)}
+          </div>
+        </div>
+
+        <div className="pt-1 text-[10px] text-white/35">{active ? "Viewing" : ""}</div>
+      </button>
+    );
+  }
+
+  function Section({
+    title,
+    subtitle,
+    cards,
+    accent,
+  }: {
+    title: string;
+    subtitle: string;
+    cards: Card[];
+    accent: "gold" | "slate" | "neutral";
+  }) {
+    if (cards.length === 0) return null;
+
+    const headerBg =
+      accent === "gold"
+        ? "bg-amber-400/10 border-amber-400/20"
+        : accent === "slate"
+        ? "bg-sky-400/10 border-sky-400/20"
+        : "bg-white/5 border-white/10";
+
+    const titleColor =
+      accent === "gold" ? "text-amber-100" : accent === "slate" ? "text-sky-100" : "text-white/90";
+
+    return (
+      <div className="border-t border-white/10">
+        {/* ✅ tier headers bigger + count badge */}
+        <div className={["px-3 py-3 border-b flex items-center justify-between gap-3", headerBg].join(" ")}>
+          <div>
+            <div className={["text-lg font-semibold leading-6", titleColor].join(" ")}>{title}</div>
+            <div className="text-xs text-white/55">{subtitle}</div>
+          </div>
+          <div className="flex items-center gap-2">
+            {badgePill(`${cards.length} cards`, accent === "neutral" ? "neutral" : accent)}
+          </div>
+        </div>
+
+        {cards.map((c) => (
+          <CardRow key={c.key} card={c} />
+        ))}
+      </div>
+    );
+  }
 
   // -------------------------
   // LEFT PANEL
@@ -876,25 +821,8 @@ export default function AppDashboardPage() {
                   Sign up
                 </button>
               </div>
-
-              {/* ✅ Forgot password */}
-              <div className="flex items-center justify-between">
-                <button
-                  onClick={sendPasswordReset}
-                  disabled={authBusy}
-                  className="text-xs text-white/55 hover:text-white/80 disabled:opacity-60"
-                  type="button"
-                >
-                  Forgot password?
-                </button>
-
-                <span className="text-[11px] text-white/35">We’ll email you a reset link</span>
-              </div>
-
               {authMsg ? (
-                <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
-                  {authMsg}
-                </div>
+                <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
               ) : null}
             </div>
           )}
@@ -922,19 +850,13 @@ export default function AppDashboardPage() {
                         <Image src={card.logo} alt={card.name} fill className="object-cover" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold leading-5 line-clamp-2">
-                          {card.name}
-                        </div>
-                        <div className="mt-0.5 text-xs text-white/55">
-                          Fee: {formatMoney(card.annualFee)}
-                        </div>
+                        <div className="text-sm font-semibold leading-5 line-clamp-2">{card.name}</div>
+                        <div className="mt-0.5 text-xs text-white/55">Fee: {formatMoney(card.annualFee)}</div>
                       </div>
                     </div>
 
                     <div className="mt-3">
-                      <div className="text-[11px] text-white/50">
-                        Cardmember year start (for Expiring Soon)
-                      </div>
+                      <div className="text-[11px] text-white/50">Cardmember year start (for Expiring Soon)</div>
                       <input
                         type="date"
                         value={start}
@@ -942,11 +864,7 @@ export default function AppDashboardPage() {
                         className="mt-1 w-full rounded-lg border border-white/10 bg-black/25 px-2 py-2 text-xs outline-none"
                         disabled={!user}
                       />
-                      {!user ? (
-                        <div className="mt-1 text-[11px] text-white/40">
-                          Sign in to save start dates.
-                        </div>
-                      ) : null}
+                      {!user ? <div className="mt-1 text-[11px] text-white/40">Sign in to save start dates.</div> : null}
                     </div>
                   </div>
                 );
@@ -958,9 +876,7 @@ export default function AppDashboardPage() {
         {/* Choose your card */}
         <div className="mt-4">
           <div className="text-lg font-semibold text-white/95">Choose your card</div>
-          <div className="mt-1 text-xs text-white/55">
-            Browse any card free. “Notify me” saves it to your dashboard.
-          </div>
+          <div className="mt-1 text-xs text-white/55">Browse any card free. “Notify me” saves it to your dashboard.</div>
 
           <div className="mt-3">
             <input
@@ -1032,18 +948,21 @@ export default function AppDashboardPage() {
               ))}
             </div>
 
-            <div className="mt-3 text-[11px] text-white/40">
-              Hard filter affects browsing only. Quiz uses soft fee penalty.
-            </div>
+            <div className="mt-3 text-[11px] text-white/40">Hard filter affects browsing only. Quiz uses soft fee penalty.</div>
           </div>
 
           {/* Tiered list */}
           <div className="mt-3 overflow-auto rounded-2xl border border-white/10 bg-[#0F1218] lg:max-h-[46vh]">
             {topPicksVisible ? (
               <div className="border-b border-white/10">
-                <div className="px-3 py-2 bg-amber-400/8">
-                  <div className="text-base font-semibold text-amber-100">Top Picks</div>
-                  <div className="text-xs text-white/50">Your 3 highlighted cards</div>
+                <div className="px-3 py-3 bg-amber-400/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-semibold text-amber-100">Top Picks</div>
+                      <div className="text-xs text-white/55">Your 3 highlighted cards</div>
+                    </div>
+                    {badgePill(`${topPicks.length} cards`, "gold")}
+                  </div>
                 </div>
                 {topPicks.map((c) => (
                   <CardRow key={c.key} card={c} showTopPickBadge />
@@ -1055,11 +974,7 @@ export default function AppDashboardPage() {
             <Section title="Tier 2" subtitle="$250–$500 annual fee" cards={tier2} accent="neutral" />
             <Section title="Tier 1" subtitle="$0–$250 annual fee" cards={tier1} accent="neutral" />
 
-            {baseFiltered.length === 0 ? (
-              <div className="p-4 text-sm text-white/60">
-                No cards match your search / fee filter.
-              </div>
-            ) : null}
+            {baseFiltered.length === 0 ? <div className="p-4 text-sm text-white/60">No cards match your search / fee filter.</div> : null}
           </div>
 
           <button
@@ -1070,9 +985,7 @@ export default function AppDashboardPage() {
             Notify me for this card
           </button>
 
-          <div className="mt-2 text-xs text-white/40">
-            Free: save 1 card • Multi-card is $5 flat (coming soon)
-          </div>
+          <div className="mt-2 text-xs text-white/40">Free: save 1 card • Multi-card is $5 flat (coming soon)</div>
         </div>
       </div>
     </aside>
@@ -1086,48 +999,37 @@ export default function AppDashboardPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Credits Redeemed</div>
-          <div className="mt-2 text-3xl font-semibold text-emerald-100">
-            {formatMoney(totals.totalRedeemed)}
-          </div>
+          <div className="mt-2 text-3xl font-semibold text-emerald-100">{formatMoney(totals.totalRedeemed)}</div>
           <div className="mt-4 h-2 w-full rounded-full bg-black/30">
-            <div
-              className="h-2 rounded-full bg-emerald-400/80"
-              style={{ width: `${totals.pct}%` }}
-            />
+            <div className="h-2 rounded-full bg-emerald-400/80" style={{ width: `${totals.pct}%` }} />
           </div>
           <div className="mt-2 text-xs text-white/50">{totals.pct}% used</div>
         </div>
 
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Total Credits Available</div>
-          <div className="mt-2 text-3xl font-semibold text-white/95">
-            {formatMoney(totals.totalAvail)}
-          </div>
-          <div className="mt-2 text-xs text-white/50">
-            excludes credits marked “Don’t care”
-          </div>
+          <div className="mt-2 text-3xl font-semibold text-white/95">{formatMoney(totals.totalAvail)}</div>
+          <div className="mt-2 text-xs text-white/50">excludes credits marked “Don’t care”</div>
         </div>
 
         <div className={surfaceCardClass("p-4 border-red-400/15 bg-red-500/6")}>
           <div className="text-xs text-white/55">Annual Fee</div>
-          <div className="mt-2 text-3xl font-semibold text-red-100">
-            {formatMoney(activeCard.annualFee)}
-          </div>
+          <div className="mt-2 text-3xl font-semibold text-red-100">{formatMoney(activeCard.annualFee)}</div>
           <div className="mt-2 text-xs text-white/50">next: net value vs fee</div>
         </div>
       </div>
 
-      <div className={surfaceCardClass("mt-6 p-5")}>
+      {/* ✅ active card glow */}
+      <div className={surfaceCardClass("mt-6 p-5 border-amber-300/15 shadow-[0_0_0_2px_rgba(245,158,11,0.10),0_0_90px_rgba(245,158,11,0.08)]")}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="relative h-12 w-12 overflow-hidden rounded-xl border border-white/10 bg-black/30">
               <Image src={activeCard.logo} alt={activeCard.name} fill className="object-cover" />
             </div>
             <div className="min-w-0">
-              <div className="truncate text-xl font-semibold text-white/95">{activeCard.name}</div>
-              <div className="mt-0.5 truncate text-sm text-white/55">
-                Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked:{" "}
-                {formatMoney(activeCard.creditsTrackedAnnualized)}
+              <div className="text-xl font-semibold text-white/95 leading-6 line-clamp-2">{activeCard.name}</div>
+              <div className="mt-1 text-sm text-white/55">
+                Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked: {formatMoney(activeCard.creditsTrackedAnnualized)}
               </div>
             </div>
           </div>
@@ -1152,46 +1054,47 @@ export default function AppDashboardPage() {
                 <div key={c.id} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-white/95">{c.title}</div>
-                      <div className="mt-0.5 truncate text-xs text-white/55">
+                      <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">{c.title}</div>
+                      <div className="mt-1 text-xs text-white/55">
                         {creditSubtitle(c)}
                         {c.notes ? ` • ${c.notes}` : ""}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 sm:justify-end lg:flex-nowrap">
-                      <button
-                        className={pillClass(remindOn ? "on" : "off")}
+                    {/* ✅ Icon toggles: bell / eye-off / check */}
+                    <div className="flex items-center gap-2 sm:justify-end">
+                      <IconToggleButton
+                        on={remindOn}
                         onClick={() => toggleRemind(activeCard.key, c.id)}
-                        type="button"
-                      >
-                        Remind
-                      </button>
-                      <button
-                        className={pillClass(dontCareOn ? "warn" : "off")}
+                        title="Remind"
+                        icon={<Bell className="h-4 w-4" />}
+                        tone="neutral"
+                      />
+                      <IconToggleButton
+                        on={dontCareOn}
                         onClick={() => toggleDontCare(activeCard.key, c.id)}
-                        type="button"
-                      >
-                        Don&apos;t care
-                      </button>
-                      <button
-                        className={pillClass(usedOn ? "good" : "off")}
+                        title="Don’t care"
+                        icon={<EyeOff className="h-4 w-4" />}
+                        tone="warn"
+                      />
+                      <IconToggleButton
+                        on={usedOn}
                         onClick={() => toggleUsed(activeCard.key, c.id)}
-                        type="button"
-                      >
-                        Mark used
-                      </button>
+                        title="Mark used"
+                        icon={<CheckCircle2 className="h-4 w-4" />}
+                        tone="good"
+                      />
                     </div>
                   </div>
                 </div>
               );
             })}
 
-            {creditsSorted.length === 0 && (
+            {creditsSorted.length === 0 ? (
               <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4 text-sm text-white/60">
                 No credits found for this card.
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -1199,15 +1102,13 @@ export default function AppDashboardPage() {
   );
 
   // -------------------------
-  // RIGHT: Multipliers + Expiring Soon (date-based)
+  // RIGHT: Multipliers + Expiring Soon
   // -------------------------
   const RightPanel = (
     <aside className="lg:col-span-3">
       <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-5 shadow-[0_0_70px_rgba(0,0,0,0.55)]">
         <div className="text-lg font-semibold text-amber-100">Points / Cash Back</div>
-        <div className="mt-1 text-xs text-amber-100/70">
-          Category multipliers for the active card
-        </div>
+        <div className="mt-1 text-xs text-amber-100/70">Category multipliers for the active card</div>
 
         <div className="mt-4 space-y-2">
           {activeCard.multipliers.map((m) => (
@@ -1215,9 +1116,7 @@ export default function AppDashboardPage() {
               key={m.label}
               className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2"
             >
-              <div className="text-sm font-medium text-amber-50/90 leading-5 line-clamp-2">
-                {m.label}
-              </div>
+              <div className="text-sm font-medium text-amber-50/90 leading-5 line-clamp-2">{m.label}</div>
               <div className="shrink-0 text-sm font-semibold text-amber-50">{m.x}x</div>
             </div>
           ))}
@@ -1226,9 +1125,7 @@ export default function AppDashboardPage() {
 
       <div className={surfaceCardClass("mt-5 p-5 border-sky-300/12 bg-sky-500/5")}>
         <div className="text-lg font-semibold text-white/95">Expiring soon</div>
-        <div className="mt-1 text-xs text-white/55">
-          Date-based (needs your cardmember year start date).
-        </div>
+        <div className="mt-1 text-xs text-white/55">Date-based (needs your cardmember year start date).</div>
 
         {!cardStartDates[activeCard.key] ? (
           <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100/90">
@@ -1248,8 +1145,8 @@ export default function AppDashboardPage() {
               <div key={x.credit.id} className="rounded-xl border border-white/10 bg-[#0F1218] p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold">{x.credit.title}</div>
-                    <div className="mt-0.5 text-xs text-white/55">{creditSubtitle(x.credit)}</div>
+                    <div className="text-sm font-semibold leading-5 line-clamp-2">{x.credit.title}</div>
+                    <div className="mt-1 text-xs text-white/55">{creditSubtitle(x.credit)}</div>
                   </div>
                   <div className="shrink-0 rounded-full border border-sky-300/20 bg-sky-300/10 px-2 py-0.5 text-[11px] text-sky-100">
                     due {formatDateShort(x.due)}
@@ -1259,28 +1156,26 @@ export default function AppDashboardPage() {
             ))
           )}
         </div>
+
+        <div className="mt-3 text-[11px] text-white/45">
+          Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.
+        </div>
       </div>
     </aside>
   );
 
   // -------------------------
-  // QUIZ MODAL
+  // QUIZ MODAL (kept)
   // -------------------------
   const QuizModal = !quizOpen ? null : (
     <div className="fixed inset-0 z-50">
-      <button
-        className="absolute inset-0 bg-black/60"
-        onClick={() => setQuizOpen(false)}
-        aria-label="Close quiz modal backdrop"
-      />
+      <button className="absolute inset-0 bg-black/60" onClick={() => setQuizOpen(false)} aria-label="Close quiz modal backdrop" />
       <div className="absolute left-1/2 top-8 w-[92vw] max-w-3xl -translate-x-1/2">
         <div className={surfaceCardClass("p-5")}>
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xl font-semibold text-white/95">Quick Fit Quiz</div>
-              <div className="mt-1 text-sm text-white/55">
-                Recommendation math is deterministic (rule-based).
-              </div>
+              <div className="mt-1 text-sm text-white/55">Recommendation math is deterministic (rule-based).</div>
             </div>
             <button
               onClick={() => setQuizOpen(false)}
@@ -1292,24 +1187,22 @@ export default function AppDashboardPage() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {(["dining", "travel", "groceries", "gas", "online", "other"] as SpendCategory[]).map(
-              (cat) => (
-                <div key={cat}>
-                  <div className="text-xs text-white/50">{cat} / mo</div>
-                  <input
-                    type="number"
-                    value={quiz.spend[cat]}
-                    onChange={(e) =>
-                      setQuiz((p) => ({
-                        ...p,
-                        spend: { ...p.spend, [cat]: Number(e.target.value || 0) },
-                      }))
-                    }
-                    className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
-                  />
-                </div>
-              )
-            )}
+            {(["dining", "travel", "groceries", "gas", "online", "other"] as SpendCategory[]).map((cat) => (
+              <div key={cat}>
+                <div className="text-xs text-white/50">{cat} / mo</div>
+                <input
+                  type="number"
+                  value={quiz.spend[cat]}
+                  onChange={(e) =>
+                    setQuiz((p) => ({
+                      ...p,
+                      spend: { ...p.spend, [cat]: Number(e.target.value || 0) },
+                    }))
+                  }
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
+                />
+              </div>
+            ))}
           </div>
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1318,12 +1211,7 @@ export default function AppDashboardPage() {
               <input
                 type="number"
                 value={quiz.annualFeeTolerance}
-                onChange={(e) =>
-                  setQuiz((p) => ({
-                    ...p,
-                    annualFeeTolerance: Number(e.target.value || 0),
-                  }))
-                }
+                onChange={(e) => setQuiz((p) => ({ ...p, annualFeeTolerance: Number(e.target.value || 0) }))}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
               />
             </div>
@@ -1331,12 +1219,7 @@ export default function AppDashboardPage() {
               <div className="text-xs text-white/50">Credit usage %</div>
               <select
                 value={quiz.creditUtilizationPct}
-                onChange={(e) =>
-                  setQuiz((p) => ({
-                    ...p,
-                    creditUtilizationPct: Number(e.target.value),
-                  }))
-                }
+                onChange={(e) => setQuiz((p) => ({ ...p, creditUtilizationPct: Number(e.target.value) }))}
                 className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
               >
                 <option value={0.25}>25%</option>
@@ -1365,17 +1248,14 @@ export default function AppDashboardPage() {
                     <div className="min-w-0">
                       <div className="text-sm font-semibold leading-5 line-clamp-2">{r.card.name}</div>
                       <div className="mt-1 text-sm text-white/60">
-                        Est annual value: {formatMoney(r.estAnnualValue)} • Score:{" "}
-                        {formatMoney(r.score)}
+                        Est annual value: {formatMoney(r.estAnnualValue)} • Score: {formatMoney(r.score)}
                       </div>
                     </div>
-                    <div className="shrink-0 text-xs text-white/50">
-                      Fee {formatMoney(r.card.annualFee)}
-                    </div>
+                    <div className="shrink-0 text-xs text-white/50">Fee {formatMoney(r.card.annualFee)}</div>
                   </div>
 
                   <div className="mt-3 space-y-1 text-xs text-white/55">
-                    {r.breakdown.slice(0, 4).map((b) => (
+                    {r.breakdown.slice(0, 5).map((b) => (
                       <div key={b}>• {b}</div>
                     ))}
                   </div>
@@ -1383,9 +1263,7 @@ export default function AppDashboardPage() {
               ))}
             </div>
 
-            <div className="mt-3 text-xs text-white/45">
-              Next: AI explanation text + “what to do this month” checklist (copy only).
-            </div>
+            <div className="mt-3 text-xs text-white/45">Next: “what to do this month” checklist + reminders UX.</div>
           </div>
         </div>
       </div>
@@ -1401,9 +1279,7 @@ export default function AppDashboardPage() {
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-2xl font-semibold text-white/95">ClawBack</div>
-            <div className="text-sm text-white/55">
-              No bank logins. Just credits, reminders, and savings.
-            </div>
+            <div className="text-sm text-white/55">No bank logins. Just credits, reminders, and savings.</div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -1434,9 +1310,7 @@ export default function AppDashboardPage() {
               onClick={() => setMobileView(t.key as "cards" | "credits" | "insights")}
               className={[
                 "flex-1 rounded-full border px-3 py-2 text-sm font-semibold transition",
-                mobileView === t.key
-                  ? "border-white/20 bg-white/10 text-white"
-                  : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10",
+                mobileView === t.key ? "border-white/20 bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10",
               ].join(" ")}
             >
               {t.label}
@@ -1446,33 +1320,15 @@ export default function AppDashboardPage() {
 
         {/* Desktop grid */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div
-            className={[
-              "lg:block",
-              mobileView === "cards" ? "block" : "hidden",
-              "lg:col-span-4",
-            ].join(" ")}
-          >
+          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>
             {LeftPanel}
           </div>
 
-          <div
-            className={[
-              "lg:block",
-              mobileView === "credits" ? "block" : "hidden",
-              "lg:col-span-5",
-            ].join(" ")}
-          >
+          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>
             {MiddlePanel}
           </div>
 
-          <div
-            className={[
-              "lg:block",
-              mobileView === "insights" ? "block" : "hidden",
-              "lg:col-span-3",
-            ].join(" ")}
-          >
+          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>
             {RightPanel}
           </div>
         </div>
