@@ -779,9 +779,24 @@ export default function AppDashboardPage() {
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
-    setAuthMsg(null);
+  setAuthMsg(null);
+
+  // ✅ Optimistic UI update so it immediately flips to signed-out
+  setSession(null);
+
+  // ✅ Also reset local app state immediately
+  setSavedCards([]);
+  setCardStartDates({});
+  setUsed({});
+  setDontCare({});
+  setRemind({});
+  setDbWarning(null);
+  didInitialLoad.current = false;
+
+  // ✅ Then actually sign out in Supabase
+  await supabase.auth.signOut({ scope: "local" });
   }
+
 
   // -------------------------
   // LEFT PANEL
