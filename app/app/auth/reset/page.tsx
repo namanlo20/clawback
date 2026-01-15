@@ -41,7 +41,15 @@ export default function ResetPasswordPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24 }}>
-      <div style={{ width: "100%", maxWidth: 420, padding: 20, border: "1px solid #333", borderRadius: 12 }}>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 420,
+          padding: 20,
+          border: "1px solid #333",
+          borderRadius: 12,
+        }}
+      >
         <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Reset password</h1>
         <p style={{ opacity: 0.85, marginBottom: 16 }}>{status}</p>
 
@@ -72,4 +80,8 @@ export default function ResetPasswordPage() {
           >
             {busy ? "Updating..." : "Update password"}
           </button>
-        </div
+        </div>
+      </div>
+    </div>
+  );
+}
