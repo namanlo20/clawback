@@ -122,63 +122,6 @@ function IconGear({ className }: { className?: string }) {
 }
 
 // -----------------------------
-// CONFETTI (no deps)
-// -----------------------------
-function ConfettiBurst({ seed }: { seed: number }) {
-  const [show, setShow] = useState(false);
-
-  const pieces = useMemo(() => {
-    if (!seed) return [] as Array<{ id: number; left: number; size: number; rotate: number; delay: number; dur: number; drift: number }>;
-    const rand = (min: number, max: number) => Math.random() * (max - min) + min;
-    return Array.from({ length: 80 }).map((_, i) => ({
-      id: i,
-      left: rand(0, 100),
-      size: rand(6, 11),
-      rotate: rand(0, 360),
-      delay: rand(0, 120),
-      dur: rand(700, 1200),
-      drift: rand(-80, 80),
-    }));
-  }, [seed]);
-
-  useEffect(() => {
-    if (!seed) return;
-    setShow(true);
-    const t = window.setTimeout(() => setShow(false), 1200);
-    return () => window.clearTimeout(t);
-  }, [seed]);
-
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 z-[70] pointer-events-none overflow-hidden">
-      <style jsx global>{`
-        @keyframes clawback_confetti {
-          0% { transform: translate3d(0, -20px, 0) rotate(0deg); opacity: 0; }
-          10% { opacity: 1; }
-          100% { transform: translate3d(var(--drift), 110vh, 0) rotate(720deg); opacity: 0; }
-        }
-      `}</style>
-      {pieces.map((p) => (
-        <div
-          key={p.id}
-          className="absolute top-0 rounded-sm bg-white/80"
-          style={{
-            left: `${p.left}%`,
-            width: `${p.size}px`,
-            height: `${Math.max(4, p.size * 0.55)}px`,
-            transform: `rotate(${p.rotate}deg)`,
-            animation: `clawback_confetti ${p.dur}ms ease-out ${p.delay}ms forwards`,
-            // @ts-expect-error CSS var
-            '--drift': `${p.drift}px`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// -----------------------------
 // HELPERS
 // -----------------------------
 function formatMoney(n: number): string {
@@ -229,7 +172,7 @@ function freqSort(freq: CreditFrequency): number {
 
 function creditSubtitle(c: Credit): string {
   const a = annualize(c.amount, c.frequency);
-  return `${freqLabel(c.frequency)} - ${formatMoney(c.amount)} - Annualized: ${formatMoney(a)}`;
+  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
 }
 
 function surfaceCardClass(extra?: string): string {
@@ -264,7 +207,7 @@ function nextResetDateForCredit(params: {
   const startDay = cardStartDate.getDate();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // monthly -> next month same day (clamp)
+  // monthly → next month same day (clamp)
   if (credit.frequency === "monthly") {
     const y = now.getFullYear();
     const m0 = now.getMonth();
@@ -314,24 +257,11 @@ function nextResetDateForCredit(params: {
 // -----------------------------
 // QUIZ ENGINE (deterministic)
 // -----------------------------
-type QuizIntent = "max_points" | "max_cashback" | "luxury_perks" | "low_annual_fee";
-type QuizFeeSensitivity = "premium_ok" | "under_250" | "no_fee";
-
 type QuizInputs = {
-  intent: QuizIntent;
   spend: Record<SpendCategory, number>; // monthly spend
-  feeSensitivity: QuizFeeSensitivity;
-  trackingTolerancePct: number; // 0..1 (how willing you are to track credits)
+  annualFeeTolerance: number; // soft penalty threshold
+  creditUtilizationPct: number; // 0..1
   includeWelcomeBonus: boolean;
-};
-
-type QuizResult = {
-  card: Card;
-  score: number;
-  estAnnualValue: number;
-  confidence: "High" | "Medium" | "Low";
-  why: string[];
-  breakdown: string[];
 };
 
 function getEarnRate(card: Card, cat: SpendCategory): number {
@@ -340,13 +270,13 @@ function getEarnRate(card: Card, cat: SpendCategory): number {
   return card.earnRates.other ?? 1;
 }
 
-function maxFeeAllowed(feeSensitivity: QuizFeeSensitivity): number {
-  if (feeSensitivity === "no_fee") return 0;
-  if (feeSensitivity === "under_250") return 250;
-  return Number.POSITIVE_INFINITY;
+function softFeePenalty(annualFee: number, tolerance: number): number {
+  const harshness = 1.15;
+  if (annualFee <= tolerance) return 0;
+  return (annualFee - tolerance) * harshness;
 }
 
-function scoreCardV2(card: Card, input: QuizInputs): QuizResult {
+function scoreCard(card: Card, input: QuizInputs) {
   const pv = pointValueUsd(card.pointsProgram);
 
   const annualSpendByCat: Record<SpendCategory, number> = {
@@ -358,109 +288,31 @@ function scoreCardV2(card: Card, input: QuizInputs): QuizResult {
     other: input.spend.other * 12,
   };
 
-  // Rewards value (deterministic)
   let rewardsValue = 0;
-  const catContrib: Record<SpendCategory, number> = {
-    dining: 0,
-    travel: 0,
-    groceries: 0,
-    gas: 0,
-    online: 0,
-    other: 0,
-  };
-
   for (const cat of Object.keys(annualSpendByCat) as SpendCategory[]) {
     const spend = annualSpendByCat[cat];
     const rate = getEarnRate(card, cat);
-    const v = spend * rate * pv;
-    rewardsValue += v;
-    catContrib[cat] = v;
+    rewardsValue += spend * rate * pv;
   }
 
-  // Credit value depends on willingness to track
-  const creditsValue = card.creditsTrackedAnnualized * input.trackingTolerancePct;
-
-  // Optional welcome bonus
+  const creditsValue = card.creditsTrackedAnnualized * input.creditUtilizationPct;
   const bonusValue = input.includeWelcomeBonus ? card.signupBonusEstUsd ?? 0 : 0;
 
   const fee = card.annualFee;
+  const penalty = softFeePenalty(fee, input.annualFeeTolerance);
 
-  // Fee sensitivity (hard-ish)
-  const maxFee = maxFeeAllowed(input.feeSensitivity);
-  const feeGatePenalty = fee > maxFee ? 10_000 : 0; // effectively filters
-
-  // Intent shaping (all deterministic)
-  let intentAdj = 0;
-  if (input.intent === "max_cashback") {
-    // Prefer cashback cards heavily
-    intentAdj += card.pointsProgram === "cashback" ? 250 : -250;
-  }
-  if (input.intent === "max_points") {
-    // Prefer points ecosystems slightly
-    intentAdj += card.pointsProgram === "cashback" ? -80 : 80;
-  }
-  if (input.intent === "luxury_perks") {
-    // Prefer high-credit, premium-fee products
-    const perkScore = Math.min(700, creditsValue * 0.45) + (fee >= 395 ? 120 : 0);
-    intentAdj += perkScore;
-  }
-  if (input.intent === "low_annual_fee") {
-    // Strongly penalize fee
-    intentAdj -= fee * 1.2;
-    intentAdj += fee <= 95 ? 180 : 0;
-    intentAdj += fee === 0 ? 220 : 0;
-  }
-
-  // Net value
   const estAnnualValue = rewardsValue + creditsValue + bonusValue - fee;
-
-  // Final score
-  const score = estAnnualValue + intentAdj - feeGatePenalty;
+  const score = estAnnualValue - penalty;
 
   const breakdown = [
     `Rewards: ${formatMoney(rewardsValue)}`,
-    `Credits (based on tracking): ${formatMoney(creditsValue)}`,
+    `Credits used: ${formatMoney(creditsValue)}`,
     `Welcome bonus: ${formatMoney(bonusValue)}`,
     `Annual fee: -${formatMoney(fee)}`,
-    `Intent adjustment: ${formatMoney(intentAdj)}`,
+    `Fee penalty (soft): -${formatMoney(penalty)}`,
   ];
-  if (feeGatePenalty) breakdown.push(`Fee preference filter: -${formatMoney(feeGatePenalty)}`);
 
-  // Explainable bullets (deterministic)
-  const topCat = (Object.entries(catContrib) as [SpendCategory, number][])    .slice()    .sort((a, b) => b[1] - a[1])[0][0];
-  const topRate = getEarnRate(card, topCat);
-
-  const why: string[] = [];
-  if (input.intent === "luxury_perks") {
-    why.push(`Big credits stack: ~${formatMoney(card.creditsTrackedAnnualized)} / yr tracked (you said ${Math.round(
-      input.trackingTolerancePct * 100
-    )}% willing to track).`);
-  }
-  if (input.intent === "max_cashback") {
-    why.push(card.pointsProgram === "cashback" ? "Pure cash-back structure (simple ROI)." : "High value, but not a pure cash-back card.");
-  }
-  if (input.intent === "max_points") {
-    why.push(card.pointsProgram === "cashback" ? "Strong earn, but you said you want points." : "Points ecosystem + strong earn profile.");
-  }
-  why.push(`Your top spend category looks like ${topCat}. This card earns ~${topRate}x there.`);
-
-  const feeLine = input.feeSensitivity === "no_fee" ? "You said no annual fee." : input.feeSensitivity === "under_250" ? "You said keep fees under $250." : "You're fine paying a premium fee if ROI is real.";
-  why.push(`${feeLine} This card is ${formatMoney(fee)} / yr.`);
-
-  if ((card.signupBonusEstUsd ?? 0) > 0 && input.includeWelcomeBonus) {
-    why.push(`Includes an estimated welcome bonus value (~${formatMoney(card.signupBonusEstUsd ?? 0)}).`);
-  }
-
-  // Keep confidence as a strict union type so TS doesn't widen it to `string`.
-  const confidence: QuizResult["confidence"] = "Low";
-  return { card, score, estAnnualValue, breakdown, why, confidence };
-}
-
-function confidenceFromGap(topScore: number, secondScore: number, topValue: number): "High" | "Medium" | "Low" {
-  const gap = topScore - secondScore;
-  if (topValue > 200 && gap > 200) return "High";
-  if (topValue > 50 && gap > 90) return "Medium";
-  return "Low";
+  return { score, estAnnualValue, breakdown };
 }
 
 function inTier(card: Card, min: number, max: number): boolean {
@@ -481,8 +333,6 @@ function normalizeOffsets(input: number[]): number[] {
 // -----------------------------
 export default function AppDashboardPage() {
   const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
-
-  const chooseCardRef = useRef<HTMLDivElement | null>(null);
 
   // Auth
   const [session, setSession] = useState<Session | null>(null);
@@ -525,7 +375,7 @@ export default function AppDashboardPage() {
 
   const [search, setSearch] = useState("");
 
-  //  Platinum default
+  // ✅ Platinum default
   const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("amex-platinum");
 
   const [savedCards, setSavedCards] = useState<string[]>([]);
@@ -547,7 +397,7 @@ export default function AppDashboardPage() {
 
   const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
-  //  Credits sorted by frequency bucket THEN alphabetized by title
+  // ✅ Credits sorted by frequency bucket THEN alphabetized by title
   const creditsSorted = useMemo(() => {
     return activeCard.credits
       .slice()
@@ -577,30 +427,19 @@ export default function AppDashboardPage() {
     return { totalAvail, totalRedeemed, pct };
   }, [creditsSorted, activeCard.key, dontCare, used]);
 
-  // Quiz (v2: gated + deterministic)
+  // Quiz
   const [quizOpen, setQuizOpen] = useState(false);
-  const [quizStage, setQuizStage] = useState<0 | 1 | 2>(0);
-  const [lookingForNew, setLookingForNew] = useState<boolean | null>(null);
   const [quiz, setQuiz] = useState<QuizInputs>({
-    intent: "max_points",
     spend: { dining: 600, travel: 400, groceries: 400, gas: 120, online: 200, other: 800 },
-    feeSensitivity: "premium_ok",
-    trackingTolerancePct: 0.5,
+    annualFeeTolerance: 200,
+    creditUtilizationPct: 0.5,
     includeWelcomeBonus: true,
   });
 
-  const quizResults: QuizResult[] = useMemo(() => {
-    if (!lookingForNew) return [];
-    const scored: QuizResult[] = CARDS.map((c) => scoreCardV2(c, quiz)).sort((a, b) => b.score - a.score);
-
-    // Confidence computed from gap between #1 and #2
-    const top = scored[0];
-    const second = scored[1];
-    const gap = top && second ? top.score - second.score : 0;
-    const confidence: QuizResult["confidence"] = gap >= 250 ? "High" : gap >= 110 ? "Medium" : "Low";
-
-    return scored.slice(0, 3).map((r, idx) => ({ ...r, confidence: idx === 0 ? confidence : r.confidence }));
-  }, [quiz, lookingForNew]);
+  const quizResults = useMemo(() => {
+    const scored = CARDS.map((c) => ({ card: c, ...scoreCard(c, quiz) })).sort((a, b) => b.score - a.score);
+    return scored.slice(0, 3);
+  }, [quiz]);
 
   // -----------------------------
   // AUTH: init + subscribe
@@ -724,7 +563,7 @@ export default function AppDashboardPage() {
   }, [user]);
 
   // -----------------------------
-  //  EXPIRING SOON (date-based v2)
+  // ✅ EXPIRING SOON (date-based v2)
   // -----------------------------
   const expiringSoon = useMemo(() => {
     const out: Array<{ credit: Credit; due: Date }> = [];
@@ -752,86 +591,6 @@ export default function AppDashboardPage() {
     out.sort((a, b) => a.due.getTime() - b.due.getTime());
     return out.slice(0, 8);
   }, [creditsSorted, activeCard.key, remind, used, dontCare, cardStartDates]);
-
-
-  // -----------------------------
-  // Premium: hero preview + win moments
-  // -----------------------------
-
-  const feeRecovered = useMemo(() => {
-    if (!activeCard.annualFee) return false;
-    return totals.totalRedeemed >= activeCard.annualFee;
-  }, [totals.totalRedeemed, activeCard.annualFee]);
-
-  const thisMonthRecovered = useMemo(() => {
-    // Deterministic & safe approximation: only monthly credits counted as "this month"
-    let v = 0;
-    for (const c of creditsSorted) {
-      if (c.frequency !== "monthly") continue;
-      const k = `${activeCard.key}:${c.id}`;
-      if (dontCare[k]) continue;
-      if (!used[k]) continue;
-      v += c.amount;
-    }
-    return v;
-  }, [creditsSorted, activeCard.key, dontCare, used]);
-
-  const streakCount = useMemo(() => {
-    // "Streak" (optional): number of credits checked off (any frequency)
-    let n = 0;
-    for (const c of creditsSorted) {
-      const k = `${activeCard.key}:${c.id}`;
-      if (dontCare[k]) continue;
-      if (used[k]) n += 1;
-    }
-    return n;
-  }, [creditsSorted, activeCard.key, dontCare, used]);
-
-  const bestDining = useMemo(() => {
-    const list = CARDS.slice().sort((a, b) => getEarnRate(b, "dining") - getEarnRate(a, "dining"));
-    const top = list[0] ?? CARDS[0];
-    return { card: top, rate: getEarnRate(top, "dining") };
-  }, []);
-
-  const nextExpiryPreview = useMemo(() => {
-    const first = expiringSoon[0];
-    if (!first) return { label: "-", days: null as number | null };
-    const now = new Date();
-    const ms = first.due.getTime() - now.getTime();
-    const days = Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
-    return { label: `${days} day${days === 1 ? "" : "s"}`, days };
-  }, [expiringSoon]);
-
-  const [toast, setToast] = useState<string | null>(null);
-  const [confettiSeed, setConfettiSeed] = useState<number>(0);
-  const prevFeeRecovered = useRef<boolean>(false);
-
-  function startTrackingScroll() {
-    const el = chooseCardRef.current;
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function launchConfettiOncePerCard(cardKey: string) {
-    try {
-      const k = `feeRecoveredShown:${cardKey}`;
-      if (localStorage.getItem(k)) return;
-      localStorage.setItem(k, "1");
-    } catch {
-      // ignore
-    }
-
-    setConfettiSeed((x) => x + 1);
-    setToast("You've fully clawed back your annual fee ");
-    window.setTimeout(() => setToast(null), 3500);
-  }
-
-  useEffect(() => {
-    const crossed = feeRecovered && !prevFeeRecovered.current;
-    prevFeeRecovered.current = feeRecovered;
-    if (!crossed) return;
-    launchConfettiOncePerCard(activeCard.key);
-  }, [feeRecovered, activeCard.key]);
 
   // -----------------------------
   // PERSIST HELPERS
@@ -1147,7 +906,7 @@ export default function AppDashboardPage() {
           </div>
 
           <div className="mt-0.5 text-xs text-white/55">
-            Fee: {formatMoney(card.annualFee)} - Credits: {formatMoney(card.creditsTrackedAnnualized)}
+            Fee: {formatMoney(card.annualFee)} • Credits: {formatMoney(card.creditsTrackedAnnualized)}
           </div>
         </div>
 
@@ -1319,7 +1078,7 @@ export default function AppDashboardPage() {
                   className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none placeholder:text-white/30"
                 />
                 <div className="mt-1 text-[11px] text-white/40">
-                  SMS reminders are OFF by default. We'll add phone verification later.
+                  SMS reminders are OFF by default. We’ll add phone verification later.
                 </div>
               </div>
 
@@ -1443,7 +1202,7 @@ export default function AppDashboardPage() {
                 {authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}
               </div>
               <div className="mt-1 text-sm text-white/55">
-                {authMode === "reset" ? "We'll email you a reset link." : "Email/password. No anonymous accounts."}
+                {authMode === "reset" ? "We’ll email you a reset link." : "Email/password. No anonymous accounts."}
               </div>
             </div>
             <button
@@ -1603,7 +1362,7 @@ export default function AppDashboardPage() {
           <div className="mt-3 space-y-2">
             {savedCards.length === 0 ? (
               <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/60">
-                No saved cards yet. Pick a card and click "Notify me".
+                No saved cards yet. Pick a card and click “Notify me”.
               </div>
             ) : (
               savedCards.map((k) => {
@@ -1641,9 +1400,9 @@ export default function AppDashboardPage() {
         </div>
 
         {/* Choose your card */}
-        <div className="mt-4" ref={chooseCardRef}>
+        <div className="mt-4">
           <div className="text-lg font-semibold text-white/95">Choose your card</div>
-          <div className="mt-1 text-xs text-white/55">Browse any card free. "Notify me" saves it to your dashboard.</div>
+          <div className="mt-1 text-xs text-white/55">Browse any card free. “Notify me” saves it to your dashboard.</div>
 
           <div className="mt-3">
             <input
@@ -1697,8 +1456,8 @@ export default function AppDashboardPage() {
 
             <div className="mt-3 flex flex-wrap gap-2">
               {[
-                { label: "0-250", min: 0, max: 250 },
-                { label: "250-500", min: 250, max: 500 },
+                { label: "0–250", min: 0, max: 250 },
+                { label: "250–500", min: 250, max: 500 },
                 { label: "500+", min: 500, max: feeBounds.max },
               ].map((chip) => (
                 <button
@@ -1738,8 +1497,8 @@ export default function AppDashboardPage() {
             ) : null}
 
             <Section title="Tier 3" subtitle="$500+ annual fee" cards={tier3} accent="slate" />
-            <Section title="Tier 2" subtitle="$250-$500 annual fee" cards={tier2} accent="neutral" />
-            <Section title="Tier 1" subtitle="$0-$250 annual fee" cards={tier1} accent="neutral" />
+            <Section title="Tier 2" subtitle="$250–$500 annual fee" cards={tier2} accent="neutral" />
+            <Section title="Tier 1" subtitle="$0–$250 annual fee" cards={tier1} accent="neutral" />
 
             {baseFiltered.length === 0 ? <div className="p-4 text-sm text-white/60">No cards match your search / fee filter.</div> : null}
           </div>
@@ -1749,10 +1508,10 @@ export default function AppDashboardPage() {
             className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
             type="button"
           >
-            {savedCards.includes(activeCard.key) ? "Saved (saved)" : "Notify me for this card"}
+            {savedCards.includes(activeCard.key) ? "Saved ✓" : "Notify me for this card"}
           </button>
 
-          <div className="mt-2 text-xs text-white/40">Free: save 1 card - Multi-card is $5 flat (coming soon)</div>
+          <div className="mt-2 text-xs text-white/40">Free: save 1 card • Multi-card is $5 flat (coming soon)</div>
 
           {authMsg ? (
             <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
@@ -1767,49 +1526,7 @@ export default function AppDashboardPage() {
   // -------------------------
   const MiddlePanel = (
     <main className="lg:col-span-5">
-
-      
-
-          {/* Mini dashboard preview */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0B0E14] p-5 shadow-[0_0_70px_rgba(0,0,0,0.55)]">
-            <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-emerald-300/10 blur-3xl" />
-            <div className="absolute -left-12 -bottom-12 h-48 w-48 rounded-full bg-red-400/10 blur-3xl" />
-
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <div className="text-xs text-white/55">Mini preview</div>
-                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] text-white/70">
-                  {activeCard.name}
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-[11px] text-white/55">Recovered this year</div>
-                  <div className="mt-2 text-2xl font-semibold text-emerald-100">{formatMoney(totals.totalRedeemed)}</div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-[11px] text-white/55">Next credit expiring in</div>
-                  <div className="mt-2 text-2xl font-semibold text-white/95">{nextExpiryPreview.label}</div>
-                  <div className="mt-1 text-xs text-white/45">based on your saved start date + Remind toggles</div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-[11px] text-white/55">Best card for dining</div>
-                  <div className="mt-2 text-sm font-semibold text-white/95 line-clamp-2">
-                    {bestDining.card.issuer} {bestDining.card.name}
-                  </div>
-                  <div className="mt-1 text-xs text-white/50">~{bestDining.rate}x dining</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* KPIs (secondary) */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Credits Redeemed</div>
           <div className="mt-2 text-3xl font-semibold text-emerald-100">{formatMoney(totals.totalRedeemed)}</div>
@@ -1822,34 +1539,13 @@ export default function AppDashboardPage() {
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Total Credits Available</div>
           <div className="mt-2 text-3xl font-semibold text-white/95">{formatMoney(totals.totalAvail)}</div>
-          <div className="mt-2 text-xs text-white/50">excludes credits marked "Don't care"</div>
+          <div className="mt-2 text-xs text-white/50">excludes credits marked “Don’t care”</div>
         </div>
 
         <div className={surfaceCardClass("p-4 border-red-400/15 bg-red-500/6")}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-xs text-white/55">Annual Fee</div>
-            {feeRecovered ? (
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[11px] text-emerald-100">
-                Fee recovered 
-              </span>
-            ) : null}
-          </div>
+          <div className="text-xs text-white/55">Annual Fee</div>
           <div className="mt-2 text-3xl font-semibold text-red-100">{formatMoney(activeCard.annualFee)}</div>
-          <div className="mt-2 text-xs text-white/50">net value vs fee coming next</div>
-        </div>
-      </div>
-
-      {/* Tier-1 premium quick wins */}
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className={surfaceCardClass("p-4")}>
-          <div className="text-xs text-white/55">This month recovered</div>
-          <div className="mt-2 text-2xl font-semibold text-white/95">{formatMoney(thisMonthRecovered)}</div>
-          <div className="mt-2 text-xs text-white/50">approx: monthly credits you marked used</div>
-        </div>
-        <div className={surfaceCardClass("p-4")}>
-          <div className="text-xs text-white/55">Streak</div>
-          <div className="mt-2 text-2xl font-semibold text-white/95">{streakCount} credits checked off</div>
-          <div className="mt-2 text-xs text-white/50">keeps you honest (and keeps your fee "paid for")</div>
+          <div className="mt-2 text-xs text-white/50">next: net value vs fee</div>
         </div>
       </div>
 
@@ -1863,7 +1559,7 @@ export default function AppDashboardPage() {
             <div className="min-w-0">
               <div className="text-xl font-semibold text-white/95 leading-6 line-clamp-2">{activeCard.name}</div>
               <div className="mt-1 text-sm text-white/55">
-                Annual fee: {formatMoney(activeCard.annualFee)} - Credits tracked: {formatMoney(activeCard.creditsTrackedAnnualized)}
+                Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked: {formatMoney(activeCard.creditsTrackedAnnualized)}
               </div>
             </div>
           </div>
@@ -1878,7 +1574,7 @@ export default function AppDashboardPage() {
           <div className="text-base font-semibold text-white/90">Credits</div>
 
           <div className="mt-2 text-xs text-white/50">
-            Sorted by frequency (Monthly -> Quarterly -> Semiannual -> Annual -> Other), then A-Z.
+            Sorted by frequency (Monthly → Quarterly → Semiannual → Annual → Other), then A–Z.
           </div>
 
           <div className="mt-4 space-y-3">
@@ -1895,7 +1591,7 @@ export default function AppDashboardPage() {
                       <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">{c.title}</div>
                       <div className="mt-1 text-xs text-white/55">
                         {creditSubtitle(c)}
-                        {c.notes ? ` - ${c.notes}` : ""}
+                        {c.notes ? ` • ${c.notes}` : ""}
                       </div>
                     </div>
 
@@ -1911,7 +1607,7 @@ export default function AppDashboardPage() {
                       <IconToggleButton
                         on={dontCareOn}
                         onClick={() => toggleDontCare(activeCard.key, c.id)}
-                        title="Don't care"
+                        title="Don’t care"
                         icon={<IconEyeOff className="h-4 w-4" />}
                         tone="warn"
                       />
@@ -1967,7 +1663,7 @@ export default function AppDashboardPage() {
 
         {!cardStartDates[activeCard.key] ? (
           <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100/90">
-            Add your <b>cardmember year start date</b> in "Your Cards" to enable Expiring Soon.
+            Add your <b>cardmember year start date</b> in “Your Cards” to enable Expiring Soon.
           </div>
         ) : null}
 
@@ -1996,7 +1692,7 @@ export default function AppDashboardPage() {
         </div>
 
         <div className="mt-3 text-[11px] text-white/45">
-          Rules: Remind ON, not Used, not Don't care, and reset within 14 days.
+          Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.
         </div>
       </div>
 
@@ -2006,7 +1702,7 @@ export default function AppDashboardPage() {
           Current schedule: <b>{normalizeOffsets(offsetsDays).join(", ")}</b> days before reset
         </div>
         <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/65">
-          Email: <b className="text-white/85">{notifEmailEnabled ? "ON" : "OFF"}</b> - SMS:{" "}
+          Email: <b className="text-white/85">{notifEmailEnabled ? "ON" : "OFF"}</b> • SMS:{" "}
           <b className="text-white/85">{notifSmsEnabled ? "ON" : "OFF"}</b>
           <div className="mt-2 text-[11px] text-white/45">
             Configure in <b>Settings</b> (top-right). SMS requires consent + phone.
@@ -2019,20 +1715,15 @@ export default function AppDashboardPage() {
   // -------------------------
   // QUIZ MODAL (unchanged)
   // -------------------------
-
   const QuizModal = !quizOpen ? null : (
     <div className="fixed inset-0 z-50">
-      <button
-        className="absolute inset-0 bg-black/60"
-        onClick={() => setQuizOpen(false)}
-        aria-label="Close quiz modal backdrop"
-      />
+      <button className="absolute inset-0 bg-black/60" onClick={() => setQuizOpen(false)} aria-label="Close quiz modal backdrop" />
       <div className="absolute left-1/2 top-8 w-[92vw] max-w-3xl -translate-x-1/2">
         <div className={surfaceCardClass("p-5")}>
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-xl font-semibold text-white/95">Card Fit Quiz</div>
-              <div className="mt-1 text-sm text-white/55">Explainable, deterministic ranking (no AI calls).</div>
+              <div className="text-xl font-semibold text-white/95">Quick Fit Quiz</div>
+              <div className="mt-1 text-sm text-white/55">Recommendation math is deterministic (rule-based).</div>
             </div>
             <button
               onClick={() => setQuizOpen(false)}
@@ -2043,330 +1734,85 @@ export default function AppDashboardPage() {
             </button>
           </div>
 
-          {/* Step 0 */}
-          {quizStage === 0 ? (
-            <div className="mt-6">
-              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
-                <div className="text-lg font-semibold text-white/95">Are you looking for a new card?</div>
-                <div className="mt-2 text-sm text-white/60">
-                  If you're just optimizing what you already have, we'll keep it focused on reminders and wins - no
-                  "fake" recommendations.
-                </div>
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLookingForNew(true);
-                      setQuizStage(1);
-                    }}
-                    className="flex-1 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-white/90"
-                  >
-                    Yes - recommend a new card
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLookingForNew(false);
-                      setQuizStage(2);
-                    }}
-                    className="flex-1 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
-                  >
-                    No - optimize my current card
-                  </button>
-                </div>
-
-                <div className="mt-4 text-xs text-white/45">
-                  Tip: The quiz is fast - your answers only change a deterministic score.
-                </div>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {(["dining", "travel", "groceries", "gas", "online", "other"] as SpendCategory[]).map((cat) => (
+              <div key={cat}>
+                <div className="text-xs text-white/50">{cat} / mo</div>
+                <input
+                  type="number"
+                  value={quiz.spend[cat]}
+                  onChange={(e) =>
+                    setQuiz((p) => ({
+                      ...p,
+                      spend: { ...p.spend, [cat]: Number(e.target.value || 0) },
+                    }))
+                  }
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
+                />
               </div>
+            ))}
+          </div>
+
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <div className="text-xs text-white/50">Annual fee tolerance</div>
+              <input
+                type="number"
+                value={quiz.annualFeeTolerance}
+                onChange={(e) => setQuiz((p) => ({ ...p, annualFeeTolerance: Number(e.target.value || 0) }))}
+                className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
+              />
             </div>
-          ) : null}
-
-          {/* Optimize mode */}
-          {quizStage === 2 && lookingForNew === false ? (
-            <div className="mt-6 space-y-4">
-              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-lg font-semibold text-white/95">Optimize your current setup</div>
-                    <div className="mt-1 text-sm text-white/60">Best ROI is usually just using what you already pay for.</div>
-                  </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
-                    {activeCard.name}
-                  </span>
-                </div>
-
-                <div className="mt-4 space-y-2 text-sm text-white/75">
-                  <div>- Set your <b>cardmember year start date</b> so Expiring Soon is accurate.</div>
-                  <div>- Turn on <b>Remind</b> for credits you care about - we'll surface what's due next.</div>
-                  <div>- Aim for <b>Fee recovered</b>: {formatMoney(activeCard.annualFee)} in redeemed value.</div>
-                  <div>- Use the "This month recovered" card as your weekly scoreboard.</div>
-                </div>
-
-                <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/60">
-                  Pro tip: start with the credits you already use (Uber, streaming, travel) - then add the weird ones.
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={startTrackingScroll}
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/85 hover:bg-white/10"
-                  >
-                    Jump to "Choose your card"
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLookingForNew(true);
-                      setQuizStage(1);
-                    }}
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/85 hover:bg-white/10"
-                  >
-                    Actually, recommend a new card
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
-                <div className="text-sm font-semibold text-white/90">Quick snapshot</div>
-                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-[11px] text-white/55">Recovered</div>
-                    <div className="mt-2 text-lg font-semibold text-emerald-100">{formatMoney(totals.totalRedeemed)}</div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-[11px] text-white/55">Fee</div>
-                    <div className="mt-2 text-lg font-semibold text-red-100">{formatMoney(activeCard.annualFee)}</div>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                    <div className="text-[11px] text-white/55">Next expiry</div>
-                    <div className="mt-2 text-lg font-semibold text-white/95">{nextExpiryPreview.label}</div>
-                  </div>
-                </div>
-              </div>
+            <div>
+              <div className="text-xs text-white/50">Credit usage %</div>
+              <select
+                value={quiz.creditUtilizationPct}
+                onChange={(e) => setQuiz((p) => ({ ...p, creditUtilizationPct: Number(e.target.value) }))}
+                className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none"
+              >
+                <option value={0.25}>25%</option>
+                <option value={0.5}>50%</option>
+                <option value={0.75}>75%</option>
+                <option value={1}>100%</option>
+              </select>
             </div>
-          ) : null}
+          </div>
 
-          {/* Step 1: Questions */}
-          {quizStage === 1 && lookingForNew === true ? (
-            <div className="mt-6">
-              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-lg font-semibold text-white/95">What are you optimizing for?</div>
-                    <div className="mt-1 text-sm text-white/60">We'll rank cards using an explainable score.</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuizStage(0);
-                      setLookingForNew(null);
-                    }}
-                    className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
-                  >
-                    Back
-                  </button>
-                </div>
+          <label className="mt-4 flex items-center gap-2 text-sm text-white/70">
+            <input
+              type="checkbox"
+              checked={quiz.includeWelcomeBonus}
+              onChange={(e) => setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))}
+            />
+            Include welcome bonus value (if any)
+          </label>
 
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <div className="text-xs text-white/50">Intent</div>
-                    <div className="mt-2 grid grid-cols-1 gap-2">
-                      {[
-                        { key: "max_points" as const, label: "Max points (travel hacking)" },
-                        { key: "max_cashback" as const, label: "Max cash back (simple)" },
-                        { key: "luxury_perks" as const, label: "Luxury perks (lounges + credits)" },
-                        { key: "low_annual_fee" as const, label: "Low annual fee" },
-                      ].map((o) => (
-                        <button
-                          key={o.key}
-                          type="button"
-                          onClick={() => setQuiz((p) => ({ ...p, intent: o.key }))}
-                          className={[
-                            "rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
-                            quiz.intent === o.key
-                              ? "border-white/25 bg-white/10 text-white"
-                              : "border-white/10 bg-black/25 text-white/75 hover:bg-white/10",
-                          ].join(" ")}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-xs text-white/50">Annual fee sensitivity</div>
-                    <div className="mt-2 grid grid-cols-1 gap-2">
-                      {[
-                        { key: "premium_ok" as const, label: "Fine paying premium fee if ROI is real" },
-                        { key: "under_250" as const, label: "Keep under $250" },
-                        { key: "no_fee" as const, label: "No annual fee" },
-                      ].map((o) => (
-                        <button
-                          key={o.key}
-                          type="button"
-                          onClick={() => setQuiz((p) => ({ ...p, feeSensitivity: o.key }))}
-                          className={[
-                            "rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
-                            quiz.feeSensitivity === o.key
-                              ? "border-white/25 bg-white/10 text-white"
-                              : "border-white/10 bg-black/25 text-white/75 hover:bg-white/10",
-                          ].join(" ")}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="mt-5">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-white/50">Credit-tracking tolerance</div>
-                        <div className="text-xs text-white/70">{Math.round(quiz.trackingTolerancePct * 100)}%</div>
-                      </div>
-                      <input
-                        type="range"
-                        min={0}
-                        max={100}
-                        value={Math.round(quiz.trackingTolerancePct * 100)}
-                        onChange={(e) => setQuiz((p) => ({ ...p, trackingTolerancePct: Number(e.target.value) / 100 }))}
-                        className="mt-2 w-full"
-                      />
-                      <div className="mt-1 text-[11px] text-white/45">0% = hate tracking. 100% = I'll use every credit.</div>
-                    </div>
-
-                    <label className="mt-4 flex items-center gap-2 text-sm text-white/70">
-                      <input
-                        type="checkbox"
-                        checked={quiz.includeWelcomeBonus}
-                        onChange={(e) => setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))}
-                      />
-                      Include welcome bonus value (if any)
-                    </label>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <div className="text-xs text-white/50">Monthly spend (rough)</div>
-                  <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {(["dining", "travel", "groceries", "gas", "online", "other"] as SpendCategory[]).map((cat) => (
-                      <div key={cat}>
-                        <div className="text-xs text-white/50">{cat}</div>
-                        <input
-                          type="number"
-                          value={quiz.spend[cat]}
-                          onChange={(e) =>
-                            setQuiz((p) => ({
-                              ...p,
-                              spend: { ...p.spend, [cat]: Number(e.target.value || 0) },
-                            }))
-                          }
-                          className="mt-1 w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2 text-sm outline-none"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-xs text-white/45">Next: we'll show 1 best match + 2 alternatives with why bullets.</div>
-                  <button
-                    type="button"
-                    onClick={() => setQuizStage(2)}
-                    className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-white/90"
-                  >
-                    Show recommendations
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          {/* Step 2: Results */}
-          {quizStage === 2 && lookingForNew === true ? (
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => setQuizStage(1)}
-                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80 hover:bg-white/10"
-                >
-                  Back
-                </button>
-                <span className="text-xs text-white/45">Deterministic ranking - explainable</span>
-              </div>
-
-              {quizResults.length ? (
-                <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
+          <div className="mt-5">
+            <div className="text-base font-semibold text-white/90">Top matches</div>
+            <div className="mt-3 space-y-3">
+              {quizResults.map((r) => (
+                <div key={r.card.key} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm text-white/55">Top recommendation</div>
-                      <div className="mt-1 text-xl font-semibold text-white/95">{quizResults[0].card.issuer} {quizResults[0].card.name}</div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold leading-5 line-clamp-2">{r.card.name}</div>
                       <div className="mt-1 text-sm text-white/60">
-                        Est annual value: {formatMoney(quizResults[0].estAnnualValue)} - Fee {formatMoney(quizResults[0].card.annualFee)}
+                        Est annual value: {formatMoney(r.estAnnualValue)} • Score: {formatMoney(r.score)}
                       </div>
                     </div>
-                    <span className={[
-                      "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold",
-                      quizResults[0].confidence === "High"
-                        ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
-                        : quizResults[0].confidence === "Medium"
-                        ? "border-amber-300/20 bg-amber-300/10 text-amber-100"
-                        : "border-white/10 bg-white/5 text-white/70",
-                    ].join(" ")}
-                    >
-                      Confidence: {quizResults[0].confidence}
-                    </span>
+                    <div className="shrink-0 text-xs text-white/50">Fee {formatMoney(r.card.annualFee)}</div>
                   </div>
 
-                  <div className="mt-4">
-                    <div className="text-sm font-semibold text-white/90">Why this fits you</div>
-                    <div className="mt-2 space-y-1 text-sm text-white/75">
-                      {quizResults[0].why.slice(0, 5).map((w) => (
-                        <div key={w}>- {w}</div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/60">
-                    Score is based on your spend, your willingness to track credits, and your annual-fee preference.
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5 text-sm text-white/70">
-                  No results yet - go back and answer the questions.
-                </div>
-              )}
-
-              {quizResults.length > 1 ? (
-                <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
-                  <div className="text-sm font-semibold text-white/90">Alternatives</div>
-                  <div className="mt-3 space-y-3">
-                    {quizResults.slice(1, 3).map((r) => (
-                      <div key={r.card.key} className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-semibold leading-5 line-clamp-2">{r.card.issuer} {r.card.name}</div>
-                            <div className="mt-1 text-sm text-white/60">
-                              Est annual value: {formatMoney(r.estAnnualValue)} - Fee {formatMoney(r.card.annualFee)}
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-xs text-white/50">Score {formatMoney(r.score)}</div>
-                        </div>
-                        <div className="mt-3 space-y-1 text-xs text-white/60">
-                          {r.why.slice(0, 3).map((w) => (
-                            <div key={w}>- {w}</div>
-                          ))}
-                        </div>
-                      </div>
+                  <div className="mt-3 space-y-1 text-xs text-white/55">
+                    {r.breakdown.slice(0, 5).map((b) => (
+                      <div key={b}>• {b}</div>
                     ))}
                   </div>
                 </div>
-              ) : null}
+              ))}
             </div>
-          ) : null}
+
+            <div className="mt-3 text-xs text-white/45">Next: improve quiz questions + “this month” checklist.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -2376,17 +1822,8 @@ export default function AppDashboardPage() {
   // PAGE
   // -------------------------
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#050611] text-white">
-      {/* Background (landing aesthetic) */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(34,197,94,0.10),transparent_55%)]" />
-        <div className="absolute inset-0 opacity-70 bg-[linear-gradient(120deg,rgba(59,130,246,0.10),transparent_35%,rgba(236,72,153,0.08))]" />
-        <div className="absolute -inset-[40%] rotate-12 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.05)_50%,transparent_100%)] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
-        <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:120px_120px]" />
-      </div>
-
-      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className="min-h-screen bg-[#0A0C10] text-white">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-2xl font-semibold text-white/95">ClawBack</div>
@@ -2432,15 +1869,6 @@ export default function AppDashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* Toast + confetti */}
-      {toast ? (
-        <div className="fixed bottom-6 left-1/2 z-[80] -translate-x-1/2">
-          <div className="rounded-full border border-white/10 bg-black/80 px-4 py-2 text-sm text-white/90 shadow-lg">{toast}</div>
-        </div>
-      ) : null}
-      <ConfettiBurst seed={confettiSeed} />
-
 
       {AuthModal}
       {SettingsModal}
