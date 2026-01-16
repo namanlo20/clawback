@@ -1,41 +1,43 @@
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-[#030303] text-white relative overflow-hidden">
-      {/* Background Gradient Mesh */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-900/10 blur-[120px]" />
-        <div className="absolute bottom-[0%] right-[-5%] w-[40%] h-[40%] rounded-full bg-blue-900/10 blur-[120px]" />
+    <main className="relative min-h-screen overflow-hidden text-white">
+      {/* Background */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[#070A12]" />
+        <div className="absolute inset-0 bg-[radial-gradient(60%_40%_at_20%_20%,rgba(88,101,242,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(50%_40%_at_80%_30%,rgba(139,92,246,0.16),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.04),transparent_40%,transparent_60%,rgba(255,255,255,0.03))]" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-4xl px-6 py-16">
-        <div className="text-4xl font-semibold tracking-tight">ClawBack</div>
-        <div className="mt-3 text-white/70">
+      <div className="mx-auto max-w-5xl px-6 py-20">
+        <h1 className="text-4xl font-semibold tracking-tight">ClawBack</h1>
+        <p className="mt-4 max-w-xl text-white/70">
           Track credit card credits. Mark used. Never waste money again.
-        </div>
+        </p>
 
         <div className="mt-10 flex flex-wrap gap-3">
           <a
             href="/app"
-            className="rounded-2xl bg-white px-5 py-3 text-sm font-medium text-black hover:bg-white/90"
+            className="rounded-2xl bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90"
           >
             Go to Dashboard →
           </a>
 
-          <a
-            href="#"
-            className="rounded-2xl border border-white/20 px-5 py-3 text-sm hover:bg-white/10"
-          >
+          <span className="rounded-2xl border border-white/20 px-6 py-3 text-sm text-white/80">
             Coming soon: reminders (email + SMS)
-          </a>
+          </span>
         </div>
 
-        <div className="mt-14 grid gap-4 md:grid-cols-3">
+        <div className="mt-16 grid gap-4 md:grid-cols-3">
           {[
             ["Never miss a credit", "7-day + 1-day reminders before expiry."],
-            ["Addictive progress", "Win rate + redeemed totals that update live."],
+            ["Addictive progress", "Redeemed totals update live."],
             ["Premium feel", "Fast, clean, and built for daily use."],
           ].map(([title, desc]) => (
-            <div key={title} className="rounded-3xl border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
+            <div
+              key={title}
+              className="rounded-3xl border border-white/15 bg-white/5 p-6 backdrop-blur"
+            >
               <div className="text-sm font-medium">{title}</div>
               <div className="mt-2 text-xs text-white/60">{desc}</div>
             </div>
