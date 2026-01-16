@@ -229,7 +229,7 @@ function freqSort(freq: CreditFrequency): number {
 
 function creditSubtitle(c: Credit): string {
   const a = annualize(c.amount, c.frequency);
-  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
+  return `${freqLabel(c.frequency)} - ${formatMoney(c.amount)} - Annualized: ${formatMoney(a)}`;
 }
 
 function surfaceCardClass(extra?: string): string {
@@ -264,7 +264,7 @@ function nextResetDateForCredit(params: {
   const startDay = cardStartDate.getDate();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  // monthly → next month same day (clamp)
+  // monthly -> next month same day (clamp)
   if (credit.frequency === "monthly") {
     const y = now.getFullYear();
     const m0 = now.getMonth();
@@ -444,7 +444,7 @@ function scoreCardV2(card: Card, input: QuizInputs): QuizResult {
   }
   why.push(`Your top spend category looks like ${topCat}. This card earns ~${topRate}x there.`);
 
-  const feeLine = input.feeSensitivity === "no_fee" ? "You said no annual fee." : input.feeSensitivity === "under_250" ? "You said keep fees under $250." : "You’re fine paying a premium fee if ROI is real.";
+  const feeLine = input.feeSensitivity === "no_fee" ? "You said no annual fee." : input.feeSensitivity === "under_250" ? "You said keep fees under $250." : "You're fine paying a premium fee if ROI is real.";
   why.push(`${feeLine} This card is ${formatMoney(fee)} / yr.`);
 
   if ((card.signupBonusEstUsd ?? 0) > 0 && input.includeWelcomeBonus) {
@@ -525,7 +525,7 @@ export default function AppDashboardPage() {
 
   const [search, setSearch] = useState("");
 
-  // ✅ Platinum default
+  //  Platinum default
   const [activeCardKey, setActiveCardKey] = useState<Card["key"]>("amex-platinum");
 
   const [savedCards, setSavedCards] = useState<string[]>([]);
@@ -547,7 +547,7 @@ export default function AppDashboardPage() {
 
   const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
-  // ✅ Credits sorted by frequency bucket THEN alphabetized by title
+  //  Credits sorted by frequency bucket THEN alphabetized by title
   const creditsSorted = useMemo(() => {
     return activeCard.credits
       .slice()
@@ -724,7 +724,7 @@ export default function AppDashboardPage() {
   }, [user]);
 
   // -----------------------------
-  // ✅ EXPIRING SOON (date-based v2)
+  //  EXPIRING SOON (date-based v2)
   // -----------------------------
   const expiringSoon = useMemo(() => {
     const out: Array<{ credit: Credit; due: Date }> = [];
@@ -764,7 +764,7 @@ export default function AppDashboardPage() {
   }, [totals.totalRedeemed, activeCard.annualFee]);
 
   const thisMonthRecovered = useMemo(() => {
-    // Deterministic & safe approximation: only monthly credits counted as “this month”
+    // Deterministic & safe approximation: only monthly credits counted as "this month"
     let v = 0;
     for (const c of creditsSorted) {
       if (c.frequency !== "monthly") continue;
@@ -777,7 +777,7 @@ export default function AppDashboardPage() {
   }, [creditsSorted, activeCard.key, dontCare, used]);
 
   const streakCount = useMemo(() => {
-    // “Streak” (optional): number of credits checked off (any frequency)
+    // "Streak" (optional): number of credits checked off (any frequency)
     let n = 0;
     for (const c of creditsSorted) {
       const k = `${activeCard.key}:${c.id}`;
@@ -795,7 +795,7 @@ export default function AppDashboardPage() {
 
   const nextExpiryPreview = useMemo(() => {
     const first = expiringSoon[0];
-    if (!first) return { label: "—", days: null as number | null };
+    if (!first) return { label: "-", days: null as number | null };
     const now = new Date();
     const ms = first.due.getTime() - now.getTime();
     const days = Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
@@ -822,7 +822,7 @@ export default function AppDashboardPage() {
     }
 
     setConfettiSeed((x) => x + 1);
-    setToast("You’ve fully clawed back your annual fee 🎉");
+    setToast("You've fully clawed back your annual fee ");
     window.setTimeout(() => setToast(null), 3500);
   }
 
@@ -1147,7 +1147,7 @@ export default function AppDashboardPage() {
           </div>
 
           <div className="mt-0.5 text-xs text-white/55">
-            Fee: {formatMoney(card.annualFee)} • Credits: {formatMoney(card.creditsTrackedAnnualized)}
+            Fee: {formatMoney(card.annualFee)} - Credits: {formatMoney(card.creditsTrackedAnnualized)}
           </div>
         </div>
 
@@ -1319,7 +1319,7 @@ export default function AppDashboardPage() {
                   className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none placeholder:text-white/30"
                 />
                 <div className="mt-1 text-[11px] text-white/40">
-                  SMS reminders are OFF by default. We’ll add phone verification later.
+                  SMS reminders are OFF by default. We'll add phone verification later.
                 </div>
               </div>
 
@@ -1443,7 +1443,7 @@ export default function AppDashboardPage() {
                 {authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}
               </div>
               <div className="mt-1 text-sm text-white/55">
-                {authMode === "reset" ? "We’ll email you a reset link." : "Email/password. No anonymous accounts."}
+                {authMode === "reset" ? "We'll email you a reset link." : "Email/password. No anonymous accounts."}
               </div>
             </div>
             <button
@@ -1603,7 +1603,7 @@ export default function AppDashboardPage() {
           <div className="mt-3 space-y-2">
             {savedCards.length === 0 ? (
               <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/60">
-                No saved cards yet. Pick a card and click “Notify me”.
+                No saved cards yet. Pick a card and click "Notify me".
               </div>
             ) : (
               savedCards.map((k) => {
@@ -1643,7 +1643,7 @@ export default function AppDashboardPage() {
         {/* Choose your card */}
         <div className="mt-4" ref={chooseCardRef}>
           <div className="text-lg font-semibold text-white/95">Choose your card</div>
-          <div className="mt-1 text-xs text-white/55">Browse any card free. “Notify me” saves it to your dashboard.</div>
+          <div className="mt-1 text-xs text-white/55">Browse any card free. "Notify me" saves it to your dashboard.</div>
 
           <div className="mt-3">
             <input
@@ -1697,8 +1697,8 @@ export default function AppDashboardPage() {
 
             <div className="mt-3 flex flex-wrap gap-2">
               {[
-                { label: "0–250", min: 0, max: 250 },
-                { label: "250–500", min: 250, max: 500 },
+                { label: "0-250", min: 0, max: 250 },
+                { label: "250-500", min: 250, max: 500 },
                 { label: "500+", min: 500, max: feeBounds.max },
               ].map((chip) => (
                 <button
@@ -1738,8 +1738,8 @@ export default function AppDashboardPage() {
             ) : null}
 
             <Section title="Tier 3" subtitle="$500+ annual fee" cards={tier3} accent="slate" />
-            <Section title="Tier 2" subtitle="$250–$500 annual fee" cards={tier2} accent="neutral" />
-            <Section title="Tier 1" subtitle="$0–$250 annual fee" cards={tier1} accent="neutral" />
+            <Section title="Tier 2" subtitle="$250-$500 annual fee" cards={tier2} accent="neutral" />
+            <Section title="Tier 1" subtitle="$0-$250 annual fee" cards={tier1} accent="neutral" />
 
             {baseFiltered.length === 0 ? <div className="p-4 text-sm text-white/60">No cards match your search / fee filter.</div> : null}
           </div>
@@ -1749,10 +1749,10 @@ export default function AppDashboardPage() {
             className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
             type="button"
           >
-            {savedCards.includes(activeCard.key) ? "Saved ✓" : "Notify me for this card"}
+            {savedCards.includes(activeCard.key) ? "Saved (saved)" : "Notify me for this card"}
           </button>
 
-          <div className="mt-2 text-xs text-white/40">Free: save 1 card • Multi-card is $5 flat (coming soon)</div>
+          <div className="mt-2 text-xs text-white/40">Free: save 1 card - Multi-card is $5 flat (coming soon)</div>
 
           {authMsg ? (
             <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
@@ -1822,7 +1822,7 @@ export default function AppDashboardPage() {
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Total Credits Available</div>
           <div className="mt-2 text-3xl font-semibold text-white/95">{formatMoney(totals.totalAvail)}</div>
-          <div className="mt-2 text-xs text-white/50">excludes credits marked “Don’t care”</div>
+          <div className="mt-2 text-xs text-white/50">excludes credits marked "Don't care"</div>
         </div>
 
         <div className={surfaceCardClass("p-4 border-red-400/15 bg-red-500/6")}>
@@ -1830,7 +1830,7 @@ export default function AppDashboardPage() {
             <div className="text-xs text-white/55">Annual Fee</div>
             {feeRecovered ? (
               <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2 py-1 text-[11px] text-emerald-100">
-                Fee recovered ✅
+                Fee recovered 
               </span>
             ) : null}
           </div>
@@ -1849,7 +1849,7 @@ export default function AppDashboardPage() {
         <div className={surfaceCardClass("p-4")}>
           <div className="text-xs text-white/55">Streak</div>
           <div className="mt-2 text-2xl font-semibold text-white/95">{streakCount} credits checked off</div>
-          <div className="mt-2 text-xs text-white/50">keeps you honest (and keeps your fee “paid for”)</div>
+          <div className="mt-2 text-xs text-white/50">keeps you honest (and keeps your fee "paid for")</div>
         </div>
       </div>
 
@@ -1863,7 +1863,7 @@ export default function AppDashboardPage() {
             <div className="min-w-0">
               <div className="text-xl font-semibold text-white/95 leading-6 line-clamp-2">{activeCard.name}</div>
               <div className="mt-1 text-sm text-white/55">
-                Annual fee: {formatMoney(activeCard.annualFee)} • Credits tracked: {formatMoney(activeCard.creditsTrackedAnnualized)}
+                Annual fee: {formatMoney(activeCard.annualFee)} - Credits tracked: {formatMoney(activeCard.creditsTrackedAnnualized)}
               </div>
             </div>
           </div>
@@ -1878,7 +1878,7 @@ export default function AppDashboardPage() {
           <div className="text-base font-semibold text-white/90">Credits</div>
 
           <div className="mt-2 text-xs text-white/50">
-            Sorted by frequency (Monthly → Quarterly → Semiannual → Annual → Other), then A–Z.
+            Sorted by frequency (Monthly -> Quarterly -> Semiannual -> Annual -> Other), then A-Z.
           </div>
 
           <div className="mt-4 space-y-3">
@@ -1895,7 +1895,7 @@ export default function AppDashboardPage() {
                       <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">{c.title}</div>
                       <div className="mt-1 text-xs text-white/55">
                         {creditSubtitle(c)}
-                        {c.notes ? ` • ${c.notes}` : ""}
+                        {c.notes ? ` - ${c.notes}` : ""}
                       </div>
                     </div>
 
@@ -1911,7 +1911,7 @@ export default function AppDashboardPage() {
                       <IconToggleButton
                         on={dontCareOn}
                         onClick={() => toggleDontCare(activeCard.key, c.id)}
-                        title="Don’t care"
+                        title="Don't care"
                         icon={<IconEyeOff className="h-4 w-4" />}
                         tone="warn"
                       />
@@ -1967,7 +1967,7 @@ export default function AppDashboardPage() {
 
         {!cardStartDates[activeCard.key] ? (
           <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-sm text-amber-100/90">
-            Add your <b>cardmember year start date</b> in “Your Cards” to enable Expiring Soon.
+            Add your <b>cardmember year start date</b> in "Your Cards" to enable Expiring Soon.
           </div>
         ) : null}
 
@@ -1996,7 +1996,7 @@ export default function AppDashboardPage() {
         </div>
 
         <div className="mt-3 text-[11px] text-white/45">
-          Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.
+          Rules: Remind ON, not Used, not Don't care, and reset within 14 days.
         </div>
       </div>
 
@@ -2006,7 +2006,7 @@ export default function AppDashboardPage() {
           Current schedule: <b>{normalizeOffsets(offsetsDays).join(", ")}</b> days before reset
         </div>
         <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/65">
-          Email: <b className="text-white/85">{notifEmailEnabled ? "ON" : "OFF"}</b> • SMS:{" "}
+          Email: <b className="text-white/85">{notifEmailEnabled ? "ON" : "OFF"}</b> - SMS:{" "}
           <b className="text-white/85">{notifSmsEnabled ? "ON" : "OFF"}</b>
           <div className="mt-2 text-[11px] text-white/45">
             Configure in <b>Settings</b> (top-right). SMS requires consent + phone.
@@ -2049,7 +2049,7 @@ export default function AppDashboardPage() {
               <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5">
                 <div className="text-lg font-semibold text-white/95">Are you looking for a new card?</div>
                 <div className="mt-2 text-sm text-white/60">
-                  If you’re just optimizing what you already have, we’ll keep it focused on reminders and wins — no
+                  If you're just optimizing what you already have, we'll keep it focused on reminders and wins - no
                   "fake" recommendations.
                 </div>
 
@@ -2062,7 +2062,7 @@ export default function AppDashboardPage() {
                     }}
                     className="flex-1 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-white/90"
                   >
-                    Yes — recommend a new card
+                    Yes - recommend a new card
                   </button>
                   <button
                     type="button"
@@ -2072,12 +2072,12 @@ export default function AppDashboardPage() {
                     }}
                     className="flex-1 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
                   >
-                    No — optimize my current card
+                    No - optimize my current card
                   </button>
                 </div>
 
                 <div className="mt-4 text-xs text-white/45">
-                  Tip: The quiz is fast — your answers only change a deterministic score.
+                  Tip: The quiz is fast - your answers only change a deterministic score.
                 </div>
               </div>
             </div>
@@ -2098,14 +2098,14 @@ export default function AppDashboardPage() {
                 </div>
 
                 <div className="mt-4 space-y-2 text-sm text-white/75">
-                  <div>• Set your <b>cardmember year start date</b> so Expiring Soon is accurate.</div>
-                  <div>• Turn on <b>Remind</b> for credits you care about — we’ll surface what’s due next.</div>
-                  <div>• Aim for <b>Fee recovered</b>: {formatMoney(activeCard.annualFee)} in redeemed value.</div>
-                  <div>• Use the "This month recovered" card as your weekly scoreboard.</div>
+                  <div>- Set your <b>cardmember year start date</b> so Expiring Soon is accurate.</div>
+                  <div>- Turn on <b>Remind</b> for credits you care about - we'll surface what's due next.</div>
+                  <div>- Aim for <b>Fee recovered</b>: {formatMoney(activeCard.annualFee)} in redeemed value.</div>
+                  <div>- Use the "This month recovered" card as your weekly scoreboard.</div>
                 </div>
 
                 <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/60">
-                  Pro tip: start with the credits you already use (Uber, streaming, travel) — then add the weird ones.
+                  Pro tip: start with the credits you already use (Uber, streaming, travel) - then add the weird ones.
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-2">
@@ -2114,7 +2114,7 @@ export default function AppDashboardPage() {
                     onClick={startTrackingScroll}
                     className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/85 hover:bg-white/10"
                   >
-                    Jump to “Choose your card”
+                    Jump to "Choose your card"
                   </button>
                   <button
                     type="button"
@@ -2156,7 +2156,7 @@ export default function AppDashboardPage() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <div className="text-lg font-semibold text-white/95">What are you optimizing for?</div>
-                    <div className="mt-1 text-sm text-white/60">We’ll rank cards using an explainable score.</div>
+                    <div className="mt-1 text-sm text-white/60">We'll rank cards using an explainable score.</div>
                   </div>
                   <button
                     type="button"
@@ -2234,7 +2234,7 @@ export default function AppDashboardPage() {
                         onChange={(e) => setQuiz((p) => ({ ...p, trackingTolerancePct: Number(e.target.value) / 100 }))}
                         className="mt-2 w-full"
                       />
-                      <div className="mt-1 text-[11px] text-white/45">0% = hate tracking. 100% = I’ll use every credit.</div>
+                      <div className="mt-1 text-[11px] text-white/45">0% = hate tracking. 100% = I'll use every credit.</div>
                     </div>
 
                     <label className="mt-4 flex items-center gap-2 text-sm text-white/70">
@@ -2271,7 +2271,7 @@ export default function AppDashboardPage() {
                 </div>
 
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="text-xs text-white/45">Next: we’ll show 1 best match + 2 alternatives with why bullets.</div>
+                  <div className="text-xs text-white/45">Next: we'll show 1 best match + 2 alternatives with why bullets.</div>
                   <button
                     type="button"
                     onClick={() => setQuizStage(2)}
@@ -2295,7 +2295,7 @@ export default function AppDashboardPage() {
                 >
                   Back
                 </button>
-                <span className="text-xs text-white/45">Deterministic ranking • explainable</span>
+                <span className="text-xs text-white/45">Deterministic ranking - explainable</span>
               </div>
 
               {quizResults.length ? (
@@ -2305,7 +2305,7 @@ export default function AppDashboardPage() {
                       <div className="text-sm text-white/55">Top recommendation</div>
                       <div className="mt-1 text-xl font-semibold text-white/95">{quizResults[0].card.issuer} {quizResults[0].card.name}</div>
                       <div className="mt-1 text-sm text-white/60">
-                        Est annual value: {formatMoney(quizResults[0].estAnnualValue)} • Fee {formatMoney(quizResults[0].card.annualFee)}
+                        Est annual value: {formatMoney(quizResults[0].estAnnualValue)} - Fee {formatMoney(quizResults[0].card.annualFee)}
                       </div>
                     </div>
                     <span className={[
@@ -2325,7 +2325,7 @@ export default function AppDashboardPage() {
                     <div className="text-sm font-semibold text-white/90">Why this fits you</div>
                     <div className="mt-2 space-y-1 text-sm text-white/75">
                       {quizResults[0].why.slice(0, 5).map((w) => (
-                        <div key={w}>• {w}</div>
+                        <div key={w}>- {w}</div>
                       ))}
                     </div>
                   </div>
@@ -2336,7 +2336,7 @@ export default function AppDashboardPage() {
                 </div>
               ) : (
                 <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-5 text-sm text-white/70">
-                  No results yet — go back and answer the questions.
+                  No results yet - go back and answer the questions.
                 </div>
               )}
 
@@ -2350,14 +2350,14 @@ export default function AppDashboardPage() {
                           <div className="min-w-0">
                             <div className="text-sm font-semibold leading-5 line-clamp-2">{r.card.issuer} {r.card.name}</div>
                             <div className="mt-1 text-sm text-white/60">
-                              Est annual value: {formatMoney(r.estAnnualValue)} • Fee {formatMoney(r.card.annualFee)}
+                              Est annual value: {formatMoney(r.estAnnualValue)} - Fee {formatMoney(r.card.annualFee)}
                             </div>
                           </div>
                           <div className="shrink-0 text-xs text-white/50">Score {formatMoney(r.score)}</div>
                         </div>
                         <div className="mt-3 space-y-1 text-xs text-white/60">
                           {r.why.slice(0, 3).map((w) => (
-                            <div key={w}>• {w}</div>
+                            <div key={w}>- {w}</div>
                           ))}
                         </div>
                       </div>
@@ -2376,8 +2376,17 @@ export default function AppDashboardPage() {
   // PAGE
   // -------------------------
   return (
-    <div className="min-h-screen bg-[#0A0C10] text-white">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <div className="relative min-h-screen overflow-hidden bg-[#050611] text-white">
+      {/* Background (landing aesthetic) */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(99,102,241,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(34,197,94,0.10),transparent_55%)]" />
+        <div className="absolute inset-0 opacity-70 bg-[linear-gradient(120deg,rgba(59,130,246,0.10),transparent_35%,rgba(236,72,153,0.08))]" />
+        <div className="absolute -inset-[40%] rotate-12 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.05)_50%,transparent_100%)] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_70%)]" />
+        <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:120px_120px]" />
+      </div>
+
+      <div className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-2xl font-semibold text-white/95">ClawBack</div>
