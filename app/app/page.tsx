@@ -755,7 +755,6 @@ export default function AppDashboardPage() {
   // -----------------------------
   // Premium: hero preview + win moments
   // -----------------------------
-  const chooseCardRef = useRef<HTMLDivElement | null>(null);
 
   const feeRecovered = useMemo(() => {
     if (!activeCard.annualFee) return false;
