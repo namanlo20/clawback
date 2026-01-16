@@ -1,7 +1,13 @@
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-black text-white">
-      <div className="mx-auto max-w-4xl px-6 py-16">
+    <main className="min-h-screen bg-[#030303] text-white relative overflow-hidden">
+      {/* Background Gradient Mesh */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-900/10 blur-[120px]" />
+        <div className="absolute bottom-[0%] right-[-5%] w-[40%] h-[40%] rounded-full bg-blue-900/10 blur-[120px]" />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-4xl px-6 py-16">
         <div className="text-4xl font-semibold tracking-tight">ClawBack</div>
         <div className="mt-3 text-white/70">
           Track credit card credits. Mark used. Never waste money again.
@@ -29,7 +35,7 @@ export default function HomePage() {
             ["Addictive progress", "Win rate + redeemed totals that update live."],
             ["Premium feel", "Fast, clean, and built for daily use."],
           ].map(([title, desc]) => (
-            <div key={title} className="rounded-3xl border border-white/15 bg-white/5 p-5">
+            <div key={title} className="rounded-3xl border border-white/15 bg-white/5 p-5 backdrop-blur-sm">
               <div className="text-sm font-medium">{title}</div>
               <div className="mt-2 text-xs text-white/60">{desc}</div>
             </div>
