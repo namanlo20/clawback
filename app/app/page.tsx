@@ -346,7 +346,7 @@ function maxFeeAllowed(feeSensitivity: QuizFeeSensitivity): number {
   return Number.POSITIVE_INFINITY;
 }
 
-function scoreCardV2(card: Card, input: QuizInputs) {
+function scoreCardV2(card: Card, input: QuizInputs): QuizResult {
   const pv = pointValueUsd(card.pointsProgram);
 
   const annualSpendByCat: Record<SpendCategory, number> = {
@@ -451,7 +451,9 @@ function scoreCardV2(card: Card, input: QuizInputs) {
     why.push(`Includes an estimated welcome bonus value (~${formatMoney(card.signupBonusEstUsd ?? 0)}).`);
   }
 
-  return { card, score, estAnnualValue, breakdown, why, confidence: "Low" };
+  // Keep confidence as a strict union type so TS doesn't widen it to `string`.
+  const confidence: QuizResult["confidence"] = "Low";
+  return { card, score, estAnnualValue, breakdown, why, confidence };
 }
 
 function confidenceFromGap(topScore: number, secondScore: number, topValue: number): "High" | "Medium" | "Low" {
@@ -755,6 +757,7 @@ export default function AppDashboardPage() {
   // -----------------------------
   // Premium: hero preview + win moments
   // -----------------------------
+  const chooseCardRef = useRef<HTMLDivElement | null>(null);
 
   const feeRecovered = useMemo(() => {
     if (!activeCard.annualFee) return false;
