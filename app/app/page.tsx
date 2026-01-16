@@ -37,6 +37,17 @@ type DbCreditState = {
   remind: boolean;
 };
 
+type DbProfile = {
+  user_id: string;
+  full_name: string | null;
+  phone_e164: string | null;
+  phone_verified: boolean;
+  notif_email_enabled: boolean;
+  notif_sms_enabled: boolean;
+  sms_consent: boolean;
+  default_offsets_days: number[] | null;
+};
+
 // -----------------------------
 // ICONS (no dependencies)
 // -----------------------------
@@ -50,7 +61,12 @@ function IconBell({ className }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M14 19a2 2 0 01-4 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M14 19a2 2 0 01-4 0"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -58,7 +74,12 @@ function IconEyeOff({ className }: { className?: string }) {
   return (
     <svg className={className ?? "h-4 w-4"} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M10.6 10.6a3 3 0 004.24 4.24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M10.6 10.6a3 3 0 004.24 4.24"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
       <path
         d="M9.9 5.2A10.5 10.5 0 0122 12c-.8 1.8-2.2 3.9-4.3 5.5M6.2 6.2C4.1 7.8 2.8 10 2 12c1.7 3.9 6 8 10 8 1.3 0 2.6-.3 3.8-.8"
         stroke="currentColor"
@@ -72,7 +93,30 @@ function IconEyeOff({ className }: { className?: string }) {
 function IconCheck({ className }: { className?: string }) {
   return (
     <svg className={className ?? "h-4 w-4"} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M20 6L9 17l-5-5"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+function IconGear({ className }: { className?: string }) {
+  return (
+    <svg className={className ?? "h-4 w-4"} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M19.4 15a8.4 8.4 0 000-6l-2.1.4a6.7 6.7 0 00-1.2-1.2L16.5 6a8.4 8.4 0 00-6 0l.4 2.2a6.7 6.7 0 00-1.2 1.2L7.5 9a8.4 8.4 0 000 6l2.2-.4a6.7 6.7 0 001.2 1.2L10.5 18a8.4 8.4 0 006 0l-.4-2.2a6.7 6.7 0 001.2-1.2l2.1.4z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -114,10 +158,16 @@ function freqLabel(freq: CreditFrequency): string {
 }
 
 function freqSort(freq: CreditFrequency): number {
-  // Monthly -> Quarterly -> Semiannual -> Annual -> Other (everyXyears/onetime)
-  const order: CreditFrequency[] = ["monthly", "quarterly", "semiannual", "annual", "every4years", "every5years", "onetime"];
-  const idx = order.indexOf(freq);
-  return idx === -1 ? 999 : idx;
+  const order: CreditFrequency[] = [
+    "monthly",
+    "quarterly",
+    "semiannual",
+    "annual",
+    "every4years",
+    "every5years",
+    "onetime",
+  ];
+  return order.indexOf(freq);
 }
 
 function creditSubtitle(c: Credit): string {
@@ -185,7 +235,12 @@ function nextResetDateForCredit(params: {
   }
 
   // quarterly / semiannual / annual
-  const monthsStep = credit.frequency === "quarterly" ? 3 : credit.frequency === "semiannual" ? 6 : 12;
+  const monthsStep =
+    credit.frequency === "quarterly"
+      ? 3
+      : credit.frequency === "semiannual"
+      ? 6
+      : 12;
 
   let candidate = makeDate(now.getFullYear(), startMonth, startDay);
   if (candidate > today) candidate = makeDate(now.getFullYear() - 1, startMonth, startDay);
@@ -264,6 +319,15 @@ function inTier(card: Card, min: number, max: number): boolean {
   return card.annualFee >= min && card.annualFee <= max;
 }
 
+function normalizeOffsets(input: number[]): number[] {
+  const cleaned = input
+    .map((x) => Number(x))
+    .filter((x) => Number.isFinite(x) && x > 0 && x <= 60);
+  const unique = Array.from(new Set(cleaned));
+  unique.sort((a, b) => b - a); // show larger first: 14, 7, 1
+  return unique.length ? unique : [7, 1];
+}
+
 // -----------------------------
 // PAGE
 // -----------------------------
@@ -283,6 +347,24 @@ export default function AppDashboardPage() {
   const [authMode, setAuthMode] = useState<"signin" | "signup" | "reset">("signin");
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState<string | null>(null);
+
+  // Settings (profiles)
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+
+  const [fullName, setFullName] = useState("");
+  const [phoneE164, setPhoneE164] = useState("");
+  const [notifEmailEnabled, setNotifEmailEnabled] = useState(true);
+  const [notifSmsEnabled, setNotifSmsEnabled] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [offsetsDays, setOffsetsDays] = useState<number[]>([7, 1]);
+
+  const displayName = useMemo(() => {
+    const n = fullName.trim();
+    if (n) return n;
+    return (user?.email ?? "").trim();
+  }, [fullName, user?.email]);
 
   // Founder logic
   const FOUNDER_EMAIL = "namanlohia02@gmail.com";
@@ -315,31 +397,7 @@ export default function AppDashboardPage() {
 
   const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
-  // -----------------------------
-  // remember last active card (premium feel)
-  // -----------------------------
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("clawback_active_card");
-      if (saved && CARDS.some((c) => c.key === saved)) {
-        setActiveCardKey(saved);
-      }
-    } catch {
-      // ignore
-    }
-    // run once
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("clawback_active_card", activeCardKey);
-    } catch {
-      // ignore
-    }
-  }, [activeCardKey]);
-
-  // ✅ Credits: frequency bucket THEN alphabetize by title
+  // ✅ Credits sorted by frequency bucket THEN alphabetized by title
   const creditsSorted = useMemo(() => {
     return activeCard.credits
       .slice()
@@ -347,9 +405,7 @@ export default function AppDashboardPage() {
         const fa = freqSort(a.frequency);
         const fb = freqSort(b.frequency);
         if (fa !== fb) return fa - fb;
-        const at = (a.title ?? "").toLowerCase();
-        const bt = (b.title ?? "").toLowerCase();
-        return at.localeCompare(bt);
+        return a.title.localeCompare(b.title);
       });
   }, [activeCard]);
 
@@ -419,6 +475,12 @@ export default function AppDashboardPage() {
       setDontCare({});
       setRemind({});
       setDbWarning(null);
+      setFullName("");
+      setPhoneE164("");
+      setNotifEmailEnabled(true);
+      setNotifSmsEnabled(false);
+      setSmsConsent(false);
+      setOffsetsDays([7, 1]);
       didInitialLoad.current = false;
       return;
     }
@@ -430,6 +492,31 @@ export default function AppDashboardPage() {
       try {
         setDbWarning(null);
 
+        // 1) Load profile
+        setProfileLoading(true);
+        const { data: prof, error: profErr } = await supabase
+          .from("profiles")
+          .select("user_id, full_name, phone_e164, phone_verified, notif_email_enabled, notif_sms_enabled, sms_consent, default_offsets_days")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (profErr) throw profErr;
+
+        const p = (prof ?? null) as DbProfile | null;
+        if (p) {
+          setFullName((p.full_name ?? "").toString());
+          setPhoneE164((p.phone_e164 ?? "").toString());
+          setNotifEmailEnabled(!!p.notif_email_enabled);
+          setNotifSmsEnabled(!!p.notif_sms_enabled);
+          setSmsConsent(!!p.sms_consent);
+          setOffsetsDays(normalizeOffsets((p.default_offsets_days ?? [7, 1]) as number[]));
+        } else {
+          // defensive: if trigger didn't insert, create now
+          await supabase.from("profiles").insert({ user_id: user.id });
+        }
+        setProfileLoading(false);
+
+        // 2) Load saved cards
         const { data: cards, error: cardsErr } = await supabase
           .from("user_cards")
           .select("card_key, card_start_date")
@@ -446,6 +533,7 @@ export default function AppDashboardPage() {
         }
         setCardStartDates(startMap);
 
+        // 3) Load credit states
         const { data: states, error: statesErr } = await supabase
           .from("credit_states")
           .select("state_key, used, dont_care, remind");
@@ -467,17 +555,8 @@ export default function AppDashboardPage() {
         setUsed(usedMap);
         setDontCare(dcMap);
         setRemind(remindMap);
-
-        // premium feel: if user has saved cards, prefer last viewed; otherwise first saved
-        try {
-          const last = localStorage.getItem("clawback_active_card");
-          const lastValid = last && typedCards.some((x) => x.card_key === last);
-          if (lastValid) setActiveCardKey(last as string);
-          else if (typedCards.length > 0) setActiveCardKey(typedCards[0].card_key);
-        } catch {
-          // ignore
-        }
       } catch {
+        setProfileLoading(false);
         setDbWarning("Supabase tables/policies might not be set up yet. App will still run (no persistence).");
       }
     })();
@@ -574,7 +653,10 @@ export default function AppDashboardPage() {
     setSavedCards((prev) => (prev.includes(activeCard.key) ? prev : [...prev, activeCard.key]));
 
     try {
-      await supabase.from("user_cards").upsert({ user_id: user.id, card_key: activeCard.key }, { onConflict: "user_id,card_key" });
+      await supabase.from("user_cards").upsert(
+        { user_id: user.id, card_key: activeCard.key },
+        { onConflict: "user_id,card_key" }
+      );
     } catch {
       // ignore
     }
@@ -591,6 +673,29 @@ export default function AppDashboardPage() {
       );
     } catch {
       // ignore
+    }
+  }
+
+  async function saveProfile(patch: Partial<DbProfile>) {
+    if (!user) return;
+    setProfileMsg(null);
+    try {
+      const payload: any = { user_id: user.id };
+
+      if (typeof patch.full_name !== "undefined") payload.full_name = patch.full_name;
+      if (typeof patch.phone_e164 !== "undefined") payload.phone_e164 = patch.phone_e164;
+      if (typeof patch.notif_email_enabled !== "undefined") payload.notif_email_enabled = !!patch.notif_email_enabled;
+      if (typeof patch.notif_sms_enabled !== "undefined") payload.notif_sms_enabled = !!patch.notif_sms_enabled;
+      if (typeof patch.sms_consent !== "undefined") payload.sms_consent = !!patch.sms_consent;
+      if (typeof patch.default_offsets_days !== "undefined") payload.default_offsets_days = normalizeOffsets(patch.default_offsets_days as number[]);
+
+      const { error } = await supabase.from("profiles").upsert(payload, { onConflict: "user_id" });
+      if (error) throw error;
+
+      setProfileMsg("Saved.");
+      setTimeout(() => setProfileMsg(null), 1200);
+    } catch {
+      setProfileMsg("Could not save settings. Check RLS / table exists.");
     }
   }
 
@@ -665,6 +770,7 @@ export default function AppDashboardPage() {
       }
 
       const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/app/auth/reset` : undefined;
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
       if (error) setResetMsg(error.message);
@@ -685,6 +791,12 @@ export default function AppDashboardPage() {
     setDontCare({});
     setRemind({});
     setDbWarning(null);
+    setFullName("");
+    setPhoneE164("");
+    setNotifEmailEnabled(true);
+    setNotifSmsEnabled(false);
+    setSmsConsent(false);
+    setOffsetsDays([7, 1]);
     didInitialLoad.current = false;
 
     await supabase.auth.signOut({ scope: "local" });
@@ -700,7 +812,11 @@ export default function AppDashboardPage() {
         : tone === "slate"
         ? "border-sky-300/20 bg-sky-300/10 text-sky-100"
         : "border-white/10 bg-white/5 text-white/70";
-    return <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>{text}</span>;
+    return (
+      <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${cls}`}>
+        {text}
+      </span>
+    );
   }
 
   function IconToggleButton(props: {
@@ -731,6 +847,21 @@ export default function AppDashboardPage() {
     );
   }
 
+  function Chip(props: { on: boolean; label: string; onClick: () => void }) {
+    return (
+      <button
+        type="button"
+        onClick={props.onClick}
+        className={[
+          "rounded-full border px-3 py-1.5 text-xs font-semibold transition",
+          props.on ? "border-amber-300/30 bg-amber-300/15 text-amber-100" : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10",
+        ].join(" ")}
+      >
+        {props.label}
+      </button>
+    );
+  }
+
   function CardRow({ card, showTopPickBadge }: { card: Card; showTopPickBadge?: boolean }) {
     const active = card.key === activeCard.key;
 
@@ -740,7 +871,10 @@ export default function AppDashboardPage() {
           setActiveCardKey(card.key);
           setMobileView("credits");
         }}
-        className={["flex w-full items-start gap-3 px-3 py-3 text-left transition", active ? "bg-white/8" : "hover:bg-white/5"].join(" ")}
+        className={[
+          "flex w-full items-start gap-3 px-3 py-3 text-left transition",
+          active ? "bg-white/8" : "hover:bg-white/5",
+        ].join(" ")}
         type="button"
       >
         <div
@@ -795,7 +929,11 @@ export default function AppDashboardPage() {
     if (cards.length === 0) return null;
 
     const headerBg =
-      accent === "gold" ? "bg-amber-400/10 border-amber-400/20" : accent === "slate" ? "bg-sky-400/10 border-sky-400/20" : "bg-white/5 border-white/10";
+      accent === "gold"
+        ? "bg-amber-400/10 border-amber-400/20"
+        : accent === "slate"
+        ? "bg-sky-400/10 border-sky-400/20"
+        : "bg-white/5 border-white/10";
 
     const titleColor = accent === "gold" ? "text-amber-100" : accent === "slate" ? "text-sky-100" : "text-white/90";
 
@@ -816,7 +954,7 @@ export default function AppDashboardPage() {
   }
 
   // -------------------------
-  // TOP-RIGHT AUTH + QUIZ
+  // TOP-RIGHT AUTH + QUIZ + SETTINGS
   // -------------------------
   const TopRight = (
     <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -826,8 +964,22 @@ export default function AppDashboardPage() {
             {isFounder ? "Founder" : "Signed in"}
           </div>
           <div className="hidden sm:block rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/70 max-w-[320px] truncate">
-            {user.email}
+            {displayName || user.email}
           </div>
+
+          <button
+            onClick={() => {
+              setSettingsOpen(true);
+              setProfileMsg(null);
+            }}
+            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/80 hover:bg-white/10 inline-flex items-center gap-2"
+            type="button"
+            title="Settings"
+          >
+            <IconGear className="h-4 w-4" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
+
           <button
             onClick={signOut}
             className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/80 hover:bg-white/10"
@@ -876,9 +1028,172 @@ export default function AppDashboardPage() {
     </div>
   );
 
+  const SettingsModal = !settingsOpen ? null : (
+    <div className="fixed inset-0 z-50">
+      <button
+        className="absolute inset-0 bg-black/60"
+        onClick={() => setSettingsOpen(false)}
+        aria-label="Close settings modal backdrop"
+      />
+      <div className="absolute left-1/2 top-10 w-[92vw] max-w-xl -translate-x-1/2">
+        <div className={surfaceCardClass("p-5")}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xl font-semibold text-white/95">Settings</div>
+              <div className="mt-1 text-sm text-white/55">
+                Email reminders can be on by default. SMS is off by default and requires consent.
+              </div>
+            </div>
+            <button
+              onClick={() => setSettingsOpen(false)}
+              className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 hover:bg-white/10"
+              type="button"
+            >
+              Close
+            </button>
+          </div>
+
+          {!user ? (
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-white/70">
+              Sign in to edit settings.
+            </div>
+          ) : (
+            <div className="mt-4 space-y-4">
+              <div>
+                <div className="text-xs text-white/50">Full name</div>
+                <input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g., Naman"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none placeholder:text-white/30"
+                />
+              </div>
+
+              <div>
+                <div className="text-xs text-white/50">Phone (optional, E.164)</div>
+                <input
+                  value={phoneE164}
+                  onChange={(e) => setPhoneE164(e.target.value)}
+                  placeholder="+14155551234"
+                  className="mt-1 w-full rounded-xl border border-white/10 bg-[#0F1218] px-3 py-2 text-sm outline-none placeholder:text-white/30"
+                />
+                <div className="mt-1 text-[11px] text-white/40">
+                  SMS reminders are OFF by default. We’ll add phone verification later.
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
+                <div className="text-sm font-semibold text-white/90">Reminder channels</div>
+
+                <div className="mt-3 space-y-3">
+                  <label className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-white/75">Email reminders</span>
+                    <input
+                      type="checkbox"
+                      checked={notifEmailEnabled}
+                      onChange={(e) => setNotifEmailEnabled(e.target.checked)}
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-white/75">SMS reminders</span>
+                    <input
+                      type="checkbox"
+                      checked={notifSmsEnabled}
+                      onChange={(e) => setNotifSmsEnabled(e.target.checked)}
+                    />
+                  </label>
+
+                  {notifSmsEnabled ? (
+                    <label className="flex items-start gap-2 text-xs text-white/70">
+                      <input
+                        type="checkbox"
+                        checked={smsConsent}
+                        onChange={(e) => setSmsConsent(e.target.checked)}
+                      />
+                      <span>
+                        I consent to receive SMS reminders from ClawBack. Msg & data rates may apply. Reply STOP to unsubscribe.
+                      </span>
+                    </label>
+                  ) : null}
+
+                  {notifSmsEnabled && !smsConsent ? (
+                    <div className="rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">
+                      SMS requires consent checkbox to be enabled.
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
+                <div className="text-sm font-semibold text-white/90">Reminder schedule</div>
+                <div className="mt-1 text-xs text-white/55">Choose how many days before reset you want to be notified.</div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[1, 3, 5, 7, 10, 14].map((d) => (
+                    <Chip
+                      key={d}
+                      label={`${d} day${d === 1 ? "" : "s"}`}
+                      on={offsetsDays.includes(d)}
+                      onClick={() => {
+                        setOffsetsDays((prev) => {
+                          const has = prev.includes(d);
+                          const next = has ? prev.filter((x) => x !== d) : [...prev, d];
+                          return normalizeOffsets(next);
+                        });
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-2 text-[11px] text-white/45">
+                  Default is <b>7</b> and <b>1</b> days. (These are global offsets, not per-credit.)
+                </div>
+              </div>
+
+              <button
+                onClick={async () => {
+                  const effectiveSmsEnabled = notifSmsEnabled && smsConsent && phoneE164.trim().length > 0;
+                  await saveProfile({
+                    full_name: fullName.trim() || null,
+                    phone_e164: phoneE164.trim() || null,
+                    notif_email_enabled: notifEmailEnabled,
+                    notif_sms_enabled: effectiveSmsEnabled,
+                    sms_consent: smsConsent,
+                    default_offsets_days: offsetsDays,
+                  } as any);
+
+                  // Reflect any normalization (ex: turning sms off if no consent/phone)
+                  setNotifSmsEnabled(effectiveSmsEnabled);
+                }}
+                className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-60"
+                type="button"
+                disabled={profileLoading || (notifSmsEnabled && !smsConsent)}
+              >
+                Save settings
+              </button>
+
+              {profileMsg ? (
+                <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{profileMsg}</div>
+              ) : null}
+
+              <div className="text-[11px] text-white/40">
+                Tip: You can keep SMS off and still get email reminders.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   const AuthModal = !authModalOpen ? null : (
     <div className="fixed inset-0 z-50">
-      <button className="absolute inset-0 bg-black/60" onClick={() => setAuthModalOpen(false)} aria-label="Close auth modal backdrop" />
+      <button
+        className="absolute inset-0 bg-black/60"
+        onClick={() => setAuthModalOpen(false)}
+        aria-label="Close auth modal backdrop"
+      />
       <div className="absolute left-1/2 top-10 w-[92vw] max-w-xl -translate-x-1/2">
         <div className={surfaceCardClass("p-5")}>
           <div className="flex items-start justify-between gap-3">
@@ -886,7 +1201,9 @@ export default function AppDashboardPage() {
               <div className="text-xl font-semibold text-white/95">
                 {authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}
               </div>
-              <div className="mt-1 text-sm text-white/55">{authMode === "reset" ? "We’ll email you a reset link." : "Email/password. No anonymous accounts."}</div>
+              <div className="mt-1 text-sm text-white/55">
+                {authMode === "reset" ? "We’ll email you a reset link." : "Email/password. No anonymous accounts."}
+              </div>
             </div>
             <button
               onClick={() => setAuthModalOpen(false)}
@@ -970,7 +1287,9 @@ export default function AppDashboardPage() {
                 <div className="text-xs text-white/40">Tip: confirm email can be OFF during testing.</div>
               </div>
 
-              {authMsg ? <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div> : null}
+              {authMsg ? (
+                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
+              ) : null}
             </div>
           ) : (
             <div className="mt-4 space-y-2">
@@ -996,7 +1315,9 @@ export default function AppDashboardPage() {
                 <div className="text-xs text-white/40">Reset link opens /app/auth/reset</div>
               </div>
 
-              {resetMsg ? <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{resetMsg}</div> : null}
+              {resetMsg ? (
+                <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{resetMsg}</div>
+              ) : null}
             </div>
           )}
         </div>
@@ -1005,28 +1326,37 @@ export default function AppDashboardPage() {
   );
 
   // -------------------------
-  // LEFT PANEL (Account box removed)
+  // LEFT PANEL
   // -------------------------
   const LeftPanel = (
     <aside className="lg:col-span-4">
       <div className={surfaceCardClass("p-4 lg:sticky lg:top-5")}>
-        {/* Your Cards (now top) */}
+        {/* Your Cards (top) */}
         <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-lg font-semibold text-white/95">Your Cards</div>
               <div className="mt-1 text-xs text-white/55">Saved cards appear here.</div>
             </div>
-
             {user ? (
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">Synced</span>
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">
+                Synced
+              </span>
             ) : (
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">Preview</span>
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                Preview
+              </span>
             )}
           </div>
 
-          {dbWarning ? (
-            <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">{dbWarning}</div>
+          {!user ? (
+            <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">
+              Browse everything free. Sign in (top-right) to save 1 card + your reminders.
+            </div>
+          ) : dbWarning ? (
+            <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs text-amber-100/90">
+              {dbWarning}
+            </div>
           ) : null}
 
           <div className="mt-3 space-y-2">
@@ -1178,12 +1508,14 @@ export default function AppDashboardPage() {
             className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90"
             type="button"
           >
-            Notify me for this card
+            {savedCards.includes(activeCard.key) ? "Saved ✓" : "Notify me for this card"}
           </button>
 
           <div className="mt-2 text-xs text-white/40">Free: save 1 card • Multi-card is $5 flat (coming soon)</div>
 
-          {authMsg ? <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div> : null}
+          {authMsg ? (
+            <div className="mt-2 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/70">{authMsg}</div>
+          ) : null}
         </div>
       </div>
     </aside>
@@ -1192,8 +1524,6 @@ export default function AppDashboardPage() {
   // -------------------------
   // MIDDLE: Credits
   // -------------------------
-  const netValue = totals.totalRedeemed - activeCard.annualFee;
-
   const MiddlePanel = (
     <main className="lg:col-span-5">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -1213,11 +1543,9 @@ export default function AppDashboardPage() {
         </div>
 
         <div className={surfaceCardClass("p-4 border-red-400/15 bg-red-500/6")}>
-          <div className="text-xs text-white/55">Net Value</div>
-          <div className="mt-2 text-3xl font-semibold text-red-100">{formatMoney(netValue)}</div>
-          <div className="mt-2 text-xs text-white/50">
-            redeemed {formatMoney(totals.totalRedeemed)} − fee {formatMoney(activeCard.annualFee)}
-          </div>
+          <div className="text-xs text-white/55">Annual Fee</div>
+          <div className="mt-2 text-3xl font-semibold text-red-100">{formatMoney(activeCard.annualFee)}</div>
+          <div className="mt-2 text-xs text-white/50">next: net value vs fee</div>
         </div>
       </div>
 
@@ -1245,6 +1573,10 @@ export default function AppDashboardPage() {
         <div className="mt-6">
           <div className="text-base font-semibold text-white/90">Credits</div>
 
+          <div className="mt-2 text-xs text-white/50">
+            Sorted by frequency (Monthly → Quarterly → Semiannual → Annual → Other), then A–Z.
+          </div>
+
           <div className="mt-4 space-y-3">
             {creditsSorted.map((c) => {
               const key = `${activeCard.key}:${c.id}`;
@@ -1252,21 +1584,12 @@ export default function AppDashboardPage() {
               const dontCareOn = !!dontCare[key];
               const remindOn = !!remind[key];
 
-              const rowTone = dontCareOn
-                ? "opacity-45"
-                : usedOn
-                ? "opacity-65"
-                : "opacity-100";
-
               return (
-                <div key={c.id} className={`rounded-2xl border border-white/10 bg-[#0F1218] p-4 ${rowTone}`}>
+                <div key={c.id} className="rounded-2xl border border-white/10 bg-[#0F1218] p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        {remindOn ? <span className="h-2 w-2 rounded-full bg-sky-300/80 shadow-[0_0_10px_rgba(125,211,252,0.35)]" /> : null}
-                        <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">{c.title}</div>
-                      </div>
-                      <div className="mt-1 text-xs text-white/55 line-clamp-1">
+                      <div className="text-sm font-semibold text-white/95 leading-5 line-clamp-2">{c.title}</div>
+                      <div className="mt-1 text-xs text-white/55">
                         {creditSubtitle(c)}
                         {c.notes ? ` • ${c.notes}` : ""}
                       </div>
@@ -1302,7 +1625,9 @@ export default function AppDashboardPage() {
             })}
 
             {creditsSorted.length === 0 ? (
-              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4 text-sm text-white/60">No credits found for this card.</div>
+              <div className="rounded-2xl border border-white/10 bg-[#0F1218] p-4 text-sm text-white/60">
+                No credits found for this card.
+              </div>
             ) : null}
           </div>
         </div>
@@ -1321,7 +1646,10 @@ export default function AppDashboardPage() {
 
         <div className="mt-4 space-y-2">
           {activeCard.multipliers.map((m) => (
-            <div key={m.label} className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2">
+            <div
+              key={m.label}
+              className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/15 bg-black/20 px-3 py-2"
+            >
               <div className="text-sm font-medium text-amber-50/90 leading-5 line-clamp-2">{m.label}</div>
               <div className="shrink-0 text-sm font-semibold text-amber-50">{m.x}x</div>
             </div>
@@ -1342,7 +1670,9 @@ export default function AppDashboardPage() {
         <div className="mt-4 space-y-2">
           {expiringSoon.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-black/25 p-3 text-sm text-white/60">
-              {cardStartDates[activeCard.key] ? "No credits expiring in the next 14 days (with Remind on)." : "No date set yet. Toggle Remind + set start date."}
+              {cardStartDates[activeCard.key]
+                ? "No credits expiring in the next 14 days (with Remind on)."
+                : "No date set yet. Toggle Remind + set start date."}
             </div>
           ) : (
             expiringSoon.map((x) => (
@@ -1361,13 +1691,29 @@ export default function AppDashboardPage() {
           )}
         </div>
 
-        <div className="mt-3 text-[11px] text-white/45">Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.</div>
+        <div className="mt-3 text-[11px] text-white/45">
+          Rules: Remind ON, not Used, not Don’t care, and reset within 14 days.
+        </div>
+      </div>
+
+      <div className={surfaceCardClass("mt-5 p-5")}>
+        <div className="text-lg font-semibold text-white/95">Reminders</div>
+        <div className="mt-1 text-xs text-white/55">
+          Current schedule: <b>{normalizeOffsets(offsetsDays).join(", ")}</b> days before reset
+        </div>
+        <div className="mt-3 rounded-xl border border-white/10 bg-black/25 p-3 text-xs text-white/65">
+          Email: <b className="text-white/85">{notifEmailEnabled ? "ON" : "OFF"}</b> • SMS:{" "}
+          <b className="text-white/85">{notifSmsEnabled ? "ON" : "OFF"}</b>
+          <div className="mt-2 text-[11px] text-white/45">
+            Configure in <b>Settings</b> (top-right). SMS requires consent + phone.
+          </div>
+        </div>
       </div>
     </aside>
   );
 
   // -------------------------
-  // QUIZ MODAL
+  // QUIZ MODAL (unchanged)
   // -------------------------
   const QuizModal = !quizOpen ? null : (
     <div className="fixed inset-0 z-50">
@@ -1433,7 +1779,11 @@ export default function AppDashboardPage() {
           </div>
 
           <label className="mt-4 flex items-center gap-2 text-sm text-white/70">
-            <input type="checkbox" checked={quiz.includeWelcomeBonus} onChange={(e) => setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))} />
+            <input
+              type="checkbox"
+              checked={quiz.includeWelcomeBonus}
+              onChange={(e) => setQuiz((p) => ({ ...p, includeWelcomeBonus: e.target.checked }))}
+            />
             Include welcome bonus value (if any)
           </label>
 
@@ -1461,7 +1811,7 @@ export default function AppDashboardPage() {
               ))}
             </div>
 
-            <div className="mt-3 text-xs text-white/45">Next: “what to do this month” checklist + reminders UX.</div>
+            <div className="mt-3 text-xs text-white/45">Next: improve quiz questions + “this month” checklist.</div>
           </div>
         </div>
       </div>
@@ -1506,15 +1856,22 @@ export default function AppDashboardPage() {
 
         {/* Desktop grid */}
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>{LeftPanel}</div>
+          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>
+            {LeftPanel}
+          </div>
 
-          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>{MiddlePanel}</div>
+          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>
+            {MiddlePanel}
+          </div>
 
-          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>{RightPanel}</div>
+          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>
+            {RightPanel}
+          </div>
         </div>
       </div>
 
       {AuthModal}
+      {SettingsModal}
       {QuizModal}
     </div>
   );
