@@ -1768,50 +1768,7 @@ export default function AppDashboardPage() {
   const MiddlePanel = (
     <main className="lg:col-span-5">
 
-      {/* Hero (premium first impression) */}
-      <div className={surfaceCardClass("p-6 border-white/15 bg-gradient-to-br from-[#101420] via-[#0F1218] to-[#0A0C10]")}>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div>
-            <div className="text-3xl font-semibold tracking-tight text-white/95">
-              The tracker that stops you from wasting premium credits.
-            </div>
-            <div className="mt-3 text-sm leading-6 text-white/60">
-              Track credits, get reminded, and claw back your annual fee — without bank logins.
-            </div>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={startTrackingScroll}
-                className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-white/90"
-              >
-                Start tracking
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setQuizOpen(true);
-                  setQuizStage(0);
-                  setLookingForNew(null);
-                }}
-                className="rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 hover:bg-white/10"
-              >
-                Take the quiz
-              </button>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-2 text-xs">
-              {[
-                "✅ No bank login needed",
-                "✅ Works in 30 seconds",
-                "✅ Save $300–$2,000/yr",
-              ].map((t) => (
-                <span key={t} className="rounded-full border border-white/10 bg-black/25 px-3 py-1 text-white/75">
-                  {t}
-                </span>
-              ))}
-            </div>
-          </div>
+      
 
           {/* Mini dashboard preview */}
           <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#0B0E14] p-5 shadow-[0_0_70px_rgba(0,0,0,0.55)]">
