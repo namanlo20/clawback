@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import {
   CARDS,
@@ -324,6 +325,8 @@ function normalizeOffsets(input: number[]): number[] {
 // PAGE
 // -----------------------------
 export default function AppDashboardPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
   const [activeTab, setActiveTab] = useState<"dashboard" | "quiz" | "coming-soon" | "settings">("dashboard");
   
@@ -522,6 +525,26 @@ export default function AppDashboardPage() {
       includeWelcomeBonus: true,
     });
   }, []);
+
+  // Landing page deep-links: /app?open=signin | signup | quiz
+  // - opens the correct modal
+  // - then cleans the URL back to /app
+  useEffect(() => {
+    const open = searchParams.get("open");
+    if (!open) return;
+
+    if (open === "quiz") {
+      setQuizOpen(true);
+      resetQuiz();
+    } else if (open === "signin" || open === "signup") {
+      setAuthModalOpen(true);
+      setAuthMode(open);
+    }
+
+    // Prevent repeated triggers on refresh/navigation
+    router.replace("/app");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, router, resetQuiz]);
 
   // Auth init
   useEffect(() => {
