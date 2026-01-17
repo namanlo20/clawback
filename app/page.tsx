@@ -28,19 +28,19 @@ export default function HomePage() {
           </Link>
           <div className="flex items-center gap-3">
             <Link 
-              href="/app?open=signin"
+              href="/app"
               className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
               Sign In
             </Link>
             <Link 
-              href="/app?open=signup"
+              href="/app"
               className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
               Sign Up
             </Link>
             <Link 
-              href="/app?open=quiz"
+              href="/app"
               className="rounded-full bg-purple-500 px-4 py-2 text-sm font-medium text-white hover:bg-purple-400 transition"
             >
               Take Quiz
