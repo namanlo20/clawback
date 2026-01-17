@@ -1,5 +1,4 @@
 // data/cards.ts
-// ClawBack card database with welcome bonus ranges and category classification
 
 export type CreditFrequency =
   | "monthly"
@@ -13,7 +12,7 @@ export type CreditFrequency =
 export type Credit = {
   id: string;
   title: string;
-  amount: number;
+  amount: number; // amount PER period (not annualized)
   frequency: CreditFrequency;
   notes?: string;
 };
@@ -34,21 +33,15 @@ export type PointsProgram =
   | "marriott_points"
   | "hilton_points";
 
-export type SpendCategory = "dining" | "travel" | "groceries" | "gas" | "online" | "other";
+export type SpendCategory =
+  | "dining"
+  | "travel"
+  | "groceries"
+  | "gas"
+  | "online"
+  | "other";
+
 export type EarnRates = Partial<Record<SpendCategory, number>>;
-
-// Welcome bonus with USD value range
-export type WelcomeBonus = {
-  points?: string;              // e.g. "175,000 MR"
-  spend?: string;               // e.g. "Spend $8,000"
-  timeframeMonths?: number;     // e.g. 6
-  estValueUsdLow?: number;      // e.g. 1800
-  estValueUsdHigh?: number;     // e.g. 2600
-  note?: string;                // "Offers vary..."
-};
-
-// Card category for tier organization
-export type CardCategory = "popular" | "hotel" | "airline" | "other";
 
 export type Card = {
   key: string;
@@ -56,17 +49,31 @@ export type Card = {
   issuer: string;
   annualFee: number;
   creditsTrackedAnnualized: number;
-  logo: string;
+  logo: string; // "/logos/xxx.png"
+
   pointsProgram: PointsProgram;
+
+  // Deterministic quiz engine input (v1: broad categories)
   earnRates: EarnRates;
-  welcomeBonus?: WelcomeBonus;
+
+  // Optional: premium feel + badges
+  signupBonusEstUsd?: number;
+
+  welcomeBonus?: {
+    headline: string;
+    details?: string;
+    valueEstimateUsd?: number;
+    note?: string;
+  };
+
   multipliers: Multiplier[];
   credits: Credit[];
-  category: CardCategory;
 };
 
-// Point values for calculations (conservative estimates)
-export const DEFAULT_POINT_VALUES_USD: Record<Exclude<PointsProgram, "cashback">, number> = {
+export const DEFAULT_POINT_VALUES_USD: Record<
+  Exclude<PointsProgram, "cashback">,
+  number
+> = {
   amex_mr: 0.015,
   chase_ur: 0.015,
   cap1_miles: 0.01,
@@ -82,443 +89,300 @@ export function pointValueUsd(program: PointsProgram): number {
   return DEFAULT_POINT_VALUES_USD[program];
 }
 
-// Helper to display welcome bonus range
-export function getWelcomeBonusDisplay(card: Card): string | null {
-  if (!card.welcomeBonus) return null;
-  const { estValueUsdLow, estValueUsdHigh } = card.welcomeBonus;
-  if (estValueUsdLow && estValueUsdHigh) {
-    return `$${estValueUsdLow.toLocaleString()}–$${estValueUsdHigh.toLocaleString()}`;
-  }
-  return null;
-}
-
-// Pinned top 3 cards (always shown first in Tier 3 Popular)
-export const PINNED_TOP_3: string[] = ["amex-platinum", "chase-sapphire-reserve", "capitalone-venture-x"];
-
 export const CARDS: Card[] = [
-  // ========== TIER 3: $500+ ==========
   {
     key: "amex-platinum",
-    name: "The Platinum Card",
+    name: "Platinum Card",
     issuer: "American Express",
-    annualFee: 695,
-    creditsTrackedAnnualized: 1800,
+    annualFee: 895,
+    creditsTrackedAnnualized: 3074,
     logo: "/logos/amex-platinum.png",
     pointsProgram: "amex_mr",
     earnRates: { travel: 5, other: 1 },
-    category: "popular",
+    signupBonusEstUsd: 2625,
     welcomeBonus: {
-      points: "150,000 MR",
-      spend: "$8,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 2250,
-      estValueUsdHigh: 3000,
-      note: "Offers vary by applicant/time",
+      headline: "175,000 MR",
+      details: "Spend $8,000 in 6 months",
+      valueEstimateUsd: 2625,
+      note: "Offers vary by applicant/time.",
     },
     multipliers: [
-      { label: "Flights booked direct or via Amex Travel", x: 5 },
-      { label: "Prepaid hotels via Amex Travel", x: 5 },
+      { label: "Flights booked direct / Amex Travel", x: 5 },
+      { label: "Prepaid hotels on AmexTravel", x: 5 },
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      { id: "plat-uber", title: "Uber Cash", amount: 15, frequency: "monthly", notes: "$35 in December" },
-      { id: "plat-saks", title: "Saks Fifth Avenue", amount: 50, frequency: "semiannual" },
-      { id: "plat-airline", title: "Airline Incidental Fee", amount: 200, frequency: "annual" },
-      { id: "plat-hotel", title: "Hotel Credit (FHR/THC)", amount: 200, frequency: "annual" },
-      { id: "plat-digital", title: "Digital Entertainment", amount: 20, frequency: "monthly" },
-      { id: "plat-equinox", title: "Equinox", amount: 25, frequency: "monthly" },
-      { id: "plat-clear", title: "CLEAR Plus", amount: 189, frequency: "annual" },
-      { id: "plat-global-entry", title: "Global Entry/TSA PreCheck", amount: 100, frequency: "every5years" },
+      { id: "plat-airline-incidental", title: "Airline Incidental Fees", amount: 200, frequency: "annual" },
+      { id: "plat-clear", title: "Clear Plus", amount: 209, frequency: "annual" },
+      { id: "plat-digital-entertainment", title: "Digital Entertainment", amount: 25, frequency: "monthly" },
+      { id: "plat-fhr-hotel-collection", title: "Fine Hotels + Resorts / Hotel Collection", amount: 300, frequency: "semiannual" },
+      { id: "plat-lululemon", title: "Lululemon", amount: 75, frequency: "quarterly" },
+      { id: "plat-oura", title: "Oura Ring", amount: 200, frequency: "annual" },
+      { id: "plat-resy", title: "Resy Restaurants", amount: 100, frequency: "quarterly" },
+      { id: "plat-saks", title: "Saks", amount: 50, frequency: "semiannual" },
+      { id: "plat-uber-one", title: "Uber One Subscription", amount: 120, frequency: "annual" },
+      { id: "plat-uber-cash-jan-nov", title: "Uber Cash (Jan–Nov)", amount: 15, frequency: "monthly" },
+      { id: "plat-uber-cash-dec", title: "Uber Cash (Dec)", amount: 35, frequency: "monthly", notes: "December only" },
+      { id: "plat-equinox", title: "Equinox", amount: 300, frequency: "annual" },
+      { id: "plat-walmartplus", title: "Walmart+ Subscription", amount: 12.95, frequency: "monthly" },
     ],
   },
+
   {
     key: "chase-sapphire-reserve",
-    name: "Sapphire Reserve",
+    name: "Chase Sapphire Reserve",
     issuer: "Chase",
-    annualFee: 550,
-    creditsTrackedAnnualized: 550,
+    annualFee: 795,
+    creditsTrackedAnnualized: 2817,
     logo: "/logos/chase-sapphire-reserve.png",
     pointsProgram: "chase_ur",
-    earnRates: { travel: 3, dining: 3, other: 1 },
-    category: "popular",
-    welcomeBonus: {
-      points: "60,000 UR",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 900,
-      estValueUsdHigh: 1200,
-      note: "Standard offer",
-    },
+    earnRates: { travel: 4, dining: 3, other: 1 },
+    signupBonusEstUsd: 900,
     multipliers: [
-      { label: "Travel & dining", x: 3 },
+      { label: "Chase travel", x: 8 },
+      { label: "Flights booked direct", x: 4 },
+      { label: "Hotels booked direct", x: 4 },
+      { label: "Dining", x: 3 },
       { label: "Everything else", x: 1 },
-      { label: "1.5x when redeemed via Chase Travel", x: 1.5 },
     ],
     credits: [
-      { id: "csr-travel", title: "Annual Travel Credit", amount: 300, frequency: "annual" },
-      { id: "csr-doordash", title: "DoorDash DashPass", amount: 60, frequency: "annual", notes: "Complimentary membership" },
-      { id: "csr-lyft", title: "Lyft Pink", amount: 60, frequency: "annual" },
-      { id: "csr-global-entry", title: "Global Entry/TSA PreCheck", amount: 100, frequency: "every5years" },
+      { id: "csr-apple-tv", title: "Apple TV+", amount: 288, frequency: "annual", notes: "Value in sheet" },
+      { id: "csr-dining-credit", title: "Dining Credit", amount: 150, frequency: "semiannual" },
+      { id: "csr-doordash-dashpass", title: "DoorDash DashPass Subscription", amount: 120, frequency: "annual" },
+      { id: "csr-doordash-restaurants", title: "DoorDash Restaurant", amount: 5, frequency: "monthly" },
+      { id: "csr-doordash-retail-10a", title: "DoorDash Retail", amount: 10, frequency: "monthly" },
+      { id: "csr-doordash-retail-10b", title: "DoorDash Retail (second line)", amount: 10, frequency: "monthly" },
+      { id: "csr-hotel-the-edit", title: "Hotel (The Edit)", amount: 250, frequency: "semiannual" },
+      { id: "csr-lyft", title: "Lyft", amount: 10, frequency: "monthly" },
+      { id: "csr-stubhub", title: "StubHub", amount: 150, frequency: "semiannual" },
+      { id: "csr-travel", title: "Travel", amount: 300, frequency: "annual" },
+      { id: "csr-peloton", title: "Peloton", amount: 10, frequency: "monthly" },
+      { id: "csr-global-entry", title: "Global Entry / TSA PreCheck / NEXUS fee", amount: 120, frequency: "every4years" },
+      { id: "csr-priority-pass", title: "Priority Pass", amount: 469, frequency: "annual", notes: "Value in sheet" },
     ],
   },
+
   {
     key: "capitalone-venture-x",
     name: "Venture X",
     issuer: "Capital One",
     annualFee: 395,
-    creditsTrackedAnnualized: 500,
+    creditsTrackedAnnualized: 400,
     logo: "/logos/capitalone-venture-x.png",
     pointsProgram: "cap1_miles",
     earnRates: { travel: 5, other: 2 },
-    category: "popular",
-    welcomeBonus: {
-      points: "75,000 miles",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 750,
-      estValueUsdHigh: 1125,
-      note: "Standard offer",
-    },
+    signupBonusEstUsd: 750,
     multipliers: [
       { label: "Hotels & rental cars via Capital One Travel", x: 10 },
-      { label: "Flights via Capital One Travel", x: 5 },
+      { label: "Flights & vacation rentals via Capital One Travel", x: 5 },
       { label: "Everything else", x: 2 },
     ],
     credits: [
-      { id: "vx-travel", title: "Annual Travel Credit", amount: 300, frequency: "annual" },
-      { id: "vx-anniversary", title: "Anniversary Bonus Miles", amount: 100, frequency: "annual", notes: "10,000 miles = $100" },
-      { id: "vx-global-entry", title: "Global Entry/TSA PreCheck", amount: 100, frequency: "every5years" },
+      { id: "vx-travel", title: "Travel", amount: 300, frequency: "annual" },
+      { id: "vx-global-entry", title: "Global Entry / TSA PreCheck / NEXUS fee", amount: 120, frequency: "every4years" },
+      { id: "vx-anniversary-bonus", title: "Anniversary Bonus Miles", amount: 100, frequency: "annual" },
     ],
   },
-  {
-    key: "hilton-aspire",
-    name: "Hilton Honors Aspire",
-    issuer: "American Express",
-    annualFee: 550,
-    creditsTrackedAnnualized: 700,
-    logo: "/logos/hilton-aspire.png",
-    pointsProgram: "hilton_points",
-    earnRates: { travel: 14, dining: 7, other: 3 },
-    category: "hotel",
-    welcomeBonus: {
-      points: "175,000 Hilton",
-      spend: "$6,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 875,
-      estValueUsdHigh: 1400,
-      note: "Offers vary",
-    },
-    multipliers: [
-      { label: "Hilton purchases", x: 14 },
-      { label: "Flights, restaurants, car rentals", x: 7 },
-      { label: "Everything else", x: 3 },
-    ],
-    credits: [
-      { id: "aspire-resort", title: "Hilton Resort Credit", amount: 200, frequency: "annual" },
-      { id: "aspire-airline", title: "Airline Incidental Fee", amount: 250, frequency: "annual" },
-      { id: "aspire-freenight", title: "Free Night Award", amount: 200, frequency: "annual", notes: "Estimated value" },
-    ],
-  },
-  {
-    key: "marriott-brilliant",
-    name: "Marriott Bonvoy Brilliant",
-    issuer: "American Express",
-    annualFee: 650,
-    creditsTrackedAnnualized: 700,
-    logo: "/logos/marriott-brilliant.png",
-    pointsProgram: "marriott_points",
-    earnRates: { travel: 6, dining: 3, other: 2 },
-    category: "hotel",
-    welcomeBonus: {
-      points: "185,000 Marriott",
-      spend: "$6,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 1295,
-      estValueUsdHigh: 1850,
-      note: "Offers vary",
-    },
-    multipliers: [
-      { label: "Marriott purchases", x: 6 },
-      { label: "Flights, restaurants", x: 3 },
-      { label: "Everything else", x: 2 },
-    ],
-    credits: [
-      { id: "brilliant-dining", title: "Dining Credit", amount: 25, frequency: "monthly" },
-      { id: "brilliant-freenight", title: "Free Night Award", amount: 300, frequency: "annual", notes: "85K cert value est." },
-      { id: "brilliant-global-entry", title: "Global Entry/TSA PreCheck", amount: 100, frequency: "every5years" },
-    ],
-  },
-  {
-    key: "delta-reserve",
-    name: "Delta SkyMiles Reserve",
-    issuer: "American Express",
-    annualFee: 650,
-    creditsTrackedAnnualized: 400,
-    logo: "/logos/delta-reserve.png",
-    pointsProgram: "delta_miles",
-    earnRates: { travel: 3, dining: 1, other: 1 },
-    category: "airline",
-    welcomeBonus: {
-      points: "90,000 Delta Miles",
-      spend: "$6,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 1080,
-      estValueUsdHigh: 1440,
-      note: "Offers vary",
-    },
-    multipliers: [
-      { label: "Delta purchases", x: 3 },
-      { label: "Everything else", x: 1 },
-    ],
-    credits: [
-      { id: "delta-companion", title: "Companion Certificate", amount: 300, frequency: "annual", notes: "Estimated value" },
-      { id: "delta-global-entry", title: "Global Entry/TSA PreCheck", amount: 100, frequency: "every5years" },
-    ],
-  },
-  {
-    key: "citi-strata-premier",
-    name: "Citi Strata Premier",
-    issuer: "Citi",
-    annualFee: 95,
-    creditsTrackedAnnualized: 100,
-    logo: "/logos/citi-strata.png",
-    pointsProgram: "citi_typ",
-    earnRates: { travel: 3, dining: 3, groceries: 3, gas: 3, other: 1 },
-    category: "other",
-    welcomeBonus: {
-      points: "75,000 TYP",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 750,
-      estValueUsdHigh: 1125,
-      note: "Standard offer",
-    },
-    multipliers: [
-      { label: "Travel, dining, groceries, gas", x: 3 },
-      { label: "Everything else", x: 1 },
-    ],
-    credits: [
-      { id: "strata-hotel", title: "Annual Hotel Savings", amount: 100, frequency: "annual", notes: "$100 off $500+ stay" },
-    ],
-  },
-  // ========== TIER 2: $250-500 ==========
-  {
-    key: "amex-gold",
-    name: "American Express Gold",
-    issuer: "American Express",
-    annualFee: 325,
-    creditsTrackedAnnualized: 380,
-    logo: "/logos/amex-gold.png",
-    pointsProgram: "amex_mr",
-    earnRates: { dining: 4, groceries: 4, travel: 3, other: 1 },
-    category: "popular",
-    welcomeBonus: {
-      points: "60,000 MR",
-      spend: "$6,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 900,
-      estValueUsdHigh: 1200,
-      note: "Offers vary",
-    },
-    multipliers: [
-      { label: "Restaurants worldwide", x: 4 },
-      { label: "US supermarkets (up to $25K/yr)", x: 4 },
-      { label: "Flights booked direct or via Amex Travel", x: 3 },
-      { label: "Everything else", x: 1 },
-    ],
-    credits: [
-      { id: "gold-uber", title: "Uber Cash", amount: 10, frequency: "monthly" },
-      { id: "gold-dining", title: "Dining Credit", amount: 10, frequency: "monthly" },
-      { id: "gold-dunkin", title: "Dunkin' Credit", amount: 7, frequency: "monthly" },
-    ],
-  },
-  {
-    key: "boa-premium-rewards",
-    name: "Premium Rewards",
-    issuer: "Bank of America",
-    annualFee: 95,
-    creditsTrackedAnnualized: 100,
-    logo: "/logos/boa-premium.png",
-    pointsProgram: "cashback",
-    earnRates: { travel: 2, dining: 2, other: 1.5 },
-    category: "other",
-    welcomeBonus: {
-      points: "60,000 points",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 600,
-      estValueUsdHigh: 600,
-      note: "Standard offer",
-    },
-    multipliers: [
-      { label: "Travel & dining", x: 2 },
-      { label: "Everything else", x: 1.5 },
-    ],
-    credits: [
-      { id: "boa-airline", title: "Airline Incidental Credit", amount: 100, frequency: "annual" },
-    ],
-  },
-  // ========== TIER 1: $0-250 ==========
+
   {
     key: "chase-sapphire-preferred",
-    name: "Sapphire Preferred",
+    name: "Chase Sapphire Preferred",
     issuer: "Chase",
     annualFee: 95,
-    creditsTrackedAnnualized: 60,
+    creditsTrackedAnnualized: 170,
     logo: "/logos/chase-sapphire-preferred.png",
     pointsProgram: "chase_ur",
-    earnRates: { travel: 5, dining: 3, online: 3, other: 1 },
-    category: "popular",
-    welcomeBonus: {
-      points: "60,000 UR",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 750,
-      estValueUsdHigh: 1200,
-      note: "Standard offer",
-    },
+    earnRates: { travel: 5, dining: 3, groceries: 3, online: 3, other: 1 },
     multipliers: [
-      { label: "Travel via Chase Travel", x: 5 },
-      { label: "Dining, online groceries, streaming", x: 3 },
+      { label: "Chase Travel", x: 5 },
       { label: "Other travel", x: 2 },
+      { label: "Dining", x: 3 },
+      { label: "Online groceries", x: 3 },
+      { label: "Select streaming", x: 3 },
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      { id: "csp-hotel", title: "Annual Hotel Credit", amount: 50, frequency: "annual", notes: "Via Chase Travel" },
+      { id: "csp-dashpass", title: "DoorDash DashPass Subscription", amount: 120, frequency: "annual" },
+      { id: "csp-hotel-credit", title: "Hotels booked via Chase Travel portal", amount: 50, frequency: "annual" },
     ],
   },
+
   {
     key: "amex-green",
     name: "American Express Green",
     issuer: "American Express",
     annualFee: 150,
-    creditsTrackedAnnualized: 200,
+    creditsTrackedAnnualized: 209,
     logo: "/logos/amex-green.png",
     pointsProgram: "amex_mr",
     earnRates: { travel: 3, dining: 3, other: 1 },
-    category: "popular",
-    welcomeBonus: {
-      points: "40,000 MR",
-      spend: "$3,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 600,
-      estValueUsdHigh: 800,
-      note: "Offers vary",
-    },
     multipliers: [
-      { label: "Travel & transit", x: 3 },
-      { label: "Restaurants", x: 3 },
+      { label: "Travel", x: 3 },
+      { label: "Transit", x: 3 },
+      { label: "Dining", x: 3 },
       { label: "Everything else", x: 1 },
     ],
-    credits: [
-      { id: "green-clear", title: "CLEAR Plus", amount: 189, frequency: "annual" },
-      { id: "green-lounge", title: "LoungeBuddy", amount: 100, frequency: "annual", notes: "Airport lounge access" },
-    ],
+    credits: [{ id: "green-clear", title: "Clear Plus", amount: 209, frequency: "annual" }],
   },
+
   {
     key: "hilton-surpass",
     name: "Hilton Honors Surpass",
     issuer: "American Express",
     annualFee: 150,
-    creditsTrackedAnnualized: 150,
-    logo: "/logos/hilton-surpass.png",
+    creditsTrackedAnnualized: 200,
+    logo: "/logos/hilton-honors-surpass.png",
     pointsProgram: "hilton_points",
-    earnRates: { travel: 12, dining: 6, groceries: 6, gas: 6, other: 3 },
-    category: "hotel",
-    welcomeBonus: {
-      points: "130,000 Hilton",
-      spend: "$3,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 650,
-      estValueUsdHigh: 1040,
-      note: "Offers vary",
-    },
+    earnRates: { travel: 12, dining: 6, groceries: 6, gas: 6, online: 4, other: 3 },
     multipliers: [
-      { label: "Hilton purchases", x: 12 },
-      { label: "Restaurants, supermarkets, gas", x: 6 },
+      { label: "Purchases at Hilton", x: 12 },
+      { label: "Dining", x: 6 },
+      { label: "US Supermarkets", x: 6 },
+      { label: "Gas", x: 6 },
+      { label: "US Online Retail", x: 4 },
+      { label: "Everything else", x: 3 },
+    ],
+    credits: [{ id: "surpass-hilton-credit", title: "Hilton credit", amount: 50, frequency: "quarterly" }],
+  },
+
+  {
+    key: "amex-gold",
+    name: "American Express Gold",
+    issuer: "American Express",
+    annualFee: 325,
+    creditsTrackedAnnualized: 424,
+    logo: "/logos/amex-gold.png",
+    pointsProgram: "amex_mr",
+    earnRates: { dining: 4, groceries: 4, travel: 3, other: 1 },
+    signupBonusEstUsd: 900,
+    multipliers: [
+      { label: "Restaurant", x: 4 },
+      { label: "Groceries", x: 4 },
+      { label: "Flights (direct/Amex Travel)", x: 3 },
+      { label: "Prepaid hotels", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "gold-uber-cash", title: "Uber Cash", amount: 10, frequency: "monthly" },
+      { id: "gold-dunkin", title: "Dunkin", amount: 7, frequency: "monthly" },
+      { id: "gold-resy", title: "Resy Restaurants", amount: 50, frequency: "semiannual" },
+      { id: "gold-dining", title: "Dining", amount: 10, frequency: "monthly" },
+    ],
+  },
+
+  {
+    key: "hilton-honors-aspire",
+    name: "Hilton Honors Aspire",
+    issuer: "American Express",
+    annualFee: 550,
+    creditsTrackedAnnualized: 909,
+    logo: "/logos/hilton-honors.png",
+    pointsProgram: "hilton_points",
+    earnRates: { travel: 7, dining: 7, other: 3 },
+    signupBonusEstUsd: 700,
+    multipliers: [
+      { label: "Hilton hotels & resorts", x: 14 },
+      { label: "Flights/AmexTravel/Car rentals", x: 7 },
+      { label: "Dining", x: 7 },
       { label: "Everything else", x: 3 },
     ],
     credits: [
-      { id: "surpass-freenight", title: "Free Night Reward", amount: 150, frequency: "annual", notes: "After $15K spend" },
+      { id: "aspire-flights", title: "Flights", amount: 50, frequency: "quarterly" },
+      { id: "aspire-clear", title: "Clear Plus", amount: 209, frequency: "annual" },
+      { id: "aspire-conrad-waldorf-2night", title: "Conrad/Waldorf Astoria (2 Night)", amount: 100, frequency: "annual" },
+      { id: "aspire-hilton-resort", title: "Hilton Resort", amount: 200, frequency: "semiannual" },
     ],
   },
+
   {
-    key: "united-quest",
-    name: "United Quest",
-    issuer: "Chase",
-    annualFee: 250,
-    creditsTrackedAnnualized: 275,
-    logo: "/logos/united-quest.png",
-    pointsProgram: "chase_ur",
-    earnRates: { travel: 3, dining: 2, other: 1 },
-    category: "airline",
-    welcomeBonus: {
-      points: "70,000 United Miles",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 840,
-      estValueUsdHigh: 1120,
-      note: "Standard offer",
-    },
+    key: "delta-reserve",
+    name: "Delta SkyMiles Reserve (Amex)",
+    issuer: "American Express",
+    annualFee: 650,
+    creditsTrackedAnnualized: 560,
+    logo: "/logos/delta-reserve.png",
+    pointsProgram: "delta_miles",
+    earnRates: { travel: 3, other: 1 },
+    signupBonusEstUsd: 600,
     multipliers: [
-      { label: "United purchases", x: 3 },
-      { label: "Dining, hotels", x: 2 },
+      { label: "Delta purchases directly", x: 3 },
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      { id: "quest-tsa", title: "TSA PreCheck/Global Entry", amount: 125, frequency: "every5years" },
-      { id: "quest-award", title: "Award Flight Credit", amount: 125, frequency: "annual", notes: "Up to $125 back" },
+      { id: "delta-resy", title: "Resy Restaurants", amount: 20, frequency: "monthly" },
+      { id: "delta-rideshare", title: "Rideshare", amount: 10, frequency: "monthly" },
+      { id: "delta-delta-stays", title: "Delta Stays", amount: 200, frequency: "annual" },
     ],
   },
+
   {
-    key: "delta-gold",
-    name: "Delta SkyMiles Gold",
+    key: "marriott-brilliant",
+    name: "Marriott Bonvoy Brilliant (Amex)",
     issuer: "American Express",
-    annualFee: 150,
-    creditsTrackedAnnualized: 0,
-    logo: "/logos/delta-gold.png",
-    pointsProgram: "delta_miles",
-    earnRates: { travel: 2, dining: 2, groceries: 2, other: 1 },
-    category: "airline",
-    welcomeBonus: {
-      points: "70,000 Delta Miles",
-      spend: "$3,000",
-      timeframeMonths: 6,
-      estValueUsdLow: 840,
-      estValueUsdHigh: 1120,
-      note: "Offers vary",
-    },
-    multipliers: [
-      { label: "Delta purchases", x: 2 },
-      { label: "Restaurants, US supermarkets", x: 2 },
-      { label: "Everything else", x: 1 },
-    ],
-    credits: [],
-  },
-  {
-    key: "marriott-boundless",
-    name: "Marriott Bonvoy Boundless",
-    issuer: "Chase",
-    annualFee: 95,
-    creditsTrackedAnnualized: 250,
-    logo: "/logos/marriott-boundless.png",
+    annualFee: 650,
+    creditsTrackedAnnualized: 400,
+    logo: "/logos/marriott-brilliant.png",
     pointsProgram: "marriott_points",
-    earnRates: { travel: 6, other: 2 },
-    category: "hotel",
-    welcomeBonus: {
-      points: "85,000 Marriott",
-      spend: "$4,000",
-      timeframeMonths: 3,
-      estValueUsdLow: 595,
-      estValueUsdHigh: 850,
-      note: "Standard offer",
-    },
+    earnRates: { travel: 6, dining: 3, other: 2 },
+    signupBonusEstUsd: 650,
     multipliers: [
-      { label: "Marriott purchases", x: 6 },
+      { label: "Marriott hotels & resorts", x: 6 },
+      { label: "Restaurant", x: 3 },
+      { label: "Flights", x: 3 },
       { label: "Everything else", x: 2 },
     ],
     credits: [
-      { id: "boundless-freenight", title: "Free Night Award", amount: 250, frequency: "annual", notes: "35K cert value est." },
+      { id: "brilliant-dining", title: "Dining", amount: 25, frequency: "monthly" },
+      { id: "brilliant-ritz-stregis", title: "Ritz-Carlton / St. Regis", amount: 100, frequency: "annual" },
+      { id: "brilliant-global-entry", title: "Global Entry", amount: 120, frequency: "every4years" },
+      { id: "brilliant-tsa-precheck", title: "TSA PreCheck / NEXUS fee", amount: 85, frequency: "every5years" },
+    ],
+  },
+
+  {
+    key: "citi-strata-elite",
+    name: "Citi Strata Elite",
+    issuer: "Citi",
+    annualFee: 595,
+    creditsTrackedAnnualized: 1169,
+    logo: "/logos/citi-strata-elite.png",
+    pointsProgram: "citi_typ",
+    earnRates: { travel: 6, dining: 3, other: 1.5 },
+    signupBonusEstUsd: 750,
+    multipliers: [
+      { label: "Hotels/Car Rentals/Attractions on Citi travel", x: 12 },
+      { label: "Air Travel on Citi travel", x: 6 },
+      { label: "Restaurants on Citi Nights (Fri/Sat 6pm–6am ET)", x: 6 },
+      { label: "Restaurants other times", x: 3 },
+      { label: "Everything else", x: 1.5 },
+    ],
+    credits: [
+      { id: "strata-hotel", title: "Hotel", amount: 300, frequency: "annual" },
+      { id: "strata-splurge", title: "Splurge (1stDibs / AA / Best Buy / Future / Live Nation)", amount: 200, frequency: "annual" },
+      { id: "strata-blacklane", title: "Annual Blacklane", amount: 200, frequency: "annual" },
+      { id: "strata-priority-pass", title: "Priority Pass", amount: 469, frequency: "annual", notes: "Value in sheet" },
+    ],
+  },
+
+  {
+    key: "citi-aa-executive",
+    name: "Citi / AAdvantage Executive",
+    issuer: "Citi",
+    annualFee: 595,
+    creditsTrackedAnnualized: 440,
+    logo: "/logos/citi-aa-executive.png",
+    pointsProgram: "aa_miles",
+    earnRates: { travel: 4, other: 1 },
+    signupBonusEstUsd: 650,
+    multipliers: [
+      { label: "American Airlines purchases", x: 4 },
+      { label: "Hotels & car rentals via AA portal", x: 10 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "aaexec-lyft", title: "Lyft", amount: 10, frequency: "monthly", notes: "After 3 rides" },
+      { id: "aaexec-grubhub", title: "Grubhub", amount: 10, frequency: "monthly" },
+      { id: "aaexec-car-rentals", title: "Car rentals", amount: 120, frequency: "annual" },
     ],
   },
 ];
