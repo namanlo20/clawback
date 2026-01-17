@@ -23,14 +23,7 @@ export default function HomePage() {
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image
-              src="/logos/clawback-mark.png"
-              alt="ClawBack"
-              width={64}
-              height={64}
-              className="rounded-2xl"
-              priority
-            />
+            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={64} height={64} className="rounded-2xl" />
             <span className="text-2xl font-bold tracking-tight">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -58,15 +51,14 @@ export default function HomePage() {
 
       {/* Hero - Centered & Compact */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-16 text-center">
-        {/* Wordmark logo (big + obvious) */}
-        <div className="flex justify-center mb-6">
+        <div className="mx-auto mb-6 flex justify-center">
           <Image
             src="/logos/clawback-logo.png"
             alt="ClawBack"
-            width={260}
+            width={360}
             height={120}
-            className="h-auto w-auto max-w-[280px]"
             priority
+            className="h-auto w-[220px] sm:w-[260px] md:w-[320px] opacity-95"
           />
         </div>
 
