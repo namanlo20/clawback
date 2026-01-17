@@ -347,6 +347,25 @@ export default function AppDashboardPage() {
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState<string | null>(null);
 
+  // Open modals from landing page links: /app?open=signin|signup|quiz
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const open = (params.get('open') || '').toLowerCase();
+
+    if (open === 'signin' || open === 'signup') {
+      setAuthMode(open as 'signin' | 'signup');
+      setAuthModalOpen(true);
+    } else if (open === 'quiz') {
+      setQuizOpen(true);
+    }
+
+    if (open) {
+      // Clean URL so refresh doesn't re-open
+      window.history.replaceState({}, '', '/app');
+    }
+  }, []);
+
   // Settings
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -449,40 +468,6 @@ export default function AppDashboardPage() {
 
   // Quiz state - expanded to 7 questions
   const [quizOpen, setQuizOpen] = useState(false);
-  // Landing deep-links: /app?open=signin|signup|quiz
-  // We intentionally avoid useSearchParams() here to prevent Suspense/prerender build errors in production.
-  const [openParamHandled, setOpenParamHandled] = useState(false);
-
-  useEffect(() => {
-    if (openParamHandled) return;
-    // Only run on client
-    if (typeof window === 'undefined') return;
-
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const open = (params.get('open') || '').toLowerCase();
-
-      if (open === 'signin' || open === 'signup') {
-        setAuthMode(open as 'signin' | 'signup');
-        setAuthModalOpen(true);
-      }
-
-      if (open === 'quiz') {
-        setQuizStep('intro');
-        setQuizOpen(true);
-      }
-
-      // Clean URL so refresh doesn't reopen
-      if (open) {
-        window.history.replaceState({}, '', '/app');
-      }
-    } catch {
-      // no-op
-    } finally {
-      setOpenParamHandled(true);
-    }
-  }, [openParamHandled]);
-
   const [quizStep, setQuizStep] = useState<QuizStep>('intro');
   const [topSpendCategories, setTopSpendCategories] = useState<SpendCategory[]>([]);
   
