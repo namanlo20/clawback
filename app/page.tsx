@@ -23,24 +23,31 @@ export default function HomePage() {
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={48} height={48} className="rounded-xl" />
+            <Image
+              src="/logos/clawback-mark.png"
+              alt="ClawBack"
+              width={64}
+              height={64}
+              className="rounded-2xl"
+              priority
+            />
             <span className="text-2xl font-bold tracking-tight">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link 
-              href="/app"
+              href="/app?open=signin"
               className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
               Sign In
             </Link>
             <Link 
-              href="/app"
+              href="/app?open=signup"
               className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
               Sign Up
             </Link>
             <Link 
-              href="/app"
+              href="/app?open=quiz"
               className="rounded-full bg-purple-500 px-4 py-2 text-sm font-medium text-white hover:bg-purple-400 transition"
             >
               Take Quiz
@@ -51,6 +58,18 @@ export default function HomePage() {
 
       {/* Hero - Centered & Compact */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-16 text-center">
+        {/* Wordmark logo (big + obvious) */}
+        <div className="flex justify-center mb-6">
+          <Image
+            src="/logos/clawback-logo.png"
+            alt="ClawBack"
+            width={260}
+            height={120}
+            className="h-auto w-auto max-w-[280px]"
+            priority
+          />
+        </div>
+
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300 mb-6">
           <span className="relative flex h-2 w-2">
