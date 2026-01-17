@@ -1150,9 +1150,84 @@ export default function AppDashboardPage() {
     </div>
   );
 
+  // Earning Categories Widget
+  const EarningCategoriesWidget = (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-base font-semibold text-white/95">Earning Categories</h3>
+        <Tooltip text="Points multipliers for different spending categories">
+          <IconInfo className="h-4 w-4 text-white/40 cursor-help" />
+        </Tooltip>
+      </div>
+      
+      {isLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {Object.entries(activeCard.earnRates).length === 0 ? (
+            <div className="text-sm text-white/50 text-center py-2">No category bonuses</div>
+          ) : (
+            Object.entries(activeCard.earnRates)
+              .sort(([, a], [, b]) => (b as number) - (a as number))
+              .map(([category, multiplier]) => {
+                const categoryIcons: Record<string, string> = {
+                  dining: '🍽️',
+                  travel: '✈️',
+                  groceries: '🛒',
+                  gas: '⛽',
+                  online: '🛍️',
+                  other: '💳',
+                };
+                const categoryLabels: Record<string, string> = {
+                  dining: 'Dining',
+                  travel: 'Travel',
+                  groceries: 'Groceries',
+                  gas: 'Gas',
+                  online: 'Online Shopping',
+                  other: 'Everything Else',
+                };
+                const mult = multiplier as number;
+                const isHighMultiplier = mult >= 3;
+                
+                return (
+                  <div
+                    key={category}
+                    className={`flex items-center justify-between p-3 rounded-xl ${
+                      isHighMultiplier ? 'bg-purple-500/10 border border-purple-400/20' : 'bg-white/5 border border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{categoryIcons[category] || '💳'}</span>
+                      <span className="text-sm text-white/90">{categoryLabels[category] || category}</span>
+                    </div>
+                    <div className={`text-sm font-bold ${isHighMultiplier ? 'text-purple-300' : 'text-white/70'}`}>
+                      {mult}x
+                    </div>
+                  </div>
+                );
+              })
+          )}
+        </div>
+      )}
+      
+      {/* Points program badge */}
+      <div className="mt-4 pt-3 border-t border-white/10">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-white/50">Points Program</span>
+          <span className="text-white/70 font-medium uppercase">
+            {activeCard.pointsProgram.replace('_', ' ')}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   // Annual Fee Defense Widget
   const FeeDefenseWidget = (
-    <div className={surfaceCardClass("p-5 mt-4")}>
+    <div className={surfaceCardClass("p-5")}>
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-base font-semibold text-white/95">Annual Fee Defense</h3>
         <Tooltip text="Should you keep or downgrade this card?">
@@ -1395,6 +1470,7 @@ export default function AppDashboardPage() {
   const RightPanel = (
     <div className="space-y-4">
       {MySavingsWidget}
+      {EarningCategoriesWidget}
       {FeeDefenseWidget}
       
       {/* Partner Offers */}
@@ -1835,7 +1911,13 @@ export default function AppDashboardPage() {
   const TopBar = (
     <div className="flex items-center justify-between mb-6">
       <div className="flex items-center gap-4">
-        <Image src="/logos/clawback-mark.png" alt="ClawBack" width={40} height={40} className="rounded-xl" />
+        <Image 
+          src="/logos/clawback-mark.png" 
+          alt="ClawBack" 
+          width={48} 
+          height={48} 
+          className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10" 
+        />
         <div>
           <h1 className="text-xl font-bold text-white/95">ClawBack</h1>
           {user && <div className="text-xs text-white/50">Welcome{displayName ? `, ${displayName}` : ''}</div>}
