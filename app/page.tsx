@@ -1,5 +1,6 @@
 // app/page.tsx
 import Link from "next/link";
+import Image from "next/image";
 
 export default function HomePage() {
   return (
@@ -21,7 +22,10 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
-          <div className="text-xl font-bold tracking-tight">ClawBack</div>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={32} height={32} className="rounded-lg" />
+            <span className="text-xl font-bold tracking-tight">ClawBack</span>
+          </Link>
           <div className="flex items-center gap-3">
             <Link 
               href="/app"
@@ -31,9 +35,15 @@ export default function HomePage() {
             </Link>
             <Link 
               href="/app"
-              className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90 transition"
+              className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
-              Get Started
+              Sign Up
+            </Link>
+            <Link 
+              href="/app"
+              className="rounded-full bg-purple-500 px-4 py-2 text-sm font-medium text-white hover:bg-purple-400 transition"
+            >
+              Take Quiz
             </Link>
           </div>
         </div>
@@ -79,8 +89,16 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Trust microcopy */}
+        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-white/40">
+          <svg className="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span>No bank logins. No SSN. No credit score access. Ever.</span>
+        </div>
+
         {/* Social proof */}
-        <div className="mt-8 flex items-center justify-center gap-3 text-sm text-white/50">
+        <div className="mt-6 flex items-center justify-center gap-3 text-sm text-white/50">
           <div className="flex -space-x-2">
             {[1,2,3,4].map((i) => (
               <div key={i} className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border-2 border-[#070A12]" />
@@ -226,14 +244,23 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer - Minimal */}
+      {/* Footer */}
       <footer className="relative z-10 border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40">
-            <div>© 2026 ClawBack. Made with 💜</div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/40">
+            <div className="flex items-center gap-2">
+              <Image src="/logos/clawback-mark.png" alt="ClawBack" width={20} height={20} className="rounded" />
+              <span>© 2026 ClawBack</span>
+            </div>
+            <div className="flex items-center gap-2 text-center">
+              <svg className="h-3.5 w-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>No bank logins. No SSN. We only store your card selections + reminder preferences.</span>
+            </div>
             <div className="flex items-center gap-4">
-              <a href="#" className="hover:text-white/70 transition">Privacy</a>
-              <a href="#" className="hover:text-white/70 transition">Terms</a>
+              <Link href="/privacy" className="hover:text-white/70 transition">Privacy</Link>
+              <Link href="/terms" className="hover:text-white/70 transition">Terms</Link>
               <a href="mailto:hello@clawback.app" className="hover:text-white/70 transition">Contact</a>
             </div>
           </div>
