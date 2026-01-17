@@ -3,7 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import {
   CARDS,
@@ -326,7 +326,6 @@ function normalizeOffsets(input: number[]): number[] {
 // -----------------------------
 export default function AppDashboardPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
   const [activeTab, setActiveTab] = useState<"dashboard" | "quiz" | "coming-soon" | "settings">("dashboard");
   
@@ -529,8 +528,12 @@ export default function AppDashboardPage() {
   // Landing page deep-links: /app?open=signin | signup | quiz
   // - opens the correct modal
   // - then cleans the URL back to /app
+  // NOTE: Avoid useSearchParams() to prevent Next.js prerender/Suspense build errors.
   useEffect(() => {
-    const open = searchParams.get("open");
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const open = params.get("open");
     if (!open) return;
 
     if (open === "quiz") {
@@ -544,7 +547,7 @@ export default function AppDashboardPage() {
     // Prevent repeated triggers on refresh/navigation
     router.replace("/app");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, router, resetQuiz]);
+  }, [router, resetQuiz]);
 
   // Auth init
   useEffect(() => {
