@@ -188,8 +188,7 @@ function freqSort(freq: CreditFrequency): number {
 }
 
 function creditSubtitle(c: Credit): string {
-  const a = annualize(c.amount, c.frequency);
-  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)} • Annualized: ${formatMoney(a)}`;
+  return `${freqLabel(c.frequency)} • ${formatMoney(c.amount)}`;
 }
 
 function surfaceCardClass(extra?: string): string {
@@ -261,7 +260,7 @@ type QuizInputs = {
   includeWelcomeBonus: boolean;
 };
 
-type QuizStep = 'intro' | 'spending' | 'preferences' | 'results';
+type QuizStep = 'intro' | 'q1_dining' | 'q2_travel' | 'q3_frequency' | 'q4_fee' | 'q5_delivery' | 'q6_optimize' | 'q7_brand' | 'results';
 
 function getEarnRate(card: Card, cat: SpendCategory): number {
   const r = card.earnRates[cat];
@@ -326,6 +325,12 @@ function normalizeOffsets(input: number[]): number[] {
 // -----------------------------
 export default function AppDashboardPage() {
   const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "quiz" | "coming-soon" | "settings">("dashboard");
+  
+  // Pro state
+  const [isPro, setIsPro] = useState(false);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   // Auth
   const [session, setSession] = useState<Session | null>(null);
@@ -353,6 +358,27 @@ export default function AppDashboardPage() {
   const [notifSmsEnabled, setNotifSmsEnabled] = useState(false);
   const [smsConsent, setSmsConsent] = useState(false);
   const [offsetsDays, setOffsetsDays] = useState<number[]>([7, 1]);
+
+  // Check Pro status on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsPro(localStorage.getItem('clawback_isPro') === 'true');
+    }
+  }, []);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleUpgrade = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_isPro', 'true');
+    }
+    setIsPro(true);
+    setUpgradeModalOpen(false);
+    showToast("🎉 Pro enabled! Enjoy unlimited features.");
+  };
 
   // Display name - just show first name or name
   const displayName = useMemo(() => {
@@ -421,10 +447,20 @@ export default function AppDashboardPage() {
     }
   }, [totals.totalRedeemed, activeCard.annualFee, activeCard.key, hasCelebrated]);
 
-  // Quiz state
+  // Quiz state - expanded to 7 questions
   const [quizOpen, setQuizOpen] = useState(false);
   const [quizStep, setQuizStep] = useState<QuizStep>('intro');
   const [topSpendCategories, setTopSpendCategories] = useState<SpendCategory[]>([]);
+  
+  // Quiz answers
+  const [qDining, setQDining] = useState<number>(300);
+  const [qTravel, setQTravel] = useState<number>(200);
+  const [qTravelFreq, setQTravelFreq] = useState<string>('2-4');
+  const [qFeeTolerance, setQFeeTolerance] = useState<string>('250-500');
+  const [qUsesDelivery, setQUsesDelivery] = useState<boolean>(true);
+  const [qOptimize, setQOptimize] = useState<string>('maximize');
+  const [qBrandPref, setQBrandPref] = useState<string>('any');
+  
   const [quiz, setQuiz] = useState<QuizInputs>({
     spend: { dining: 500, travel: 300, groceries: 400, gas: 100, online: 200, other: 500 },
     annualFeeTolerance: 500,
@@ -432,14 +468,53 @@ export default function AppDashboardPage() {
     includeWelcomeBonus: true,
   });
 
+  // Compute quiz results based on answers
   const quizResults = useMemo(() => {
-    const scored = CARDS.map((c) => ({ card: c, ...scoreCard(c, quiz) })).sort((a, b) => b.score - a.score);
+    // Build quiz inputs from answers
+    const feeTol = qFeeTolerance === '0-250' ? 250 : qFeeTolerance === '250-500' ? 500 : 1000;
+    const utilization = qOptimize === 'maximize' ? 0.85 : 0.6;
+    
+    const modifiedQuiz: QuizInputs = {
+      spend: { 
+        dining: qDining, 
+        travel: qTravel, 
+        groceries: 400, 
+        gas: 100, 
+        online: qUsesDelivery ? 300 : 100, 
+        other: 300 
+      },
+      annualFeeTolerance: feeTol,
+      creditUtilizationPct: utilization,
+      includeWelcomeBonus: true,
+    };
+    
+    let scored = CARDS.map((c) => {
+      const base = scoreCard(c, modifiedQuiz);
+      let score = base.score;
+      
+      // Brand preference boost/penalty
+      if (qBrandPref === 'chase' && c.issuer === 'Chase') score *= 1.2;
+      else if (qBrandPref === 'amex' && c.issuer === 'American Express') score *= 1.2;
+      else if (qBrandPref === 'cap1' && c.issuer === 'Capital One') score *= 1.2;
+      else if (qBrandPref === 'citi' && c.issuer === 'Citi') score *= 1.2;
+      else if (qBrandPref === 'avoid-amex' && c.issuer === 'American Express') score *= 0.3;
+      
+      return { card: c, ...base, score };
+    }).sort((a, b) => b.score - a.score);
+    
     return scored.slice(0, 3);
-  }, [quiz]);
+  }, [qDining, qTravel, qFeeTolerance, qOptimize, qUsesDelivery, qBrandPref]);
 
   const resetQuiz = useCallback(() => {
     setQuizStep('intro');
     setTopSpendCategories([]);
+    setQDining(300);
+    setQTravel(200);
+    setQTravelFreq('2-4');
+    setQFeeTolerance('250-500');
+    setQUsesDelivery(true);
+    setQOptimize('maximize');
+    setQBrandPref('any');
     setQuiz({
       spend: { dining: 500, travel: 300, groceries: 400, gas: 100, online: 200, other: 500 },
       annualFeeTolerance: 500,
@@ -795,28 +870,60 @@ export default function AppDashboardPage() {
     );
   }
 
-  // Top Right - Sign In / Sign Up / User Name
+  // Top Right - Tabs + Auth
   const TopRight = (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={() => { setQuizOpen(true); resetQuiz(); }}
-        className="flex items-center gap-1.5 rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-2 text-sm text-purple-100 hover:bg-purple-500/20 transition"
-        type="button"
-      >
-        <IconSparkles className="h-4 w-4" />
-        <span>Find My Card</span>
-      </button>
+    <div className="flex items-center gap-4">
+      {/* Tab Navigation */}
+      {user && (
+        <div className="flex items-center gap-1 rounded-full border border-white/10 bg-white/5 p-1">
+          {[
+            { key: 'dashboard', label: 'Dashboard' },
+            { key: 'quiz', label: 'Quiz' },
+            { key: 'coming-soon', label: 'Coming Soon' },
+            { key: 'settings', label: 'Settings' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => {
+                if (tab.key === 'quiz') {
+                  setQuizOpen(true);
+                  resetQuiz();
+                } else {
+                  setActiveTab(tab.key as typeof activeTab);
+                }
+              }}
+              className={[
+                "rounded-full px-3 py-1.5 text-sm font-medium transition",
+                activeTab === tab.key ? "bg-white/10 text-white" : "text-white/60 hover:text-white/80"
+              ].join(" ")}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
+      
+      {!user && (
+        <button
+          onClick={() => { setQuizOpen(true); resetQuiz(); }}
+          className="flex items-center gap-1.5 rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-2 text-sm text-purple-100 hover:bg-purple-500/20 transition"
+          type="button"
+        >
+          <IconSparkles className="h-4 w-4" />
+          <span>Find My Card</span>
+        </button>
+      )}
       
       {user ? (
         <>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="rounded-full border border-white/10 bg-white/5 p-2 text-white/70 hover:bg-white/10"
-            type="button"
-            aria-label="Settings"
-          >
-            <IconGear className="h-5 w-5" />
-          </button>
+          {/* Pro Badge */}
+          {isPro && (
+            <div className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/30 px-3 py-1.5 text-xs font-semibold text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.15)]">
+              <span>✨</span>
+              <span>PRO Lifetime</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2">
             <span className="text-sm font-medium text-white/90">{displayName || 'User'}</span>
           </div>
@@ -1266,12 +1373,12 @@ export default function AppDashboardPage() {
               <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-purple-500/30 to-indigo-500/30 flex items-center justify-center mb-5">
                 <IconSparkles className="h-7 w-7 text-purple-300" />
               </div>
-              <h2 className="text-2xl font-bold text-white/95">Looking for a new card?</h2>
-              <p className="mt-3 text-white/60">Answer 2 quick questions and we'll recommend the best card for you.</p>
+              <h2 className="text-2xl font-bold text-white/95">Find Your Perfect Card</h2>
+              <p className="mt-3 text-white/60">Answer 7 quick questions and we'll recommend the best card for your spending.</p>
               
               <div className="mt-8 space-y-3">
-                <button onClick={() => setQuizStep('spending')} className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-4 text-base font-semibold text-white hover:opacity-90 transition" type="button">
-                  Yes, find me a card →
+                <button onClick={() => setQuizStep('q1_dining')} className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-4 text-base font-semibold text-white hover:opacity-90 transition" type="button">
+                  Let's do it →
                 </button>
                 <button onClick={() => setQuizOpen(false)} className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm text-white/70 hover:bg-white/10 transition" type="button">
                   Not right now
@@ -1280,96 +1387,178 @@ export default function AppDashboardPage() {
             </div>
           )}
 
-          {quizStep === 'spending' && (
+          {/* Q1: Dining */}
+          {quizStep === 'q1_dining' && (
             <div>
-              <button onClick={() => setQuizStep('intro')} className="text-sm text-white/50 hover:text-white/80 mb-4">← Back</button>
-              <h2 className="text-xl font-bold text-white/95">Where do you spend the most?</h2>
-              <p className="mt-2 text-sm text-white/60">Pick your top 2-3 spending categories.</p>
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {(Object.keys(categoryInfo) as SpendCategory[]).map((cat) => {
-                  const { emoji, name } = categoryInfo[cat];
-                  const isSelected = topSpendCategories.includes(cat);
-                  return (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        if (isSelected) {
-                          setTopSpendCategories(prev => prev.filter(c => c !== cat));
-                        } else if (topSpendCategories.length < 3) {
-                          setTopSpendCategories(prev => [...prev, cat]);
-                        }
-                      }}
-                      className={[
-                        "rounded-xl border p-4 text-left transition",
-                        isSelected ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"
-                      ].join(" ")}
-                      type="button"
-                    >
-                      <span className="text-xl">{emoji}</span>
-                      <div className="mt-2 text-sm font-medium text-white/90">{name}</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <button
-                onClick={() => {
-                  // Boost selected categories
-                  const newSpend = { ...quiz.spend };
-                  for (const cat of topSpendCategories) {
-                    newSpend[cat] = 800;
-                  }
-                  setQuiz(p => ({ ...p, spend: newSpend }));
-                  setQuizStep('preferences');
-                }}
-                disabled={topSpendCategories.length === 0}
-                className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed"
-                type="button"
-              >
-                Continue →
-              </button>
-            </div>
-          )}
-
-          {quizStep === 'preferences' && (
-            <div>
-              <button onClick={() => setQuizStep('spending')} className="text-sm text-white/50 hover:text-white/80 mb-4">← Back</button>
-              <h2 className="text-xl font-bold text-white/95">Annual fee comfort?</h2>
-              <p className="mt-2 text-sm text-white/60">Higher fee cards often have more valuable perks.</p>
+              <div className="text-xs text-white/40 mb-2">Question 1 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">Monthly dining spend?</h2>
+              <p className="mt-2 text-sm text-white/60">Restaurants, cafes, bars, etc.</p>
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {[
-                  { label: "Keep it low", value: 200, desc: "Under $200/yr" },
-                  { label: "Mid-range", value: 400, desc: "$200-500/yr" },
-                  { label: "Premium OK", value: 700, desc: "$500-700/yr" },
-                  { label: "Sky's the limit", value: 1000, desc: "$700+/yr" },
+                  { label: "Under $100", value: 75 },
+                  { label: "$100 – $300", value: 200 },
+                  { label: "$300 – $600", value: 450 },
+                  { label: "$600+", value: 800 },
                 ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setQuiz(p => ({ ...p, annualFeeTolerance: opt.value }))}
-                    className={[
-                      "rounded-xl border p-4 text-left transition",
-                      quiz.annualFeeTolerance === opt.value ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"
-                    ].join(" ")}
-                    type="button"
-                  >
+                  <button key={opt.value} onClick={() => setQDining(opt.value)} className={["rounded-xl border p-4 text-left transition", qDining === opt.value ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                    <div className="text-sm font-medium text-white/90">{opt.label}</div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setQuizStep('q2_travel')} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90" type="button">Continue →</button>
+            </div>
+          )}
+
+          {/* Q2: Travel */}
+          {quizStep === 'q2_travel' && (
+            <div>
+              <button onClick={() => setQuizStep('q1_dining')} className="text-sm text-white/50 hover:text-white/80 mb-2">← Back</button>
+              <div className="text-xs text-white/40 mb-2">Question 2 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">Monthly travel spend?</h2>
+              <p className="mt-2 text-sm text-white/60">Flights, hotels, rental cars, etc.</p>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {[
+                  { label: "Under $100", value: 50 },
+                  { label: "$100 – $300", value: 200 },
+                  { label: "$300 – $700", value: 500 },
+                  { label: "$700+", value: 1000 },
+                ].map((opt) => (
+                  <button key={opt.value} onClick={() => setQTravel(opt.value)} className={["rounded-xl border p-4 text-left transition", qTravel === opt.value ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                    <div className="text-sm font-medium text-white/90">{opt.label}</div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setQuizStep('q3_frequency')} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90" type="button">Continue →</button>
+            </div>
+          )}
+
+          {/* Q3: Travel Frequency */}
+          {quizStep === 'q3_frequency' && (
+            <div>
+              <button onClick={() => setQuizStep('q2_travel')} className="text-sm text-white/50 hover:text-white/80 mb-2">← Back</button>
+              <div className="text-xs text-white/40 mb-2">Question 3 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">How often do you travel?</h2>
+              <p className="mt-2 text-sm text-white/60">Trips per year (flights or hotel stays)</p>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                {[
+                  { label: "0–1 trips", value: '0-1' },
+                  { label: "2–4 trips", value: '2-4' },
+                  { label: "5–10 trips", value: '5-10' },
+                  { label: "10+ trips", value: '10+' },
+                ].map((opt) => (
+                  <button key={opt.value} onClick={() => setQTravelFreq(opt.value)} className={["rounded-xl border p-4 text-left transition", qTravelFreq === opt.value ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                    <div className="text-sm font-medium text-white/90">{opt.label}</div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setQuizStep('q4_fee')} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90" type="button">Continue →</button>
+            </div>
+          )}
+
+          {/* Q4: Fee Tolerance */}
+          {quizStep === 'q4_fee' && (
+            <div>
+              <button onClick={() => setQuizStep('q3_frequency')} className="text-sm text-white/50 hover:text-white/80 mb-2">← Back</button>
+              <div className="text-xs text-white/40 mb-2">Question 4 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">Annual fee comfort?</h2>
+              <p className="mt-2 text-sm text-white/60">Higher fee cards often have more valuable perks.</p>
+
+              <div className="mt-5 space-y-3">
+                {[
+                  { label: "Under $250/year", value: '0-250', desc: "No fee or low fee cards" },
+                  { label: "$250 – $500/year", value: '250-500', desc: "Mid-range premium cards" },
+                  { label: "$500+/year", value: '500+', desc: "Top-tier premium cards" },
+                ].map((opt) => (
+                  <button key={opt.value} onClick={() => setQFeeTolerance(opt.value)} className={["w-full rounded-xl border p-4 text-left transition", qFeeTolerance === opt.value ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
                     <div className="text-sm font-medium text-white/90">{opt.label}</div>
                     <div className="text-xs text-white/50 mt-1">{opt.desc}</div>
                   </button>
                 ))}
               </div>
+              <button onClick={() => setQuizStep('q5_delivery')} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90" type="button">Continue →</button>
+            </div>
+          )}
 
+          {/* Q5: Delivery Apps */}
+          {quizStep === 'q5_delivery' && (
+            <div>
+              <button onClick={() => setQuizStep('q4_fee')} className="text-sm text-white/50 hover:text-white/80 mb-2">← Back</button>
+              <div className="text-xs text-white/40 mb-2">Question 5 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">Use delivery apps?</h2>
+              <p className="mt-2 text-sm text-white/60">Uber, DoorDash, Instacart, etc.</p>
+
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <button onClick={() => setQUsesDelivery(true)} className={["rounded-xl border p-5 text-center transition", qUsesDelivery ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                  <div className="text-2xl mb-2">✅</div>
+                  <div className="text-sm font-medium text-white/90">Yes, regularly</div>
+                </button>
+                <button onClick={() => setQUsesDelivery(false)} className={["rounded-xl border p-5 text-center transition", !qUsesDelivery ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                  <div className="text-2xl mb-2">❌</div>
+                  <div className="text-sm font-medium text-white/90">No / rarely</div>
+                </button>
+              </div>
+              <button onClick={() => setQuizStep('q6_optimize')} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90" type="button">Continue →</button>
+            </div>
+          )}
+
+          {/* Q6: Optimization Style */}
+          {quizStep === 'q6_optimize' && (
+            <div>
+              <button onClick={() => setQuizStep('q5_delivery')} className="text-sm text-white/50 hover:text-white/80 mb-2">← Back</button>
+              <div className="text-xs text-white/40 mb-2">Question 6 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">Your optimization style?</h2>
+              <p className="mt-2 text-sm text-white/60">How much effort do you want to put in?</p>
+
+              <div className="mt-5 space-y-3">
+                <button onClick={() => setQOptimize('simple')} className={["w-full rounded-xl border p-4 text-left transition", qOptimize === 'simple' ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                  <div className="text-sm font-medium text-white/90">😌 Keep it simple</div>
+                  <div className="text-xs text-white/50 mt-1">One good card for everything</div>
+                </button>
+                <button onClick={() => setQOptimize('maximize')} className={["w-full rounded-xl border p-4 text-left transition", qOptimize === 'maximize' ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                  <div className="text-sm font-medium text-white/90">🎯 Maximize rewards</div>
+                  <div className="text-xs text-white/50 mt-1">Willing to track credits and optimize</div>
+                </button>
+              </div>
+              <button onClick={() => setQuizStep('q7_brand')} className="mt-6 w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90" type="button">Continue →</button>
+            </div>
+          )}
+
+          {/* Q7: Brand Preference */}
+          {quizStep === 'q7_brand' && (
+            <div>
+              <button onClick={() => setQuizStep('q6_optimize')} className="text-sm text-white/50 hover:text-white/80 mb-2">← Back</button>
+              <div className="text-xs text-white/40 mb-2">Question 7 of 7</div>
+              <h2 className="text-xl font-bold text-white/95">Brand preference?</h2>
+              <p className="mt-2 text-sm text-white/60">Do you prefer a specific card issuer?</p>
+
+              <div className="mt-5 space-y-2">
+                {[
+                  { label: "Open to any brand", value: 'any' },
+                  { label: "Prefer Chase", value: 'chase' },
+                  { label: "Prefer Amex", value: 'amex' },
+                  { label: "Prefer Capital One", value: 'cap1' },
+                  { label: "Prefer Citi", value: 'citi' },
+                  { label: "Avoid Amex (acceptance concerns)", value: 'avoid-amex' },
+                ].map((opt) => (
+                  <button key={opt.value} onClick={() => setQBrandPref(opt.value)} className={["w-full rounded-xl border p-3 text-left transition", qBrandPref === opt.value ? "border-purple-400/30 bg-purple-500/15" : "border-white/10 bg-white/5 hover:bg-white/10"].join(" ")} type="button">
+                    <div className="text-sm font-medium text-white/90">{opt.label}</div>
+                  </button>
+                ))}
+              </div>
               <button onClick={() => setQuizStep('results')} className="mt-6 w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:opacity-90" type="button">
                 Show my recommendations →
               </button>
             </div>
           )}
 
+          {/* Results */}
           {quizStep === 'results' && (
             <div>
               <h2 className="text-xl font-bold text-white/95">Your Top Matches</h2>
-              <p className="mt-2 text-sm text-white/60">Based on your spending in {topSpendCategories.map(c => categoryInfo[c].name).join(', ')}.</p>
+              <p className="mt-2 text-sm text-white/60">Based on your answers</p>
 
               <div className="mt-5 space-y-4">
                 {quizResults.map((r, i) => (
@@ -1428,24 +1617,153 @@ export default function AppDashboardPage() {
           {TopRight}
         </div>
 
-        {/* Mobile tabs */}
-        <div className="mb-4 flex gap-2 lg:hidden">
-          {[
-            { key: "cards", label: "Cards" },
-            { key: "credits", label: "Credits" },
-            { key: "insights", label: "Insights" },
-          ].map((t) => (
-            <button key={t.key} type="button" onClick={() => setMobileView(t.key as "cards" | "credits" | "insights")} className={["flex-1 rounded-full border px-3 py-2 text-sm font-semibold transition", mobileView === t.key ? "border-white/20 bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"].join(" ")}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+        {/* Main Content - Tab Aware */}
+        {activeTab === 'dashboard' && (
+          <>
+            {/* Mobile tabs */}
+            <div className="mb-4 flex gap-2 lg:hidden">
+              {[
+                { key: "cards", label: "Cards" },
+                { key: "credits", label: "Credits" },
+                { key: "insights", label: "Insights" },
+              ].map((t) => (
+                <button key={t.key} type="button" onClick={() => setMobileView(t.key as "cards" | "credits" | "insights")} className={["flex-1 rounded-full border px-3 py-2 text-sm font-semibold transition", mobileView === t.key ? "border-white/20 bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"].join(" ")}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>{LeftPanel}</div>
-          <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>{MiddlePanel}</div>
-          <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>{RightPanel}</div>
-        </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>{LeftPanel}</div>
+              <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>{MiddlePanel}</div>
+              <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>{RightPanel}</div>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'coming-soon' && (
+          <div className="max-w-4xl mx-auto">
+            <div className={surfaceCardClass("p-8 text-center")}>
+              <div className="text-3xl mb-2">🚀</div>
+              <h2 className="text-2xl font-bold text-white/95">Coming Soon</h2>
+              <p className="mt-2 text-white/60">Features on our roadmap</p>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {[
+                { icon: "📸", title: "Receipt Scan", desc: "Scan receipts or statements → auto-marks credits as Used" },
+                { icon: "💳", title: "Best Card to Use", desc: "Know which card to swipe at restaurants, hotels, flights" },
+                { icon: "✈️", title: "Airport Mode", desc: "Quick access to lounge info + travel benefits at the airport" },
+                { icon: "📧", title: "Email Forward", desc: "Forward confirmation emails → we detect credits posted" },
+                { icon: "🔔", title: "Smart Reminders", desc: "\"Your Uber credit expires tomorrow—use it here...\"" },
+                { icon: "📊", title: "Annual Report", desc: "See your total savings, usage patterns, and ROI per card" },
+              ].map((item) => (
+                <div key={item.title} className={surfaceCardClass("p-5")}>
+                  <div className="text-2xl mb-3">{item.icon}</div>
+                  <div className="text-base font-semibold text-white/95">{item.title}</div>
+                  <p className="mt-2 text-sm text-white/55">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {!isPro && (
+              <div className={surfaceCardClass("mt-6 p-6 text-center border-purple-500/20 bg-purple-500/5")}>
+                <div className="text-lg font-semibold text-white/95">Unlock Pro Lifetime</div>
+                <p className="mt-2 text-sm text-white/60">Get unlimited cards, Expiring Soon alerts, and more for just $9.99 one-time.</p>
+                <button onClick={() => setUpgradeModalOpen(true)} className="mt-4 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition" type="button">
+                  Upgrade to Pro — $9.99
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'settings' && (
+          <div className="max-w-2xl mx-auto">
+            <div className={surfaceCardClass("p-6")}>
+              <h2 className="text-xl font-bold text-white/95">Settings</h2>
+              {user && <p className="mt-1 text-sm text-white/55">{user.email}</p>}
+
+              <div className="mt-6 space-y-5">
+                <div>
+                  <label className="text-sm font-semibold text-white/90">Display name</label>
+                  <input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your name" className="mt-2 w-full rounded-xl border border-white/10 bg-[#0F1218] px-4 py-3 text-sm outline-none" />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-white/90">Phone (for SMS)</label>
+                  <input value={phoneE164} onChange={(e) => setPhoneE164(e.target.value)} placeholder="+15551234567" className="mt-2 w-full rounded-xl border border-white/10 bg-[#0F1218] px-4 py-3 text-sm outline-none" />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 text-sm text-white/80">
+                    <input type="checkbox" checked={notifEmailEnabled} onChange={(e) => setNotifEmailEnabled(e.target.checked)} className="h-4 w-4 rounded" />
+                    Email reminders
+                  </label>
+                  <label className="flex items-center gap-3 text-sm text-white/80">
+                    <input type="checkbox" checked={notifSmsEnabled} onChange={(e) => setNotifSmsEnabled(e.target.checked)} className="h-4 w-4 rounded" />
+                    SMS reminders
+                  </label>
+                  <label className="flex items-center gap-3 text-sm text-white/80">
+                    <input type="checkbox" checked={smsConsent} onChange={(e) => setSmsConsent(e.target.checked)} className="h-4 w-4 rounded" />
+                    I consent to receive SMS from ClawBack
+                  </label>
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-white/90">Reminder days before reset</label>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[1, 3, 5, 7, 10, 14].map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => {
+                          if (!isPro && !offsetsDays.includes(d)) {
+                            setUpgradeModalOpen(true);
+                            return;
+                          }
+                          setOffsetsDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort((a,b) => b - a));
+                        }}
+                        className={[
+                          "rounded-full border px-4 py-2 text-sm font-medium transition",
+                          offsetsDays.includes(d) ? "border-purple-400/30 bg-purple-500/20 text-purple-200" : "border-white/10 bg-white/5 text-white/70 hover:bg-white/10"
+                        ].join(" ")}
+                        type="button"
+                      >
+                        {d} days
+                      </button>
+                    ))}
+                  </div>
+                  {!isPro && <p className="mt-2 text-xs text-white/40">Custom offsets require Pro</p>}
+                </div>
+
+                <button onClick={saveProfile} disabled={profileLoading} className="w-full rounded-xl bg-white px-4 py-3 text-sm font-semibold text-black hover:bg-white/90 disabled:opacity-50" type="button">
+                  {profileLoading ? "Saving..." : "Save settings"}
+                </button>
+                {profileMsg && <div className="text-sm text-white/70">{profileMsg}</div>}
+              </div>
+            </div>
+
+            {/* Pro Status */}
+            <div className={surfaceCardClass("mt-6 p-6")}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-base font-semibold text-white/95">Plan</div>
+                  <p className="mt-1 text-sm text-white/55">{isPro ? "Pro Lifetime — unlimited features" : "Free — 1 card, email reminders"}</p>
+                </div>
+                {isPro ? (
+                  <div className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/30 px-3 py-1.5 text-xs font-semibold text-amber-200">
+                    <span>✨</span>
+                    <span>PRO Lifetime</span>
+                  </div>
+                ) : (
+                  <button onClick={() => setUpgradeModalOpen(true)} className="rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition" type="button">
+                    Upgrade — $9.99
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <footer className="mt-10 pt-6 border-t border-white/10">
@@ -1469,6 +1787,66 @@ export default function AppDashboardPage() {
       {AuthModal}
       {SettingsModal}
       {QuizModal}
+
+      {/* Upgrade Modal */}
+      {upgradeModalOpen && (
+        <div className="fixed inset-0 z-50">
+          <button className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setUpgradeModalOpen(false)} aria-label="Close" />
+          <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2">
+            <div className={surfaceCardClass("p-6 text-center border-purple-500/20")}>
+              <div className="mx-auto w-14 h-14 rounded-full bg-gradient-to-br from-amber-500/30 to-yellow-500/30 flex items-center justify-center mb-5">
+                <span className="text-2xl">✨</span>
+              </div>
+              <h2 className="text-2xl font-bold text-white/95">Unlock Pro Lifetime</h2>
+              <p className="mt-3 text-white/60">One-time payment. Forever access.</p>
+
+              <ul className="mt-6 space-y-3 text-left">
+                {[
+                  "Track unlimited cards",
+                  "Expiring Soon alerts (real reset dates)",
+                  "Custom reminder schedule",
+                  "Export credits + reminders (CSV)",
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-sm text-white/80">
+                    <svg className="h-5 w-5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <div className="text-3xl font-bold text-white/95">$9.99</div>
+                <div className="text-sm text-white/50">one-time payment</div>
+              </div>
+
+              <div className="mt-4 text-xs text-white/40 flex items-center justify-center gap-2">
+                <svg className="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>No subscriptions. No bank connections.</span>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <button onClick={handleUpgrade} className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-4 text-base font-semibold text-white hover:opacity-90 transition" type="button">
+                  Upgrade for $9.99
+                </button>
+                <button onClick={() => setUpgradeModalOpen(false)} className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm text-white/70 hover:bg-white/10 transition" type="button">
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl border border-emerald-400/30 bg-emerald-500/20 backdrop-blur px-5 py-3 text-sm text-emerald-100 shadow-lg">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
