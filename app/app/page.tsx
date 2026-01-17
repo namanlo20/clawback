@@ -347,25 +347,6 @@ export default function AppDashboardPage() {
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState<string | null>(null);
 
-  // Open modals from landing page links: /app?open=signin|signup|quiz
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    const open = (params.get('open') || '').toLowerCase();
-
-    if (open === 'signin' || open === 'signup') {
-      setAuthMode(open as 'signin' | 'signup');
-      setAuthModalOpen(true);
-    } else if (open === 'quiz') {
-      setQuizOpen(true);
-    }
-
-    if (open) {
-      // Clean URL so refresh doesn't re-open
-      window.history.replaceState({}, '', '/app');
-    }
-  }, []);
-
   // Settings
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
