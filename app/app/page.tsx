@@ -886,6 +886,13 @@ export default function AppDashboardPage() {
                   <button onClick={() => setAuthMode("reset")} className="text-white/55 hover:text-white/80" type="button">Forgot password?</button>
                 )}
               </div>
+              {/* Trust microcopy */}
+              <div className="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-white/40">
+                <svg className="h-4 w-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+                <span>No bank logins. No SSN. No credit score access. Ever.</span>
+              </div>
             </div>
           )}
         </div>
@@ -1148,9 +1155,40 @@ export default function AppDashboardPage() {
     </main>
   );
 
-  // Right Panel - Expiring Soon & Reminders (NO Summary)
+  // Helper to format points program name
+  const formatProgramName = (program: string) => {
+    const names: Record<string, string> = {
+      amex_mr: "MEMBERSHIP REWARDS",
+      chase_ur: "ULTIMATE REWARDS",
+      cap1_miles: "CAPITAL ONE MILES",
+      citi_typ: "THANKYOU POINTS",
+      aa_miles: "AADVANTAGE MILES",
+      delta_miles: "SKYMILES",
+      marriott_points: "MARRIOTT BONVOY",
+      hilton_points: "HILTON HONORS",
+      cashback: "CASH BACK",
+    };
+    return names[program] || program.toUpperCase();
+  };
+
+  // Right Panel - Points/Rewards, Expiring Soon & Reminders
   const RightPanel = (
     <aside className="lg:col-span-3">
+      {/* Points / Rewards */}
+      <div className={surfaceCardClass("p-5 mb-5")}>
+        <div className="text-lg font-semibold text-white/95">Points / Rewards</div>
+        <div className="mt-1 text-[11px] text-white/40 uppercase tracking-wider">{formatProgramName(activeCard.pointsProgram)}</div>
+        <div className="mt-4 space-y-3">
+          {activeCard.multipliers.map((m, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className="rounded-full bg-purple-500/20 border border-purple-400/30 px-2.5 py-0.5 text-base font-bold text-purple-200 min-w-[44px] text-center">{m.x}x</span>
+              <span className="text-sm text-white/70 leading-tight">{m.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Expiring Soon */}
       <div className={surfaceCardClass("p-5 border-sky-300/12 bg-sky-500/5")}>
         <div className="text-lg font-semibold text-white/95">Expiring soon</div>
         <div className="mt-1 text-xs text-white/55">Credits resetting in the next 14 days</div>
@@ -1408,6 +1446,24 @@ export default function AppDashboardPage() {
           <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>{MiddlePanel}</div>
           <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>{RightPanel}</div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-10 pt-6 border-t border-white/10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/40">
+            <div>© 2026 ClawBack</div>
+            <div className="flex items-center gap-2">
+              <svg className="h-3.5 w-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              <span>No bank logins. No SSN. We only store your card selections + reminder preferences.</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <a href="/privacy" className="hover:text-white/70 transition">Privacy</a>
+              <a href="/terms" className="hover:text-white/70 transition">Terms</a>
+              <a href="mailto:hello@clawback.app" className="hover:text-white/70 transition">Contact</a>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {AuthModal}
