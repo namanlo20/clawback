@@ -3,7 +3,6 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { createClient, type Session, type User } from "@supabase/supabase-js";
 import {
   CARDS,
@@ -325,7 +324,6 @@ function normalizeOffsets(input: number[]): number[] {
 // PAGE
 // -----------------------------
 export default function AppDashboardPage() {
-  const router = useRouter();
   const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
   const [activeTab, setActiveTab] = useState<"dashboard" | "quiz" | "coming-soon" | "settings">("dashboard");
   
@@ -451,6 +449,40 @@ export default function AppDashboardPage() {
 
   // Quiz state - expanded to 7 questions
   const [quizOpen, setQuizOpen] = useState(false);
+  // Landing deep-links: /app?open=signin|signup|quiz
+  // We intentionally avoid useSearchParams() here to prevent Suspense/prerender build errors in production.
+  const [openParamHandled, setOpenParamHandled] = useState(false);
+
+  useEffect(() => {
+    if (openParamHandled) return;
+    // Only run on client
+    if (typeof window === 'undefined') return;
+
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const open = (params.get('open') || '').toLowerCase();
+
+      if (open === 'signin' || open === 'signup') {
+        setAuthMode(open as 'signin' | 'signup');
+        setAuthModalOpen(true);
+      }
+
+      if (open === 'quiz') {
+        setQuizStep('intro');
+        setQuizOpen(true);
+      }
+
+      // Clean URL so refresh doesn't reopen
+      if (open) {
+        window.history.replaceState({}, '', '/app');
+      }
+    } catch {
+      // no-op
+    } finally {
+      setOpenParamHandled(true);
+    }
+  }, [openParamHandled]);
+
   const [quizStep, setQuizStep] = useState<QuizStep>('intro');
   const [topSpendCategories, setTopSpendCategories] = useState<SpendCategory[]>([]);
   
@@ -524,30 +556,6 @@ export default function AppDashboardPage() {
       includeWelcomeBonus: true,
     });
   }, []);
-
-  // Landing page deep-links: /app?open=signin | signup | quiz
-  // - opens the correct modal
-  // - then cleans the URL back to /app
-  // NOTE: Avoid useSearchParams() to prevent Next.js prerender/Suspense build errors.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-    const open = params.get("open");
-    if (!open) return;
-
-    if (open === "quiz") {
-      setQuizOpen(true);
-      resetQuiz();
-    } else if (open === "signin" || open === "signup") {
-      setAuthModalOpen(true);
-      setAuthMode(open);
-    }
-
-    // Prevent repeated triggers on refresh/navigation
-    router.replace("/app");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router, resetQuiz]);
 
   // Auth init
   useEffect(() => {
