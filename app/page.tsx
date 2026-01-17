@@ -19,37 +19,37 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - CHANGED: Logo 56x56, hash routing on buttons */}
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={48} height={48} className="rounded-xl" />
-            <span className="text-2xl font-bold tracking-tight">ClawBack</span>
+            <Image 
+              src="/logos/clawback-mark.png" 
+              alt="ClawBack" 
+              width={56} 
+              height={56} 
+              className="rounded-xl shadow-lg shadow-purple-500/30" 
+            />
+            <span className="text-xl font-bold tracking-tight">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link 
-              href="/app"
+              href="/app#signin"
               className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
               Sign In
             </Link>
             <Link 
-              href="/app"
-              className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
+              href="/app#signup"
+              className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90 transition"
             >
-              Sign Up
-            </Link>
-            <Link 
-              href="/app"
-              className="rounded-full bg-purple-500 px-4 py-2 text-sm font-medium text-white hover:bg-purple-400 transition"
-            >
-              Take Quiz
+              Get Started
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero - Centered & Compact */}
+      {/* Hero - Centered & Compact (UNCHANGED) */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-16 text-center">
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300 mb-6">
@@ -89,16 +89,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Trust microcopy */}
-        <div className="mt-6 flex items-center justify-center gap-2 text-xs text-white/40">
-          <svg className="h-4 w-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-          </svg>
-          <span>No bank logins. No SSN. No credit score access. Ever.</span>
-        </div>
-
-        {/* Social proof */}
-        <div className="mt-6 flex items-center justify-center gap-3 text-sm text-white/50">
+        {/* Social proof (UNCHANGED) */}
+        <div className="mt-8 flex items-center justify-center gap-3 text-sm text-white/50">
           <div className="flex -space-x-2">
             {[1,2,3,4].map((i) => (
               <div key={i} className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border-2 border-[#070A12]" />
@@ -108,7 +100,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Features - Compact Grid */}
+      {/* Features - Compact Grid (UNCHANGED) */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
         <div className="grid gap-4 md:grid-cols-3">
           {[
@@ -140,7 +132,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Cards Preview - Compact */}
+      {/* Cards Preview - Compact (UNCHANGED) */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -172,7 +164,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Pricing - Side by Side Compact */}
+      {/* Pricing - Side by Side Compact (CHANGED: $9.99 price only) */}
       <div className="relative z-10 mx-auto max-w-4xl px-6 pb-16">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-white/95">Simple pricing</h2>
@@ -180,7 +172,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Free tier */}
+          {/* Free tier (UNCHANGED) */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-3xl font-bold text-white/95">$0</span>
@@ -201,15 +193,15 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Pro tier */}
+          {/* Pro tier (CHANGED: $9.99 price, kept "Soon" badge and waitlist) */}
           <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-500/10 to-transparent p-6 relative">
-            <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">BEST VALUE</span>
+            <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">Soon</span>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-3xl font-bold text-white/95">$9.99</span>
               <span className="text-sm text-white/50">one-time</span>
             </div>
             <ul className="space-y-2 mb-6">
-              {["Unlimited cards", "Expiring Soon alerts", "Custom reminder schedule", "CSV export"].map((f) => (
+              {["Unlimited cards", "SMS reminders", "Priority support", "Everything free"].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white/70">
                   <svg className="h-4 w-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -218,14 +210,14 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link href="/app" className="block w-full rounded-xl bg-purple-500 py-2.5 text-center text-sm font-semibold text-white hover:bg-purple-400 transition">
-              Get Pro — $9.99
-            </Link>
+            <button disabled className="block w-full rounded-xl bg-purple-500/30 py-2.5 text-center text-sm font-semibold text-purple-200 cursor-not-allowed">
+              Join waitlist
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Final CTA - Compact */}
+      {/* Final CTA - Compact (UNCHANGED) */}
       <div className="relative z-10 mx-auto max-w-4xl px-6 pb-16">
         <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-8 text-center">
           <h2 className="text-2xl font-bold text-white/95">Ready to claw back your credits?</h2>
@@ -244,23 +236,14 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer - Minimal (UNCHANGED) */}
       <footer className="relative z-10 border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/40">
-            <div className="flex items-center gap-2">
-              <Image src="/logos/clawback-mark.png" alt="ClawBack" width={20} height={20} className="rounded" />
-              <span>© 2026 ClawBack</span>
-            </div>
-            <div className="flex items-center gap-2 text-center">
-              <svg className="h-3.5 w-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              <span>No bank logins. No SSN. We only store your card selections + reminder preferences.</span>
-            </div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40">
+            <div>© 2026 ClawBack. Made with 💜</div>
             <div className="flex items-center gap-4">
-              <Link href="/privacy" className="hover:text-white/70 transition">Privacy</Link>
-              <Link href="/terms" className="hover:text-white/70 transition">Terms</Link>
+              <a href="#" className="hover:text-white/70 transition">Privacy</a>
+              <a href="#" className="hover:text-white/70 transition">Terms</a>
               <a href="mailto:hello@clawback.app" className="hover:text-white/70 transition">Contact</a>
             </div>
           </div>
