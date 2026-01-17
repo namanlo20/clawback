@@ -23,7 +23,7 @@ export default function HomePage() {
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={64} height={64} className="rounded-2xl" />
+            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={48} height={48} className="rounded-xl" />
             <span className="text-2xl font-bold tracking-tight">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
@@ -51,17 +51,6 @@ export default function HomePage() {
 
       {/* Hero - Centered & Compact */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-16 text-center">
-        <div className="mx-auto mb-6 flex justify-center">
-          <Image
-            src="/logos/clawback-logo.png"
-            alt="ClawBack"
-            width={360}
-            height={120}
-            priority
-            className="h-auto w-[220px] sm:w-[260px] md:w-[320px] opacity-95"
-          />
-        </div>
-
         {/* Badge */}
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300 mb-6">
           <span className="relative flex h-2 w-2">
