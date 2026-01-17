@@ -26,11 +26,11 @@ export default function HomePage() {
             <Image 
               src="/logos/clawback-mark.png" 
               alt="ClawBack" 
-              width={56} 
-              height={56} 
-              className="rounded-xl shadow-lg shadow-purple-500/30" 
+              width={64} 
+              height={64} 
+              className="rounded-2xl shadow-xl shadow-purple-500/40 ring-2 ring-white/20 ring-offset-2 ring-offset-[#070A12]" 
             />
-            <span className="text-xl font-bold tracking-tight">ClawBack</span>
+            <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-purple-200 bg-clip-text text-transparent">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link 
