@@ -22,9 +22,9 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={32} height={32} className="rounded-lg" />
-            <span className="text-xl font-bold tracking-tight">ClawBack</span>
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/logos/clawback-mark.png" alt="ClawBack" width={48} height={48} className="rounded-xl" />
+            <span className="text-2xl font-bold tracking-tight">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link 
@@ -203,13 +203,13 @@ export default function HomePage() {
 
           {/* Pro tier */}
           <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-500/10 to-transparent p-6 relative">
-            <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">Soon</span>
+            <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">BEST VALUE</span>
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-3xl font-bold text-white/95">$5</span>
+              <span className="text-3xl font-bold text-white/95">$9.99</span>
               <span className="text-sm text-white/50">one-time</span>
             </div>
             <ul className="space-y-2 mb-6">
-              {["Unlimited cards", "SMS reminders", "Priority support", "Everything free"].map((f) => (
+              {["Unlimited cards", "Expiring Soon alerts", "Custom reminder schedule", "CSV export"].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white/70">
                   <svg className="h-4 w-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -218,9 +218,9 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <button disabled className="block w-full rounded-xl bg-purple-500/30 py-2.5 text-center text-sm font-semibold text-purple-200 cursor-not-allowed">
-              Join waitlist
-            </button>
+            <Link href="/app" className="block w-full rounded-xl bg-purple-500 py-2.5 text-center text-sm font-semibold text-white hover:bg-purple-400 transition">
+              Get Pro — $9.99
+            </Link>
           </div>
         </div>
       </div>
