@@ -242,6 +242,77 @@ function getDaysUntilReset(freq: CreditFrequency): number {
 }
 
 // -----------------------------
+// PERIOD-BASED TRACKING
+// -----------------------------
+type Period = {
+  key: string;      // e.g., "2026-01", "2026-Q1", "2026-H1", "2026"
+  label: string;    // e.g., "Jan", "Q1", "H1", "2026"
+  shortLabel: string; // e.g., "J", "Q1", "H1", "26"
+};
+
+function getPeriodsForFrequency(freq: CreditFrequency, year: number = new Date().getFullYear()): Period[] {
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-11
+  const currentYear = now.getFullYear();
+  
+  // Only show periods up to current period (can't use future credits)
+  const isCurrentYear = year === currentYear;
+  
+  switch (freq) {
+    case "monthly": {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const shortMonths = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+      const maxMonth = isCurrentYear ? currentMonth : 11;
+      return months.slice(0, maxMonth + 1).map((m, i) => ({
+        key: `${year}-${String(i + 1).padStart(2, '0')}`,
+        label: m,
+        shortLabel: shortMonths[i],
+      }));
+    }
+    case "quarterly": {
+      const quarters = [
+        { key: `${year}-Q1`, label: 'Q1', shortLabel: 'Q1', endMonth: 2 },
+        { key: `${year}-Q2`, label: 'Q2', shortLabel: 'Q2', endMonth: 5 },
+        { key: `${year}-Q3`, label: 'Q3', shortLabel: 'Q3', endMonth: 8 },
+        { key: `${year}-Q4`, label: 'Q4', shortLabel: 'Q4', endMonth: 11 },
+      ];
+      const maxQuarter = isCurrentYear ? Math.floor(currentMonth / 3) : 3;
+      return quarters.slice(0, maxQuarter + 1);
+    }
+    case "semiannual": {
+      const halves = [
+        { key: `${year}-H1`, label: 'H1', shortLabel: 'H1', endMonth: 5 },
+        { key: `${year}-H2`, label: 'H2', shortLabel: 'H2', endMonth: 11 },
+      ];
+      const maxHalf = isCurrentYear ? (currentMonth < 6 ? 0 : 1) : 1;
+      return halves.slice(0, maxHalf + 1);
+    }
+    case "annual":
+      return [{ key: `${year}`, label: `${year}`, shortLabel: `'${String(year).slice(-2)}` }];
+    case "every4years":
+    case "every5years":
+    case "onetime":
+      return [{ key: `${year}`, label: `${year}`, shortLabel: `'${String(year).slice(-2)}` }];
+    default:
+      return [];
+  }
+}
+
+function getPeriodStateKey(cardKey: string, creditId: string, periodKey: string): string {
+  return `${cardKey}::${creditId}::${periodKey}`;
+}
+
+function countUsedPeriods(cardKey: string, creditId: string, freq: CreditFrequency, usedState: ToggleState): number {
+  const periods = getPeriodsForFrequency(freq);
+  let count = 0;
+  for (const p of periods) {
+    const stateKey = getPeriodStateKey(cardKey, creditId, p.key);
+    if (usedState[stateKey]) count++;
+  }
+  return count;
+}
+
+// -----------------------------
 // SCORING ENGINE
 // -----------------------------
 function scoreCard(card: Card, inputs: QuizInputs): { score: number; detailLines: string[] } {
@@ -467,32 +538,66 @@ export default function AppDashboardPage() {
 
   const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
-  const creditsSorted = useMemo(() => {
-    return activeCard.credits.slice().sort((a, b) => {
-      const fa = freqSort(a.frequency);
-      const fb = freqSort(b.frequency);
-      if (fa !== fb) return fa - fb;
-      return a.title.localeCompare(b.title);
-    });
+  // Group credits by frequency for tiered display
+  const creditsGrouped = useMemo(() => {
+    const groups: Record<CreditFrequency, Credit[]> = {
+      monthly: [],
+      quarterly: [],
+      semiannual: [],
+      annual: [],
+      every4years: [],
+      every5years: [],
+      onetime: [],
+    };
+    
+    for (const c of activeCard.credits) {
+      groups[c.frequency].push(c);
+    }
+    
+    // Sort each group alphabetically
+    for (const key of Object.keys(groups) as CreditFrequency[]) {
+      groups[key].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    
+    return groups;
   }, [activeCard]);
 
-  // Calculate totals for active card
+  // Frequency display order and labels
+  const frequencyOrder: CreditFrequency[] = ['monthly', 'quarterly', 'semiannual', 'annual', 'every4years', 'every5years', 'onetime'];
+  const frequencyLabels: Record<CreditFrequency, string> = {
+    monthly: 'Monthly Credits',
+    quarterly: 'Quarterly Credits',
+    semiannual: 'Semi-Annual Credits',
+    annual: 'Annual Credits',
+    every4years: 'Every 4 Years',
+    every5years: 'Every 5 Years',
+    onetime: 'One-Time Credits',
+  };
+
+  // Calculate totals for active card - PERIOD-BASED TRACKING
   const totals = useMemo(() => {
     let totalAvail = 0;
     let totalRedeemed = 0;
     let totalRemaining = 0;
     
     for (const c of activeCard.credits) {
-      const key = `${activeCard.key}::${c.id}`;
-      const isUsed = !!used[key];
-      const isDontCare = !!dontCare[key];
-      const annualVal = annualize(c.amount, c.frequency);
+      const periods = getPeriodsForFrequency(c.frequency);
+      const totalPeriods = periods.length;
+      const usedPeriodsCount = countUsedPeriods(activeCard.key, c.id, c.frequency, used);
       
-      totalAvail += annualVal;
-      if (isUsed) {
-        totalRedeemed += annualVal;
-      } else if (!isDontCare) {
-        totalRemaining += annualVal;
+      // Total available = periods so far this year × amount
+      const availThisYear = totalPeriods * c.amount;
+      totalAvail += availThisYear;
+      
+      // Redeemed = used periods × amount
+      totalRedeemed += usedPeriodsCount * c.amount;
+      
+      // Remaining = (total periods - used periods) × amount
+      // Only count if not marked as "don't care"
+      const baseKey = `${activeCard.key}::${c.id}`;
+      const isDontCare = !!dontCare[baseKey];
+      if (!isDontCare) {
+        totalRemaining += (totalPeriods - usedPeriodsCount) * c.amount;
       }
     }
     
@@ -1392,71 +1497,118 @@ export default function AppDashboardPage() {
         </button>
       </div>
 
-      {/* Credits list */}
-      <div className="space-y-2">
+      {/* Credits list - Grouped by frequency */}
+      <div className="space-y-4">
         {isLoading ? (
           <div className="space-y-2">
             {[1,2,3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
           </div>
-        ) : creditsSorted.length === 0 ? (
+        ) : activeCard.credits.length === 0 ? (
           <div className="text-center py-8">
             <div className="text-3xl mb-2">📭</div>
             <div className="text-white/60">No credits for this card</div>
           </div>
         ) : (
-          creditsSorted.map((c) => {
-            const key = `${activeCard.key}::${c.id}`;
-            const isUsed = !!used[key];
-            const isDontCare = !!dontCare[key];
-            const daysLeft = getDaysUntilReset(c.frequency);
+          frequencyOrder.map((freq) => {
+            const credits = creditsGrouped[freq];
+            if (credits.length === 0) return null;
             
             return (
-              <div
-                key={c.id}
-                className={[
-                  "rounded-xl border p-4 transition",
-                  isUsed ? "border-emerald-400/30 bg-emerald-500/10" :
-                  isDontCare ? "border-white/5 bg-white/[0.02] opacity-50" :
-                  "border-white/10 bg-white/5",
-                ].join(" ")}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-white/95">{c.title}</span>
-                      {daysLeft <= 7 && !isUsed && !isDontCare && (
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
-                          {daysLeft}d left
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-white/50 mt-1">{creditSubtitle(c)}</div>
-                    {c.notes && <div className="text-xs text-white/40 mt-1">{c.notes}</div>}
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-emerald-400">{formatMoney(c.amount)}</div>
-                  </div>
+              <div key={freq}>
+                {/* Section header */}
+                <div className="flex items-center gap-2 mb-2 mt-4 first:mt-0">
+                  <h3 className="text-sm font-semibold text-white/70">{frequencyLabels[freq]}</h3>
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-xs text-white/40">{credits.length}</span>
                 </div>
                 
-                <div className="flex items-center gap-2 mt-3">
-                  <button
-                    onClick={() => toggleUsed(key)}
-                    className={[
-                      "flex-1 rounded-lg py-2 text-sm font-medium transition",
-                      isUsed ? "bg-emerald-500/30 text-emerald-200" : "bg-white/10 text-white/70 hover:bg-white/15",
-                    ].join(" ")}
-                  >
-                    {isUsed ? "✓ Used" : "Mark Used"}
-                  </button>
-                  <button
-                    onClick={() => toggleDontCare(key)}
-                    className={[
-                      "px-3 py-2 rounded-lg text-sm transition",
-                      isDontCare ? "bg-white/20 text-white/70" : "bg-white/5 text-white/40 hover:bg-white/10",
-                    ].join(" ")}
-                  >
-                    Skip
-                  </button>
+                {/* Credits in this tier */}
+                <div className="space-y-2">
+                  {credits.map((c) => {
+                    const baseKey = `${activeCard.key}::${c.id}`;
+                    const isDontCare = !!dontCare[baseKey];
+                    const daysLeft = getDaysUntilReset(c.frequency);
+                    const periods = getPeriodsForFrequency(c.frequency);
+                    const usedCount = countUsedPeriods(activeCard.key, c.id, c.frequency, used);
+                    const allUsed = usedCount === periods.length && periods.length > 0;
+                    
+                    return (
+                      <div
+                        key={c.id}
+                        className={[
+                          "rounded-xl border p-4 transition",
+                          allUsed ? "border-emerald-400/30 bg-emerald-500/10" :
+                          isDontCare ? "border-white/5 bg-white/[0.02] opacity-50" :
+                          "border-white/10 bg-white/5",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-white/95">{c.title}</span>
+                              {daysLeft <= 7 && usedCount < periods.length && !isDontCare && (
+                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
+                                  {daysLeft}d left
+                                </span>
+                              )}
+                            </div>
+                            {c.notes && <div className="text-xs text-white/40 mt-1">{c.notes}</div>}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-emerald-400">{formatMoney(c.amount)}</div>
+                            <div className="text-xs text-white/40">
+                              {usedCount}/{periods.length} used
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Period checkboxes */}
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {periods.map((period) => {
+                            const periodKey = getPeriodStateKey(activeCard.key, c.id, period.key);
+                            const isUsed = !!used[periodKey];
+                            
+                            return (
+                              <button
+                                key={period.key}
+                                onClick={() => toggleUsed(periodKey)}
+                                disabled={isDontCare}
+                                className={[
+                                  "min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-medium transition",
+                                  isUsed 
+                                    ? "bg-emerald-500/30 text-emerald-200 border border-emerald-400/30" 
+                                    : "bg-white/10 text-white/60 border border-white/10 hover:bg-white/15",
+                                  isDontCare ? "opacity-50 cursor-not-allowed" : "",
+                                ].join(" ")}
+                                title={`${period.label} - ${isUsed ? 'Used' : 'Not used'}`}
+                              >
+                                {period.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        
+                        {/* Skip button */}
+                        <div className="flex items-center justify-between">
+                          <div className="text-xs text-white/40">
+                            {allUsed ? '✓ All periods used' : `${formatMoney(usedCount * c.amount)} redeemed`}
+                          </div>
+                          <button
+                            onClick={() => toggleDontCare(baseKey)}
+                            className={[
+                              "px-3 py-1.5 rounded-lg text-xs transition",
+                              isDontCare ? "bg-white/20 text-white/70" : "bg-white/5 text-white/40 hover:bg-white/10",
+                            ].join(" ")}
+                          >
+                            {isDontCare ? "Skipped" : "Skip credit"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -2450,15 +2602,6 @@ export default function AppDashboardPage() {
       <div className="mx-auto max-w-7xl px-4 py-6">
         {TopBar}
         {TabBar}
-        
-        {/* Recommended Action - always visible on dashboard */}
-        {activeTab === 'dashboard' && RecommendedActionWidget}
-        
-        {/* Use Today Strip */}
-        {activeTab === 'dashboard' && UseTodayStrip}
-        
-        {/* Widgets Row */}
-        {activeTab === 'dashboard' && WidgetsRow}
 
         {/* Mobile view toggle */}
         <div className="flex gap-2 lg:hidden mb-4">
