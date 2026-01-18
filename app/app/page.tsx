@@ -813,6 +813,23 @@ export default function AppDashboardPage() {
   const [compareCards, setCompareCards] = useState<string[]>([]);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
 
+  // Streaks & Badges (Pro feature)
+  type StreakData = {
+    currentStreak: number;
+    longestStreak: number;
+    perfectMonths: string[]; // Array of "YYYY-MM" strings
+    badges: string[]; // Array of badge IDs
+  };
+  const [streakData, setStreakData] = useState<StreakData>({
+    currentStreak: 0,
+    longestStreak: 0,
+    perfectMonths: [],
+    badges: [],
+  });
+
+  // Hidden Benefits Guide modal
+  const [benefitsGuideOpen, setBenefitsGuideOpen] = useState(false);
+
   // Check Pro status + hash routing on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -852,6 +869,12 @@ export default function AppDashboardPage() {
       const savedFamilyMode = localStorage.getItem('clawback_familyModeEnabled');
       if (savedFamilyMode) {
         setFamilyModeEnabled(savedFamilyMode === 'true');
+      }
+
+      // Load streak data
+      const savedStreaks = localStorage.getItem('clawback_streakData');
+      if (savedStreaks) {
+        try { setStreakData(JSON.parse(savedStreaks)); } catch {}
       }
       
       // Simulate loading
@@ -897,6 +920,13 @@ export default function AppDashboardPage() {
       localStorage.setItem('clawback_familyModeEnabled', String(familyModeEnabled));
     }
   }, [familyMembers, familyModeEnabled]);
+
+  // Save streak data to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_streakData', JSON.stringify(streakData));
+    }
+  }, [streakData]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -2166,6 +2196,202 @@ export default function AppDashboardPage() {
     </div>
   ) : null;
 
+  // Pro Upgrade Banner (for free users) - Starbucks comparison
+  const ProUpgradeBanner = !isPro ? (
+    <div className={surfaceCardClass("p-5 bg-gradient-to-r from-purple-500/10 to-indigo-500/10 border-purple-500/20")}>
+      <div className="flex items-start gap-4">
+        <div className="text-3xl">☕</div>
+        <div className="flex-1">
+          <div className="text-sm font-semibold text-white/95 mb-1">
+            Less than a coffee. Save hundreds.
+          </div>
+          <div className="text-xs text-white/60 mb-3">
+            That $15 credit you forgot last month? Pro reminders would've saved it.
+          </div>
+          <button
+            onClick={handleUpgrade}
+            className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:opacity-90 transition"
+          >
+            Upgrade — $4.99 lifetime
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  // Hidden Benefits Guide Widget (Pro)
+  const hiddenBenefitsData: Record<string, { title: string; benefits: { name: string; description: string; howToUse: string }[] }> = {
+    'amex-platinum': {
+      title: 'Amex Platinum Hidden Benefits',
+      benefits: [
+        { name: 'Purchase Protection', description: 'Up to $10,000 per item for 90 days against theft/damage', howToUse: 'File claim at americanexpress.com/purchaseprotection within 90 days with receipt' },
+        { name: 'Return Protection', description: "Refund up to $300 if merchant won't accept return", howToUse: 'Submit within 90 days of purchase if merchant refuses return' },
+        { name: 'Trip Delay Insurance', description: '$500 for delays over 6 hours - covers food, hotel, toiletries', howToUse: 'Keep all receipts, file claim online within 60 days' },
+        { name: 'Cell Phone Protection', description: 'Up to $800 for damage/theft when you pay your bill with the card', howToUse: 'Pay monthly phone bill with Platinum, file claim within 90 days' },
+        { name: 'Car Rental Loss & Damage', description: 'Primary coverage up to $75,000 when you decline rental insurance', howToUse: 'Decline rental company insurance, pay full rental with card' },
+        { name: 'Global Assist Hotline', description: '24/7 emergency assistance while traveling - medical, legal, travel help', howToUse: 'Call 1-800-333-2639 for emergencies abroad' },
+      ]
+    },
+    'amex-gold': {
+      title: 'Amex Gold Hidden Benefits',
+      benefits: [
+        { name: 'Purchase Protection', description: 'Up to $10,000 per item for 90 days', howToUse: 'File claim at americanexpress.com/purchaseprotection' },
+        { name: 'Return Protection', description: 'Up to $300 refund if merchant refuses return', howToUse: 'Submit within 90 days of purchase' },
+        { name: 'Baggage Insurance', description: 'Up to $1,250 for carry-on, $500 for checked bags', howToUse: 'File claim within 30 days of incident' },
+        { name: 'Car Rental Insurance', description: 'Secondary coverage when you decline rental insurance', howToUse: 'Decline rental insurance, pay with card' },
+      ]
+    },
+    'chase-sapphire-reserve': {
+      title: 'Chase Sapphire Reserve Hidden Benefits',
+      benefits: [
+        { name: 'Trip Cancellation Insurance', description: 'Up to $10,000 per trip for covered reasons', howToUse: 'Book travel with card, file claim within 60 days' },
+        { name: 'Trip Delay Reimbursement', description: '$500 per ticket for delays over 6 hours', howToUse: 'Keep receipts for meals/lodging, submit claim online' },
+        { name: 'Primary Car Rental Insurance', description: 'Covers theft and collision damage', howToUse: 'Decline rental insurance, pay full rental with card' },
+        { name: 'Emergency Medical Evacuation', description: 'Up to $100,000 in coverage', howToUse: 'Call benefit administrator before arranging transport' },
+        { name: 'Lost Luggage Reimbursement', description: '$3,000 per passenger for lost bags', howToUse: 'File claim with airline first, then Chase within 30 days' },
+        { name: 'DoorDash DashPass', description: 'Free DashPass membership ($0 delivery fees)', howToUse: 'Activate at doordash.com/sapphirereserve' },
+      ]
+    },
+    'chase-sapphire-preferred': {
+      title: 'Chase Sapphire Preferred Hidden Benefits',
+      benefits: [
+        { name: 'Trip Cancellation Insurance', description: 'Up to $5,000 per trip', howToUse: 'Book travel with card, file claim within 60 days' },
+        { name: 'Trip Delay Reimbursement', description: '$500 per ticket for 12+ hour delays', howToUse: 'Keep receipts, submit claim online' },
+        { name: 'Primary Car Rental Insurance', description: 'Covers collision damage', howToUse: 'Decline rental insurance, pay with card' },
+        { name: 'Purchase Protection', description: '120 days coverage against damage/theft', howToUse: 'File claim within 120 days with proof of purchase' },
+      ]
+    },
+  };
+
+  const activeCardBenefits = hiddenBenefitsData[activeCard?.key || ''];
+
+  const HiddenBenefitsWidget = isPro && activeCardBenefits ? (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <h3 className="text-base font-semibold text-white/95">💎 Hidden Benefits</h3>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+        </div>
+        <button
+          onClick={() => setBenefitsGuideOpen(true)}
+          className="text-xs text-purple-400 hover:text-purple-300"
+        >
+          View All →
+        </button>
+      </div>
+      
+      <div className="space-y-2">
+        {activeCardBenefits.benefits.slice(0, 3).map((benefit, i) => (
+          <div key={i} className="p-3 rounded-lg bg-white/5 border border-white/10">
+            <div className="text-sm font-medium text-white/90">{benefit.name}</div>
+            <div className="text-xs text-white/50 mt-1">{benefit.description}</div>
+          </div>
+        ))}
+        {activeCardBenefits.benefits.length > 3 && (
+          <button
+            onClick={() => setBenefitsGuideOpen(true)}
+            className="w-full p-2 text-xs text-purple-400 hover:text-purple-300"
+          >
+            +{activeCardBenefits.benefits.length - 3} more benefits →
+          </button>
+        )}
+      </div>
+    </div>
+  ) : null;
+
+  // Badge definitions
+  const badgeDefinitions = [
+    { id: 'first-credit', name: 'First Credit', icon: '🎯', description: 'Used your first credit' },
+    { id: 'perfect-month', name: 'Perfect Month', icon: '⭐', description: 'Used all credits in a month' },
+    { id: 'streak-3', name: 'On Fire', icon: '🔥', description: '3 month streak' },
+    { id: 'streak-6', name: 'Unstoppable', icon: '💪', description: '6 month streak' },
+    { id: 'streak-12', name: 'Credit Master', icon: '👑', description: '12 month streak' },
+    { id: 'saved-500', name: '$500 Club', icon: '💰', description: 'Saved $500 total' },
+    { id: 'saved-1000', name: '$1K Club', icon: '💎', description: 'Saved $1,000 total' },
+    { id: 'saved-5000', name: '$5K Club', icon: '🏆', description: 'Saved $5,000 total' },
+  ];
+
+  // Calculate streaks from used credits
+  const calculatedStreaks = useMemo(() => {
+    if (!isPro || savedCards.length === 0) return streakData;
+    
+    // This is a simplified calculation - in production you'd track by month
+    const totalUsed = Object.values(used).filter(Boolean).length;
+    const earnedBadges: string[] = [];
+    
+    if (totalUsed >= 1) earnedBadges.push('first-credit');
+    if (savingsData.redeemed >= 500) earnedBadges.push('saved-500');
+    if (savingsData.redeemed >= 1000) earnedBadges.push('saved-1000');
+    if (savingsData.redeemed >= 5000) earnedBadges.push('saved-5000');
+    
+    // Simulate streak based on redeemed percentage
+    let currentStreak = 0;
+    if (savingsData.percentRecovered >= 100) currentStreak = 3;
+    else if (savingsData.percentRecovered >= 75) currentStreak = 2;
+    else if (savingsData.percentRecovered >= 50) currentStreak = 1;
+    
+    if (currentStreak >= 3) earnedBadges.push('streak-3');
+    if (currentStreak >= 6) earnedBadges.push('streak-6');
+    if (currentStreak >= 12) earnedBadges.push('streak-12');
+    
+    return {
+      currentStreak,
+      longestStreak: Math.max(currentStreak, streakData.longestStreak),
+      perfectMonths: streakData.perfectMonths,
+      badges: earnedBadges,
+    };
+  }, [isPro, savedCards, used, savingsData, streakData]);
+
+  // Streaks & Badges Widget (Pro)
+  const StreaksBadgesWidget = isPro ? (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-base font-semibold text-white/95">🏆 Streaks & Badges</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+      </div>
+      
+      {/* Current Streak */}
+      <div className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-orange-500/10 to-amber-500/10 border border-amber-500/20 mb-4">
+        <div className="text-4xl">🔥</div>
+        <div>
+          <div className="text-2xl font-bold text-white/95">{calculatedStreaks.currentStreak} month{calculatedStreaks.currentStreak !== 1 ? 's' : ''}</div>
+          <div className="text-sm text-white/50">Current streak</div>
+        </div>
+        {calculatedStreaks.longestStreak > calculatedStreaks.currentStreak && (
+          <div className="ml-auto text-right">
+            <div className="text-sm text-white/70">{calculatedStreaks.longestStreak}</div>
+            <div className="text-xs text-white/40">Best</div>
+          </div>
+        )}
+      </div>
+      
+      {/* Badges */}
+      <div className="text-sm text-white/70 mb-2">Badges Earned</div>
+      <div className="flex flex-wrap gap-2">
+        {badgeDefinitions.map((badge) => {
+          const earned = calculatedStreaks.badges.includes(badge.id);
+          return (
+            <Tooltip key={badge.id} text={`${badge.name}: ${badge.description}`}>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition ${
+                  earned 
+                    ? 'bg-gradient-to-br from-amber-500/30 to-orange-500/30 border border-amber-400/30' 
+                    : 'bg-white/5 border border-white/10 opacity-40 grayscale'
+                }`}
+              >
+                {badge.icon}
+              </div>
+            </Tooltip>
+          );
+        })}
+      </div>
+      
+      {calculatedStreaks.badges.length === 0 && (
+        <div className="text-xs text-white/40 mt-2">Use your credits to earn badges!</div>
+      )}
+    </div>
+  ) : null;
+
   // Render a single card button
   const renderCardButton = (card: Card) => {
     const isSaved = savedCards.includes(card.key);
@@ -2479,9 +2705,12 @@ export default function AppDashboardPage() {
   // Right Panel - Insights
   const RightPanel = (
     <div className="space-y-4">
+      {ProUpgradeBanner}
       {MySavingsWidget}
+      {StreaksBadgesWidget}
       {AnnualSummaryWidget}
       {CreditCalendarWidget}
+      {HiddenBenefitsWidget}
       {SUBTrackerWidget}
       {AnniversaryAlertsWidget}
       {SpendingOptimizerWidget}
@@ -3370,6 +3599,43 @@ export default function AppDashboardPage() {
     </div>
   );
 
+  // Hidden Benefits Guide Modal
+  const BenefitsGuideModal = !benefitsGuideOpen || !activeCardBenefits ? null : (
+    <div className="fixed inset-0 z-50">
+      <button className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setBenefitsGuideOpen(false)} aria-label="Close" />
+      <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 max-h-[85vh] overflow-y-auto">
+        <div className={surfaceCardClass("p-6")}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-white/95">💎 {activeCardBenefits.title}</h2>
+            <button onClick={() => setBenefitsGuideOpen(false)} className="text-white/40 hover:text-white/70">
+              ✕
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            {activeCardBenefits.benefits.map((benefit, i) => (
+              <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
+                <div className="text-base font-semibold text-white/95 mb-2">{benefit.name}</div>
+                <div className="text-sm text-white/70 mb-3">{benefit.description}</div>
+                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+                  <div className="text-xs text-emerald-400 font-medium mb-1">How to use:</div>
+                  <div className="text-sm text-white/80">{benefit.howToUse}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-400/20">
+            <div className="text-sm text-white/70">
+              💡 <strong className="text-white/90">Pro tip:</strong> Save this page or screenshot these benefits. 
+              Most people don't realize they have these protections until it's too late!
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   // Family Modal
   const FamilyModal = !familyModalOpen ? null : (
     <div className="fixed inset-0 z-50">
@@ -3808,6 +4074,7 @@ export default function AppDashboardPage() {
       {UpgradeModal}
       {OfferModal}
       {FamilyModal}
+      {BenefitsGuideModal}
 
       {/* Toast */}
       {toast && (
