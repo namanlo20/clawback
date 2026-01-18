@@ -120,6 +120,14 @@ type PartnerOffer = {
   cardKey: string;
 };
 
+type ReferralLink = {
+  id: string;
+  cardKey: string;
+  url: string;
+  bonus: string; // e.g., "30,000 MR" or "$200"
+  notes?: string;
+};
+
 // Downgrade paths database
 const DOWNGRADE_PATHS: Record<string, { name: string; loses: string[]; keeps: string[] }[]> = {
   'amex-platinum': [
@@ -462,6 +470,10 @@ export default function AppDashboardPage() {
   const [offerModalOpen, setOfferModalOpen] = useState(false);
   const [newOffer, setNewOffer] = useState<Partial<PartnerOffer>>({});
 
+  // Referral links (Pro feature)
+  const [referralLinks, setReferralLinks] = useState<ReferralLink[]>([]);
+  const [newReferral, setNewReferral] = useState<Partial<ReferralLink>>({});
+
   // Compare tool
   const [compareCards, setCompareCards] = useState<string[]>([]);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
@@ -475,6 +487,12 @@ export default function AppDashboardPage() {
       const savedOffers = localStorage.getItem('clawback_partnerOffers');
       if (savedOffers) {
         try { setPartnerOffers(JSON.parse(savedOffers)); } catch {}
+      }
+      
+      // Load referral links
+      const savedReferrals = localStorage.getItem('clawback_referralLinks');
+      if (savedReferrals) {
+        try { setReferralLinks(JSON.parse(savedReferrals)); } catch {}
       }
       
       // Simulate loading
@@ -491,6 +509,13 @@ export default function AppDashboardPage() {
       localStorage.setItem('clawback_partnerOffers', JSON.stringify(partnerOffers));
     }
   }, [partnerOffers]);
+
+  // Save referral links to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_referralLinks', JSON.stringify(referralLinks));
+    }
+  }, [referralLinks]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -1070,7 +1095,8 @@ export default function AppDashboardPage() {
   };
 
   // Filter cards
-  const filteredCards = useMemo(() => {
+  // Group cards by fee tiers: $500+, $250-500, $0-250
+  const cardsByTier = useMemo(() => {
     let list = CARDS;
     if (search) {
       const q = search.toLowerCase();
@@ -1078,15 +1104,18 @@ export default function AppDashboardPage() {
     }
     list = list.filter((c) => c.annualFee >= feeMin && c.annualFee <= feeMax);
 
-    const saved = list.filter((c) => savedCards.includes(c.key));
-    const pinned = list.filter((c) => pinnedOrder.includes(c.key) && !savedCards.includes(c.key));
-    const rest = list.filter((c) => !savedCards.includes(c.key) && !pinnedOrder.includes(c.key));
+    // Define tiers
+    const tier1 = list.filter(c => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier2 = list.filter(c => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier3 = list.filter(c => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
 
-    pinned.sort((a, b) => pinnedOrder.indexOf(a.key) - pinnedOrder.indexOf(b.key));
-    rest.sort((a, b) => a.name.localeCompare(b.name));
-
-    return [...saved, ...pinned, ...rest];
-  }, [search, feeMin, feeMax, savedCards]);
+    return {
+      premium: { label: 'Premium ($500+)', cards: tier1 },
+      mid: { label: 'Mid-Tier ($250-$499)', cards: tier2 },
+      entry: { label: 'Entry ($0-$249)', cards: tier3 },
+      total: tier1.length + tier2.length + tier3.length,
+    };
+  }, [search, feeMin, feeMax]);
 
   // Updated X mins ago
   const updatedAgo = useMemo(() => {
@@ -1382,42 +1411,85 @@ export default function AppDashboardPage() {
     </div>
   );
 
-  // Card list with empty state
-  const CardListContent = filteredCards.length === 0 ? (
+  // Render a single card button
+  const renderCardButton = (card: Card) => {
+    const isSaved = savedCards.includes(card.key);
+    const isActive = card.key === activeCardKey;
+    return (
+      <button
+        key={card.key}
+        onClick={() => setActiveCardKey(card.key)}
+        className={[
+          "w-full text-left rounded-xl border p-3 transition flex items-center gap-3",
+          isActive ? "border-purple-500/50 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10",
+        ].join(" ")}
+      >
+        <Image src={card.logo} alt={card.name} width={40} height={40} className="rounded-lg" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-white/95 truncate">{card.name}</span>
+            {isSaved && <span className="text-xs text-emerald-400">✓</span>}
+          </div>
+          <div className="text-xs text-white/50">{card.issuer} • {formatMoney(card.annualFee)}/yr</div>
+        </div>
+        <div className="text-right">
+          <div className="text-emerald-400 font-semibold">{formatMoney(card.creditsTrackedAnnualized)}</div>
+          <div className="text-xs text-white/40">/year</div>
+        </div>
+      </button>
+    );
+  };
+
+  // Card list with empty state - Grouped by tiers
+  const CardListContent = cardsByTier.total === 0 ? (
     <div className="text-center py-12">
       <div className="text-4xl mb-3">🔍</div>
       <div className="text-white/70 font-medium">No cards match your filters</div>
       <div className="text-white/50 text-sm mt-1">Try adjusting your search or fee range</div>
     </div>
   ) : (
-    <div className="space-y-2">
-      {filteredCards.map((card) => {
-        const isSaved = savedCards.includes(card.key);
-        const isActive = card.key === activeCardKey;
-        return (
-          <button
-            key={card.key}
-            onClick={() => setActiveCardKey(card.key)}
-            className={[
-              "w-full text-left rounded-xl border p-3 transition flex items-center gap-3",
-              isActive ? "border-purple-500/50 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10",
-            ].join(" ")}
-          >
-            <Image src={card.logo} alt={card.name} width={40} height={40} className="rounded-lg" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-white/95 truncate">{card.name}</span>
-                {isSaved && <span className="text-xs text-emerald-400">✓ Saved</span>}
-              </div>
-              <div className="text-xs text-white/50">{card.issuer} • {formatMoney(card.annualFee)}/yr</div>
-            </div>
-            <div className="text-right">
-              <div className="text-emerald-400 font-semibold">{formatMoney(card.creditsTrackedAnnualized)}</div>
-              <div className="text-xs text-white/40">/year</div>
-            </div>
-          </button>
-        );
-      })}
+    <div className="space-y-4">
+      {/* Premium Tier ($500+) */}
+      {cardsByTier.premium.cards.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-purple-400">{cardsByTier.premium.label}</span>
+            <div className="flex-1 h-px bg-purple-500/20" />
+            <span className="text-xs text-white/40">{cardsByTier.premium.cards.length}</span>
+          </div>
+          <div className="space-y-2">
+            {cardsByTier.premium.cards.map(renderCardButton)}
+          </div>
+        </div>
+      )}
+      
+      {/* Mid Tier ($250-$499) */}
+      {cardsByTier.mid.cards.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-amber-400">{cardsByTier.mid.label}</span>
+            <div className="flex-1 h-px bg-amber-500/20" />
+            <span className="text-xs text-white/40">{cardsByTier.mid.cards.length}</span>
+          </div>
+          <div className="space-y-2">
+            {cardsByTier.mid.cards.map(renderCardButton)}
+          </div>
+        </div>
+      )}
+      
+      {/* Entry Tier ($0-$249) */}
+      {cardsByTier.entry.cards.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-emerald-400">{cardsByTier.entry.label}</span>
+            <div className="flex-1 h-px bg-emerald-500/20" />
+            <span className="text-xs text-white/40">{cardsByTier.entry.cards.length}</span>
+          </div>
+          <div className="space-y-2">
+            {cardsByTier.entry.cards.map(renderCardButton)}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -1426,7 +1498,7 @@ export default function AppDashboardPage() {
     <div className={surfaceCardClass("p-4 h-fit")}>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white/95">Cards</h2>
-        <span className="text-xs text-white/50">{filteredCards.length} cards</span>
+        <span className="text-xs text-white/50">{cardsByTier.total} cards</span>
       </div>
       
       <input
@@ -2029,6 +2101,127 @@ export default function AppDashboardPage() {
           </p>
         )}
         
+        {/* Referral Links - Pro Feature */}
+        <div className="pt-6 border-t border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-white/90">My Referral Links</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+            </div>
+            {isPro && (
+              <span className="text-xs text-white/40">{referralLinks.length} links</span>
+            )}
+          </div>
+          
+          {!isPro ? (
+            <div className="text-center py-6 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-2xl mb-2">🔗</div>
+              <div className="text-sm text-white/70 mb-3">Store & share your referral links</div>
+              <button
+                onClick={() => setUpgradeModalOpen(true)}
+                className="text-sm text-purple-400 hover:text-purple-300"
+              >
+                Upgrade to Pro →
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {/* Add new referral form */}
+              <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
+                <select
+                  value={newReferral.cardKey || ''}
+                  onChange={(e) => setNewReferral(prev => ({ ...prev, cardKey: e.target.value }))}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                >
+                  <option value="">Select card...</option>
+                  {CARDS.map(c => (
+                    <option key={c.key} value={c.key}>{c.name}</option>
+                  ))}
+                </select>
+                
+                <input
+                  type="url"
+                  value={newReferral.url || ''}
+                  onChange={(e) => setNewReferral(prev => ({ ...prev, url: e.target.value }))}
+                  placeholder="Referral URL (e.g., https://amex.co/refer/...)"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                />
+                
+                <input
+                  type="text"
+                  value={newReferral.bonus || ''}
+                  onChange={(e) => setNewReferral(prev => ({ ...prev, bonus: e.target.value }))}
+                  placeholder="Referral bonus (e.g., 30,000 MR)"
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                />
+                
+                <button
+                  onClick={() => {
+                    if (newReferral.cardKey && newReferral.url && newReferral.bonus) {
+                      const newLink: ReferralLink = {
+                        id: `ref-${Date.now()}`,
+                        cardKey: newReferral.cardKey,
+                        url: newReferral.url,
+                        bonus: newReferral.bonus,
+                      };
+                      setReferralLinks(prev => [...prev, newLink]);
+                      setNewReferral({});
+                      showToast('Referral link saved ✓');
+                    }
+                  }}
+                  disabled={!newReferral.cardKey || !newReferral.url || !newReferral.bonus}
+                  className="w-full rounded-lg bg-purple-500 px-4 py-2 text-sm text-white font-medium hover:bg-purple-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  + Add Referral Link
+                </button>
+              </div>
+              
+              {/* Existing referral links */}
+              {referralLinks.length > 0 && (
+                <div className="space-y-2">
+                  {referralLinks.map((ref) => {
+                    const card = CARDS.find(c => c.key === ref.cardKey);
+                    return (
+                      <div key={ref.id} className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        {card && (
+                          <Image src={card.logo} alt={card.name} width={32} height={32} className="rounded-lg" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-white/90 truncate">{card?.name || 'Unknown'}</div>
+                          <div className="text-xs text-emerald-400">Earn: {ref.bonus}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(ref.url);
+                              showToast('Link copied! 📋');
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-white/10 text-xs text-white/70 hover:bg-white/15 transition"
+                          >
+                            📋 Copy
+                          </button>
+                          <button
+                            onClick={() => setReferralLinks(prev => prev.filter(r => r.id !== ref.id))}
+                            className="px-2 py-1.5 rounded-lg bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 transition"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              
+              {referralLinks.length === 0 && (
+                <div className="text-center py-4 text-sm text-white/50">
+                  No referral links yet. Add your first one above!
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
         {/* Pro Status */}
         <div className="pt-6 border-t border-white/10">
           <div className="flex items-center justify-between">
@@ -2063,8 +2256,8 @@ export default function AppDashboardPage() {
         <Image 
           src="/logos/clawback-mark.png" 
           alt="ClawBack" 
-          width={48} 
-          height={48} 
+          width={64} 
+          height={64} 
           className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10" 
         />
         <div>
