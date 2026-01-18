@@ -903,14 +903,31 @@ export default function AppDashboardPage() {
     setTimeout(() => setToast(null), 3000);
   };
 
+  // Stripe Payment Link
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIcYpcsV7on6sz0co00';
+
   const handleUpgrade = () => {
+    // Redirect to Stripe Payment Link
     if (typeof window !== 'undefined') {
-      localStorage.setItem('clawback_isPro', 'true');
+      window.location.href = STRIPE_PAYMENT_LINK;
     }
-    setIsPro(true);
-    setUpgradeModalOpen(false);
-    showToast("🎉 Pro enabled! Enjoy unlimited features.");
   };
+
+  // Check for successful payment on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('payment') === 'success') {
+        // Mark as Pro
+        localStorage.setItem('clawback_isPro', 'true');
+        setIsPro(true);
+        showToast("🎉 Payment successful! Pro features unlocked.");
+        
+        // Clean up URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
 
   // Display name
   const displayName = useMemo(() => {
@@ -2764,7 +2781,7 @@ export default function AppDashboardPage() {
         <div className="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-400/20 text-center">
           <p className="text-sm text-white/70 mb-3">Unlock all guides, playbooks, and checklists</p>
           <button onClick={() => setUpgradeModalOpen(true)} className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-400 transition">
-            Upgrade to Pro — $9.99
+            Upgrade to Pro — $4.99
           </button>
         </div>
       )}
@@ -3091,7 +3108,7 @@ export default function AppDashboardPage() {
                 onClick={() => setUpgradeModalOpen(true)}
                 className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-400 transition"
               >
-                Upgrade — $9.99
+                Upgrade — $4.99
               </button>
             )}
             {isPro && (
@@ -3703,7 +3720,7 @@ export default function AppDashboardPage() {
           </ul>
 
           <div className="mt-6 pt-6 border-t border-white/10">
-            <div className="text-3xl font-bold text-white/95">$9.99</div>
+            <div className="text-3xl font-bold text-white/95">$4.99</div>
             <div className="text-sm text-white/50">one-time payment</div>
           </div>
 
@@ -3716,7 +3733,7 @@ export default function AppDashboardPage() {
 
           <div className="mt-6 space-y-3">
             <button onClick={handleUpgrade} className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-6 py-4 text-base font-semibold text-white hover:opacity-90 transition">
-              Upgrade for $9.99
+              Upgrade for $4.99
             </button>
             <button onClick={() => setUpgradeModalOpen(false)} className="w-full rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm text-white/70 hover:bg-white/10 transition">
               Not now
