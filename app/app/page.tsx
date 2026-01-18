@@ -1607,9 +1607,6 @@ export default function AppDashboardPage() {
                     );
                   })}
                 </div>
-                    );
-                  })}
-                </div>
               </div>
             );
           })
