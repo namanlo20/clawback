@@ -22,15 +22,15 @@ export default function HomePage() {
       {/* Navigation - CHANGED: Logo 56x56, hash routing on buttons */}
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-4">
             <Image 
               src="/logos/clawback-mark.png" 
               alt="ClawBack" 
-              width={64} 
-              height={64} 
-              className="rounded-2xl shadow-xl shadow-purple-500/40 ring-2 ring-white/20 ring-offset-2 ring-offset-[#070A12]" 
+              width={96} 
+              height={96} 
+              className="rounded-2xl shadow-2xl shadow-purple-500/50 ring-2 ring-white/20 ring-offset-2 ring-offset-[#070A12]" 
             />
-            <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-purple-200 bg-clip-text text-transparent">ClawBack</span>
+            <span className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-purple-200 bg-clip-text text-transparent">ClawBack</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link 
