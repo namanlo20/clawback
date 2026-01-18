@@ -438,6 +438,9 @@ export default function AppDashboardPage() {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Collapsed frequency sections (default: all expanded)
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
   // Auth
   const [session, setSession] = useState<Session | null>(null);
   const user: User | null = session?.user ?? null;
@@ -474,6 +477,20 @@ export default function AppDashboardPage() {
   const [referralLinks, setReferralLinks] = useState<ReferralLink[]>([]);
   const [newReferral, setNewReferral] = useState<Partial<ReferralLink>>({});
 
+  // Points Portfolio (Pro feature) - user enters their points balances
+  const [pointsBalances, setPointsBalances] = useState<Record<string, number>>({});
+  
+  // Welcome Bonus Tracker (Pro feature)
+  type SUBTracker = {
+    cardKey: string;
+    spendRequired: number;
+    spendCompleted: number;
+    deadline: string; // ISO date
+    bonusAmount: string; // e.g., "150,000 MR"
+  };
+  const [subTrackers, setSubTrackers] = useState<SUBTracker[]>([]);
+  const [newSub, setNewSub] = useState<Partial<SUBTracker>>({});
+
   // Compare tool
   const [compareCards, setCompareCards] = useState<string[]>([]);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
@@ -493,6 +510,18 @@ export default function AppDashboardPage() {
       const savedReferrals = localStorage.getItem('clawback_referralLinks');
       if (savedReferrals) {
         try { setReferralLinks(JSON.parse(savedReferrals)); } catch {}
+      }
+      
+      // Load points balances
+      const savedPoints = localStorage.getItem('clawback_pointsBalances');
+      if (savedPoints) {
+        try { setPointsBalances(JSON.parse(savedPoints)); } catch {}
+      }
+      
+      // Load SUB trackers
+      const savedSubs = localStorage.getItem('clawback_subTrackers');
+      if (savedSubs) {
+        try { setSubTrackers(JSON.parse(savedSubs)); } catch {}
       }
       
       // Simulate loading
@@ -516,6 +545,20 @@ export default function AppDashboardPage() {
       localStorage.setItem('clawback_referralLinks', JSON.stringify(referralLinks));
     }
   }, [referralLinks]);
+
+  // Save points balances to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_pointsBalances', JSON.stringify(pointsBalances));
+    }
+  }, [pointsBalances]);
+
+  // Save SUB trackers to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_subTrackers', JSON.stringify(subTrackers));
+    }
+  }, [subTrackers]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -642,6 +685,93 @@ export default function AppDashboardPage() {
     
     return { fee, redeemed, remaining, netValue, projectedNet, percentRecovered, breakEvenReached, toBreakEven };
   }, [activeCard, totals]);
+
+  // Points Portfolio total value calculation
+  const pointsPortfolio = useMemo(() => {
+    const programs: Array<{ program: PointsProgram; name: string; balance: number; value: number }> = [];
+    const programNames: Record<PointsProgram, string> = {
+      amex_mr: 'Amex MR',
+      chase_ur: 'Chase UR',
+      cap1_miles: 'Capital One Miles',
+      citi_typ: 'Citi TYP',
+      aa_miles: 'AA Miles',
+      delta_miles: 'Delta Miles',
+      marriott_points: 'Marriott Points',
+      hilton_points: 'Hilton Points',
+      cashback: 'Cash Back',
+    };
+    
+    let totalValue = 0;
+    for (const [program, balance] of Object.entries(pointsBalances)) {
+      if (balance > 0) {
+        const valuePerPoint = pointValueUsd(program as PointsProgram);
+        const value = balance * valuePerPoint;
+        totalValue += value;
+        programs.push({
+          program: program as PointsProgram,
+          name: programNames[program as PointsProgram] || program,
+          balance,
+          value,
+        });
+      }
+    }
+    
+    return { programs, totalValue };
+  }, [pointsBalances]);
+
+  // Card Anniversary Alerts - cards renewing in next 60 days
+  const anniversaryAlerts = useMemo(() => {
+    const alerts: Array<{ card: Card; daysUntilRenewal: number; renewalDate: Date }> = [];
+    const now = new Date();
+    
+    for (const cardKey of savedCards) {
+      const card = CARDS.find(c => c.key === cardKey);
+      const startDate = cardStartDates[cardKey];
+      if (!card || !startDate) continue;
+      
+      // Parse start date and calculate next anniversary
+      const start = new Date(startDate);
+      const thisYearAnniversary = new Date(now.getFullYear(), start.getMonth(), start.getDate());
+      const nextYearAnniversary = new Date(now.getFullYear() + 1, start.getMonth(), start.getDate());
+      
+      // Pick the next upcoming anniversary
+      const nextRenewal = thisYearAnniversary > now ? thisYearAnniversary : nextYearAnniversary;
+      const daysUntil = Math.ceil((nextRenewal.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysUntil <= 60) {
+        alerts.push({ card, daysUntilRenewal: daysUntil, renewalDate: nextRenewal });
+      }
+    }
+    
+    return alerts.sort((a, b) => a.daysUntilRenewal - b.daysUntilRenewal);
+  }, [savedCards, cardStartDates]);
+
+  // Annual Summary - total redeemed across all saved cards
+  const annualSummary = useMemo(() => {
+    let totalRedeemed = 0;
+    let totalFees = 0;
+    let cardCount = 0;
+    
+    for (const cardKey of savedCards) {
+      const card = CARDS.find(c => c.key === cardKey);
+      if (!card) continue;
+      
+      cardCount++;
+      totalFees += card.annualFee;
+      
+      // Count redeemed credits for this card
+      for (const credit of card.credits) {
+        const periods = getPeriodsForFrequency(credit.frequency);
+        const usedCount = countUsedPeriods(cardKey, credit.id, credit.frequency, used);
+        totalRedeemed += usedCount * credit.amount;
+      }
+    }
+    
+    const netValue = totalRedeemed - totalFees;
+    const percentRecovered = totalFees > 0 ? Math.round((totalRedeemed / totalFees) * 100) : 0;
+    
+    return { totalRedeemed, totalFees, netValue, cardCount, percentRecovered };
+  }, [savedCards, used]);
 
   // Confetti on break-even
   useEffect(() => {
@@ -1411,6 +1541,157 @@ export default function AppDashboardPage() {
     </div>
   );
 
+  // Annual Summary Widget (Pro)
+  const AnnualSummaryWidget = isPro && savedCards.length > 0 ? (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-base font-semibold text-white/95">📊 Annual Summary</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+      </div>
+      
+      <div className="text-center mb-4">
+        <div className="text-3xl font-bold text-emerald-400">{formatMoney(annualSummary.totalRedeemed)}</div>
+        <div className="text-sm text-white/50">redeemed across {annualSummary.cardCount} card{annualSummary.cardCount !== 1 ? 's' : ''}</div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="p-3 rounded-lg bg-white/5">
+          <div className="text-white/50 text-xs">Total Fees</div>
+          <div className="text-white/90 font-medium">{formatMoney(annualSummary.totalFees)}</div>
+        </div>
+        <div className="p-3 rounded-lg bg-white/5">
+          <div className="text-white/50 text-xs">Net Value</div>
+          <div className={`font-medium ${annualSummary.netValue >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {annualSummary.netValue >= 0 ? '+' : ''}{formatMoney(annualSummary.netValue)}
+          </div>
+        </div>
+      </div>
+      
+      <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
+        <div 
+          className={`h-full transition-all ${annualSummary.percentRecovered >= 100 ? 'bg-emerald-500' : annualSummary.percentRecovered >= 60 ? 'bg-amber-500' : 'bg-red-500'}`}
+          style={{ width: `${Math.min(annualSummary.percentRecovered, 100)}%` }}
+        />
+      </div>
+      <div className="text-xs text-white/50 mt-1 text-center">{annualSummary.percentRecovered}% of fees recovered</div>
+    </div>
+  ) : null;
+
+  // Points Portfolio Widget (Pro)
+  const PointsPortfolioWidget = isPro ? (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-base font-semibold text-white/95">💎 Points Portfolio</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+      </div>
+      
+      {pointsPortfolio.programs.length === 0 ? (
+        <div className="text-center py-4">
+          <div className="text-2xl mb-2">📈</div>
+          <div className="text-sm text-white/50 mb-2">Track your points value</div>
+          <div className="text-xs text-white/40">Add your balances in Settings</div>
+        </div>
+      ) : (
+        <>
+          <div className="text-center mb-4">
+            <div className="text-2xl font-bold text-purple-300">~{formatMoney(pointsPortfolio.totalValue)}</div>
+            <div className="text-xs text-white/50">estimated total value</div>
+          </div>
+          
+          <div className="space-y-2">
+            {pointsPortfolio.programs.map((p) => (
+              <div key={p.program} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                <div>
+                  <div className="text-sm text-white/90">{p.name}</div>
+                  <div className="text-xs text-white/50">{p.balance.toLocaleString()} pts</div>
+                </div>
+                <div className="text-sm text-emerald-400">{formatMoney(p.value)}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  ) : null;
+
+  // Anniversary Alerts Widget (Pro)
+  const AnniversaryAlertsWidget = isPro && anniversaryAlerts.length > 0 ? (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-base font-semibold text-white/95">🗓️ Upcoming Renewals</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">{anniversaryAlerts.length}</span>
+      </div>
+      
+      <div className="space-y-2">
+        {anniversaryAlerts.map((alert) => (
+          <div key={alert.card.key} className={`p-3 rounded-lg border ${alert.daysUntilRenewal <= 30 ? 'bg-red-500/10 border-red-400/30' : 'bg-amber-500/10 border-amber-400/30'}`}>
+            <div className="flex items-center gap-3">
+              <Image src={alert.card.logo} alt={alert.card.name} width={32} height={32} className="rounded-lg" />
+              <div className="flex-1">
+                <div className="text-sm font-medium text-white/90">{alert.card.name}</div>
+                <div className="text-xs text-white/50">{formatMoney(alert.card.annualFee)} fee</div>
+              </div>
+              <div className="text-right">
+                <div className={`text-sm font-bold ${alert.daysUntilRenewal <= 30 ? 'text-red-400' : 'text-amber-400'}`}>
+                  {alert.daysUntilRenewal}d
+                </div>
+                <div className="text-xs text-white/40">until renewal</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+  // SUB Tracker Widget (Pro)
+  const SUBTrackerWidget = isPro && subTrackers.length > 0 ? (
+    <div className={surfaceCardClass("p-5")}>
+      <div className="flex items-center gap-2 mb-4">
+        <h3 className="text-base font-semibold text-white/95">🎯 Welcome Bonus Tracker</h3>
+        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">{subTrackers.length}</span>
+      </div>
+      
+      <div className="space-y-3">
+        {subTrackers.map((sub, i) => {
+          const card = CARDS.find(c => c.key === sub.cardKey);
+          const percent = sub.spendRequired > 0 ? Math.round((sub.spendCompleted / sub.spendRequired) * 100) : 0;
+          const daysLeft = Math.ceil((new Date(sub.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          const isComplete = percent >= 100;
+          const isUrgent = daysLeft <= 30 && !isComplete;
+          
+          return (
+            <div key={i} className={`p-3 rounded-lg border ${isComplete ? 'bg-emerald-500/10 border-emerald-400/30' : isUrgent ? 'bg-red-500/10 border-red-400/30' : 'bg-white/5 border-white/10'}`}>
+              <div className="flex items-center gap-3 mb-2">
+                {card && <Image src={card.logo} alt={card.name} width={28} height={28} className="rounded-lg" />}
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-white/90">{card?.name || 'Unknown'}</div>
+                  <div className="text-xs text-purple-300">{sub.bonusAmount}</div>
+                </div>
+                <div className="text-right">
+                  <div className={`text-xs font-medium ${isUrgent ? 'text-red-400' : 'text-white/50'}`}>
+                    {daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-1">
+                <div 
+                  className={`h-full transition-all ${isComplete ? 'bg-emerald-500' : 'bg-purple-500'}`}
+                  style={{ width: `${Math.min(percent, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-white/50">
+                <span>{formatMoney(sub.spendCompleted)} / {formatMoney(sub.spendRequired)}</span>
+                <span>{percent}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  ) : null;
+
   // Render a single card button
   const renderCardButton = (card: Card) => {
     const isSaved = savedCards.includes(card.key);
@@ -1585,100 +1866,110 @@ export default function AppDashboardPage() {
             const credits = creditsGrouped[freq];
             if (credits.length === 0) return null;
             
+            const isCollapsed = collapsedSections[freq] ?? false;
+            
             return (
               <div key={freq}>
-                {/* Section header */}
-                <div className="flex items-center gap-2 mb-2 mt-4 first:mt-0">
-                  <h3 className="text-sm font-semibold text-white/70">{frequencyLabels[freq]}</h3>
+                {/* Section header - clickable to toggle */}
+                <button
+                  onClick={() => setCollapsedSections(prev => ({ ...prev, [freq]: !prev[freq] }))}
+                  className="w-full flex items-center gap-2 mb-2 mt-4 first:mt-0 group cursor-pointer"
+                >
+                  <span className={`text-white/50 transition-transform duration-200 ${isCollapsed ? '' : 'rotate-90'}`}>
+                    ▶
+                  </span>
+                  <h3 className="text-sm font-semibold text-white/70 group-hover:text-white/90 transition">{frequencyLabels[freq]}</h3>
                   <div className="flex-1 h-px bg-white/10" />
                   <span className="text-xs text-white/40">{credits.length}</span>
-                </div>
+                </button>
                 
-                {/* Credits in this tier */}
-                <div className="space-y-2">
-                  {credits.map((c) => {
-                    const baseKey = `${activeCard.key}::${c.id}`;
-                    const isDontCare = !!dontCare[baseKey];
-                    const daysLeft = getDaysUntilReset(c.frequency);
-                    const periods = getPeriodsForFrequency(c.frequency);
-                    const usedCount = countUsedPeriods(activeCard.key, c.id, c.frequency, used);
-                    const allUsed = usedCount === periods.length && periods.length > 0;
-                    
-                    return (
-                      <div
-                        key={c.id}
-                        className={[
-                          "rounded-xl border p-4 transition",
-                          allUsed ? "border-emerald-400/30 bg-emerald-500/10" :
-                          isDontCare ? "border-white/5 bg-white/[0.02] opacity-50" :
-                          "border-white/10 bg-white/5",
-                        ].join(" ")}
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-white/95">{c.title}</span>
-                              {daysLeft <= 7 && usedCount < periods.length && !isDontCare && (
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
-                                  {daysLeft}d left
-                                </span>
-                              )}
+                {/* Credits in this tier - collapsible */}
+                {!isCollapsed && (
+                  <div className="space-y-2">
+                    {credits.map((c) => {
+                      const baseKey = `${activeCard.key}::${c.id}`;
+                      const isDontCare = !!dontCare[baseKey];
+                      const daysLeft = getDaysUntilReset(c.frequency);
+                      const periods = getPeriodsForFrequency(c.frequency);
+                      const usedCount = countUsedPeriods(activeCard.key, c.id, c.frequency, used);
+                      const allUsed = usedCount === periods.length && periods.length > 0;
+                      
+                      return (
+                        <div
+                          key={c.id}
+                          className={[
+                            "rounded-xl border p-4 transition",
+                            allUsed ? "border-emerald-400/30 bg-emerald-500/10" :
+                            isDontCare ? "border-white/5 bg-white/[0.02] opacity-50" :
+                            "border-white/10 bg-white/5",
+                          ].join(" ")}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-white/95">{c.title}</span>
+                                {daysLeft <= 7 && usedCount < periods.length && !isDontCare && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300">
+                                    {daysLeft}d left
+                                  </span>
+                                )}
+                              </div>
+                              {c.notes && <div className="text-xs text-white/40 mt-1">{c.notes}</div>}
                             </div>
-                            {c.notes && <div className="text-xs text-white/40 mt-1">{c.notes}</div>}
+                            <div className="text-right">
+                              <div className="text-lg font-bold text-emerald-400">{formatMoney(c.amount)}</div>
+                              <div className="text-xs text-white/40">
+                                {usedCount}/{periods.length} used
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-emerald-400">{formatMoney(c.amount)}</div>
+                          
+                          {/* Period checkboxes */}
+                          <div className="flex flex-wrap gap-1.5 mb-3">
+                            {periods.map((period) => {
+                              const periodKey = getPeriodStateKey(activeCard.key, c.id, period.key);
+                              const isUsed = !!used[periodKey];
+                              
+                              return (
+                                <button
+                                  key={period.key}
+                                  onClick={() => toggleUsed(periodKey)}
+                                  disabled={isDontCare}
+                                  className={[
+                                    "min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-medium transition",
+                                    isUsed 
+                                      ? "bg-emerald-500/30 text-emerald-200 border border-emerald-400/30" 
+                                      : "bg-white/10 text-white/60 border border-white/10 hover:bg-white/15",
+                                    isDontCare ? "opacity-50 cursor-not-allowed" : "",
+                                  ].join(" ")}
+                                  title={`${period.label} - ${isUsed ? 'Used' : 'Not used'}`}
+                                >
+                                  {period.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          
+                          {/* Skip button */}
+                          <div className="flex items-center justify-between">
                             <div className="text-xs text-white/40">
-                              {usedCount}/{periods.length} used
+                              {allUsed ? '✓ All periods used' : `${formatMoney(usedCount * c.amount)} redeemed`}
                             </div>
+                            <button
+                              onClick={() => toggleDontCare(baseKey)}
+                              className={[
+                                "px-3 py-1.5 rounded-lg text-xs transition",
+                                isDontCare ? "bg-white/20 text-white/70" : "bg-white/5 text-white/40 hover:bg-white/10",
+                              ].join(" ")}
+                            >
+                              {isDontCare ? "Skipped" : "Skip credit"}
+                            </button>
                           </div>
                         </div>
-                        
-                        {/* Period checkboxes */}
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          {periods.map((period) => {
-                            const periodKey = getPeriodStateKey(activeCard.key, c.id, period.key);
-                            const isUsed = !!used[periodKey];
-                            
-                            return (
-                              <button
-                                key={period.key}
-                                onClick={() => toggleUsed(periodKey)}
-                                disabled={isDontCare}
-                                className={[
-                                  "min-w-[32px] px-2 py-1.5 rounded-lg text-xs font-medium transition",
-                                  isUsed 
-                                    ? "bg-emerald-500/30 text-emerald-200 border border-emerald-400/30" 
-                                    : "bg-white/10 text-white/60 border border-white/10 hover:bg-white/15",
-                                  isDontCare ? "opacity-50 cursor-not-allowed" : "",
-                                ].join(" ")}
-                                title={`${period.label} - ${isUsed ? 'Used' : 'Not used'}`}
-                              >
-                                {period.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        
-                        {/* Skip button */}
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-white/40">
-                            {allUsed ? '✓ All periods used' : `${formatMoney(usedCount * c.amount)} redeemed`}
-                          </div>
-                          <button
-                            onClick={() => toggleDontCare(baseKey)}
-                            className={[
-                              "px-3 py-1.5 rounded-lg text-xs transition",
-                              isDontCare ? "bg-white/20 text-white/70" : "bg-white/5 text-white/40 hover:bg-white/10",
-                            ].join(" ")}
-                          >
-                            {isDontCare ? "Skipped" : "Skip credit"}
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })
@@ -1691,6 +1982,10 @@ export default function AppDashboardPage() {
   const RightPanel = (
     <div className="space-y-4">
       {MySavingsWidget}
+      {AnnualSummaryWidget}
+      {SUBTrackerWidget}
+      {AnniversaryAlertsWidget}
+      {PointsPortfolioWidget}
       {EarningCategoriesWidget}
       {FeeDefenseWidget}
       
@@ -2101,36 +2396,72 @@ export default function AppDashboardPage() {
           </p>
         )}
         
-        {/* Referral Links - Pro Feature */}
+        {/* Points Portfolio Input - Pro Feature */}
         <div className="pt-6 border-t border-white/10">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-medium text-white/90">My Referral Links</h3>
+              <h3 className="text-sm font-medium text-white/90">💎 Points Balances</h3>
               <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
             </div>
-            {isPro && (
-              <span className="text-xs text-white/40">{referralLinks.length} links</span>
-            )}
           </div>
           
           {!isPro ? (
-            <div className="text-center py-6 rounded-xl bg-white/5 border border-white/10">
-              <div className="text-2xl mb-2">🔗</div>
-              <div className="text-sm text-white/70 mb-3">Store & share your referral links</div>
-              <button
-                onClick={() => setUpgradeModalOpen(true)}
-                className="text-sm text-purple-400 hover:text-purple-300"
-              >
+            <div className="text-center py-4 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-sm text-white/70 mb-2">Track your total points value</div>
+              <button onClick={() => setUpgradeModalOpen(true)} className="text-sm text-purple-400 hover:text-purple-300">
                 Upgrade to Pro →
               </button>
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Add new referral form */}
+              {(['amex_mr', 'chase_ur', 'cap1_miles', 'citi_typ', 'hilton_points', 'marriott_points'] as const).map((program) => {
+                const names: Record<string, string> = {
+                  amex_mr: 'Amex MR',
+                  chase_ur: 'Chase UR', 
+                  cap1_miles: 'Capital One Miles',
+                  citi_typ: 'Citi TYP',
+                  hilton_points: 'Hilton Points',
+                  marriott_points: 'Marriott Points',
+                };
+                return (
+                  <div key={program} className="flex items-center gap-3">
+                    <label className="text-sm text-white/70 w-32">{names[program]}</label>
+                    <input
+                      type="number"
+                      value={pointsBalances[program] || ''}
+                      onChange={(e) => setPointsBalances(prev => ({ ...prev, [program]: Number(e.target.value) || 0 }))}
+                      placeholder="0"
+                      className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        
+        {/* SUB Tracker - Pro Feature */}
+        <div className="pt-6 border-t border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-white/90">🎯 Welcome Bonus Tracker</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+            </div>
+          </div>
+          
+          {!isPro ? (
+            <div className="text-center py-4 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-sm text-white/70 mb-2">Track your signup bonus progress</div>
+              <button onClick={() => setUpgradeModalOpen(true)} className="text-sm text-purple-400 hover:text-purple-300">
+                Upgrade to Pro →
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
               <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-3">
                 <select
-                  value={newReferral.cardKey || ''}
-                  onChange={(e) => setNewReferral(prev => ({ ...prev, cardKey: e.target.value }))}
+                  value={newSub.cardKey || ''}
+                  onChange={(e) => setNewSub(prev => ({ ...prev, cardKey: e.target.value }))}
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
                 >
                   <option value="">Select card...</option>
@@ -2139,85 +2470,127 @@ export default function AppDashboardPage() {
                   ))}
                 </select>
                 
-                <input
-                  type="url"
-                  value={newReferral.url || ''}
-                  onChange={(e) => setNewReferral(prev => ({ ...prev, url: e.target.value }))}
-                  placeholder="Referral URL (e.g., https://amex.co/refer/...)"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    value={newSub.spendRequired || ''}
+                    onChange={(e) => setNewSub(prev => ({ ...prev, spendRequired: Number(e.target.value) }))}
+                    placeholder="Spend required ($)"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                  />
+                  <input
+                    type="number"
+                    value={newSub.spendCompleted || ''}
+                    onChange={(e) => setNewSub(prev => ({ ...prev, spendCompleted: Number(e.target.value) }))}
+                    placeholder="Spent so far ($)"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                  />
+                </div>
                 
-                <input
-                  type="text"
-                  value={newReferral.bonus || ''}
-                  onChange={(e) => setNewReferral(prev => ({ ...prev, bonus: e.target.value }))}
-                  placeholder="Referral bonus (e.g., 30,000 MR)"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={newSub.bonusAmount || ''}
+                    onChange={(e) => setNewSub(prev => ({ ...prev, bonusAmount: e.target.value }))}
+                    placeholder="Bonus (e.g., 150K MR)"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
+                  />
+                  <input
+                    type="date"
+                    value={newSub.deadline || ''}
+                    onChange={(e) => setNewSub(prev => ({ ...prev, deadline: e.target.value }))}
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                  />
+                </div>
                 
                 <button
                   onClick={() => {
-                    if (newReferral.cardKey && newReferral.url && newReferral.bonus) {
-                      const newLink: ReferralLink = {
-                        id: `ref-${Date.now()}`,
-                        cardKey: newReferral.cardKey,
-                        url: newReferral.url,
-                        bonus: newReferral.bonus,
-                      };
-                      setReferralLinks(prev => [...prev, newLink]);
-                      setNewReferral({});
-                      showToast('Referral link saved ✓');
+                    if (newSub.cardKey && newSub.spendRequired && newSub.bonusAmount && newSub.deadline) {
+                      setSubTrackers(prev => [...prev, {
+                        cardKey: newSub.cardKey!,
+                        spendRequired: newSub.spendRequired!,
+                        spendCompleted: newSub.spendCompleted || 0,
+                        bonusAmount: newSub.bonusAmount!,
+                        deadline: newSub.deadline!,
+                      }]);
+                      setNewSub({});
+                      showToast('SUB tracker added ✓');
                     }
                   }}
-                  disabled={!newReferral.cardKey || !newReferral.url || !newReferral.bonus}
+                  disabled={!newSub.cardKey || !newSub.spendRequired || !newSub.bonusAmount || !newSub.deadline}
                   className="w-full rounded-lg bg-purple-500 px-4 py-2 text-sm text-white font-medium hover:bg-purple-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  + Add Referral Link
+                  + Add SUB Tracker
                 </button>
               </div>
               
-              {/* Existing referral links */}
-              {referralLinks.length > 0 && (
+              {/* Existing SUB trackers */}
+              {subTrackers.length > 0 && (
                 <div className="space-y-2">
-                  {referralLinks.map((ref) => {
-                    const card = CARDS.find(c => c.key === ref.cardKey);
+                  {subTrackers.map((sub, i) => {
+                    const card = CARDS.find(c => c.key === sub.cardKey);
+                    const percent = sub.spendRequired > 0 ? Math.round((sub.spendCompleted / sub.spendRequired) * 100) : 0;
                     return (
-                      <div key={ref.id} className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
-                        {card && (
-                          <Image src={card.logo} alt={card.name} width={32} height={32} className="rounded-lg" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-white/90 truncate">{card?.name || 'Unknown'}</div>
-                          <div className="text-xs text-emerald-400">Earn: {ref.bonus}</div>
+                      <div key={i} className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        {card && <Image src={card.logo} alt={card.name} width={28} height={28} className="rounded-lg" />}
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-white/90">{card?.name}</div>
+                          <div className="text-xs text-white/50">{formatMoney(sub.spendCompleted)} / {formatMoney(sub.spendRequired)} ({percent}%)</div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(ref.url);
-                              showToast('Link copied! 📋');
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-white/10 text-xs text-white/70 hover:bg-white/15 transition"
-                          >
-                            📋 Copy
-                          </button>
-                          <button
-                            onClick={() => setReferralLinks(prev => prev.filter(r => r.id !== ref.id))}
-                            className="px-2 py-1.5 rounded-lg bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 transition"
-                          >
-                            ✕
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => setSubTrackers(prev => prev.filter((_, j) => j !== i))}
+                          className="px-2 py-1.5 rounded-lg bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 transition"
+                        >
+                          ✕
+                        </button>
                       </div>
                     );
                   })}
                 </div>
               )}
-              
-              {referralLinks.length === 0 && (
-                <div className="text-center py-4 text-sm text-white/50">
-                  No referral links yet. Add your first one above!
-                </div>
-              )}
+            </div>
+          )}
+        </div>
+        
+        {/* Card Start Dates - For Anniversary Alerts */}
+        <div className="pt-6 border-t border-white/10">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-white/90">🗓️ Card Anniversary Dates</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+            </div>
+          </div>
+          
+          {!isPro ? (
+            <div className="text-center py-4 rounded-xl bg-white/5 border border-white/10">
+              <div className="text-sm text-white/70 mb-2">Get alerts before annual fees hit</div>
+              <button onClick={() => setUpgradeModalOpen(true)} className="text-sm text-purple-400 hover:text-purple-300">
+                Upgrade to Pro →
+              </button>
+            </div>
+          ) : savedCards.length === 0 ? (
+            <div className="text-center py-4 text-sm text-white/50">
+              Save some cards first to set anniversary dates
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {savedCards.map((cardKey) => {
+                const card = CARDS.find(c => c.key === cardKey);
+                if (!card) return null;
+                return (
+                  <div key={cardKey} className="flex items-center gap-3">
+                    <Image src={card.logo} alt={card.name} width={28} height={28} className="rounded-lg" />
+                    <span className="text-sm text-white/70 flex-1">{card.name}</span>
+                    <input
+                      type="date"
+                      value={cardStartDates[cardKey] || ''}
+                      onChange={(e) => setCardStartDates(prev => ({ ...prev, [cardKey]: e.target.value }))}
+                      className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                    />
+                  </div>
+                );
+              })}
+              <div className="text-xs text-white/40">Enter the date you opened each card</div>
             </div>
           )}
         </div>
