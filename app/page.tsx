@@ -164,7 +164,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Pricing - Side by Side Compact (CHANGED: $9.99 price only) */}
+      {/* Pricing - Side by Side Compact (CHANGED: $4.99 price only) */}
       <div className="relative z-10 mx-auto max-w-4xl px-6 pb-16">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-white/95">Simple pricing</h2>
@@ -193,11 +193,11 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Pro tier (CHANGED: $9.99 price, kept "Soon" badge and waitlist) */}
+          {/* Pro tier (CHANGED: $4.99 price, kept "Soon" badge and waitlist) */}
           <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-500/10 to-transparent p-6 relative">
             <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">Soon</span>
             <div className="flex items-baseline gap-2 mb-4">
-              <span className="text-3xl font-bold text-white/95">$9.99</span>
+              <span className="text-3xl font-bold text-white/95">$4.99</span>
               <span className="text-sm text-white/50">one-time</span>
             </div>
             <ul className="space-y-2 mb-6">
