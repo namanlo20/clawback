@@ -172,14 +172,14 @@ export default function HomePage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Free tier (UNCHANGED) */}
+          {/* Free tier (UPDATED: SMS now free) */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-3xl font-bold text-white/95">$0</span>
               <span className="text-sm text-white/50">forever</span>
             </div>
             <ul className="space-y-2 mb-6">
-              {["Track 1 card", "Email reminders", "Full credit tracking", "Card quiz"].map((f) => (
+              {["Track 1 card", "Email + SMS reminders", "Full credit tracking", "Card quiz"].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white/70">
                   <svg className="h-4 w-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -201,7 +201,7 @@ export default function HomePage() {
               <span className="text-sm text-white/50">one-time</span>
             </div>
             <ul className="space-y-2 mb-6">
-              {["Unlimited cards", "SMS reminders", "Priority support", "Everything free"].map((f) => (
+              {["Unlimited cards", "Points portfolio tracker", "Welcome bonus tracker", "Card anniversary alerts"].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white/70">
                   <svg className="h-4 w-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
