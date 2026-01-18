@@ -11,7 +11,6 @@ import {
   type Credit,
   type CreditFrequency,
   type SpendCategory,
-  type PointsProgram,
 } from "../../data/cards";
 
 // -----------------------------
