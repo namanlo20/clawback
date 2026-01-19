@@ -1404,7 +1404,13 @@ export default function AppDashboardPage() {
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
-      setSession(data.session ?? null);
+      const sess = data.session ?? null;
+      setSession(sess);
+
+      // Founder Access
+      if (sess?.user?.email?.toLowerCase() === "namanlohia02@gmail.com") {
+        setIsPro(true);
+      }
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
