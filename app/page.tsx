@@ -19,7 +19,7 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Navigation - CHANGED: Logo 56x56, hash routing on buttons */}
+      {/* Navigation */}
       <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-4">
@@ -49,9 +49,8 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero - Centered & Compact (UNCHANGED) */}
-      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-16 text-center">
-        {/* Badge */}
+      {/* Hero */}
+      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300 mb-6">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -89,7 +88,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Social proof (UNCHANGED) */}
         <div className="mt-8 flex items-center justify-center gap-3 text-sm text-white/50">
           <div className="flex -space-x-2">
             {[1,2,3,4].map((i) => (
@@ -100,30 +98,41 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Features - Compact Grid (UNCHANGED) */}
+      {/* Coffee Banner - Value Prop */}
+      <div className="relative z-10 mx-auto max-w-4xl px-6 pb-10">
+        <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 p-6 flex flex-col md:flex-row items-center gap-6">
+          <div className="text-5xl">☕</div>
+          <div className="flex-1 text-center md:text-left">
+            <div className="text-lg font-semibold text-white/95 mb-1">
+              Less than a coffee. Save hundreds.
+            </div>
+            <div className="text-sm text-white/60">
+              That $15 credit you forgot last month? Pro reminders would have saved it. 
+              Unlock unlimited card tracking for a one-time payment.
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="text-2xl font-bold text-white/95">$4.99</div>
+            <div className="text-xs text-white/50">lifetime access</div>
+            <Link
+              href="/app"
+              className="mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:opacity-90 transition"
+            >
+              Get Pro →
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Features */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            {
-              icon: "🔔",
-              title: "Never miss a credit",
-              desc: "7-day + 1-day reminders via email and SMS before credits expire."
-            },
-            {
-              icon: "📈",
-              title: "Addictive progress",
-              desc: "Watch your redeemed totals grow. 🎉 Confetti when you beat your annual fee!"
-            },
-            {
-              icon: "💡",
-              title: "Smart recommendations",
-              desc: "Take a quick quiz and we'll find the perfect card for your spending."
-            },
+            { icon: "🔔", title: "Never miss a credit", desc: "7-day + 1-day reminders via email and SMS before credits expire." },
+            { icon: "📈", title: "Addictive progress", desc: "Watch your redeemed totals grow. 🎉 Confetti when you beat your annual fee!" },
+            { icon: "💡", title: "Smart recommendations", desc: "Take a quick quiz and we'll find the perfect card for your spending." },
           ].map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur p-5 hover:bg-white/[0.05] transition"
-            >
+            <div key={feature.title} className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur p-5 hover:bg-white/[0.05] transition">
               <div className="text-2xl mb-3">{feature.icon}</div>
               <div className="text-base font-semibold text-white/95 mb-2">{feature.title}</div>
               <p className="text-sm text-white/55 leading-relaxed">{feature.desc}</p>
@@ -132,7 +141,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Cards Preview - Compact (UNCHANGED) */}
+      {/* Cards Preview */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
         <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
@@ -140,11 +149,8 @@ export default function HomePage() {
               <h2 className="text-xl font-bold text-white/95">Premium cards supported</h2>
               <p className="text-sm text-white/50">All the major premium cards with complex credit systems</p>
             </div>
-            <Link href="/app" className="text-sm text-purple-400 hover:text-purple-300 font-medium">
-              View all cards →
-            </Link>
+            <Link href="/app" className="text-sm text-purple-400 hover:text-purple-300 font-medium">View all cards →</Link>
           </div>
-          
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
               { name: "Amex Platinum", value: "$3,074" },
@@ -164,15 +170,13 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Pricing - Side by Side Compact (CHANGED: $4.99 price only) */}
+      {/* Pricing */}
       <div className="relative z-10 mx-auto max-w-4xl px-6 pb-16">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-white/95">Simple pricing</h2>
           <p className="mt-1 text-sm text-white/50">No monthly fees. No subscriptions.</p>
         </div>
-
         <div className="grid gap-4 md:grid-cols-2">
-          {/* Free tier (UPDATED: SMS now free) */}
           <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6">
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-3xl font-bold text-white/95">$0</span>
@@ -181,62 +185,45 @@ export default function HomePage() {
             <ul className="space-y-2 mb-6">
               {["Track 1 card", "Email + SMS reminders", "Full credit tracking", "Card quiz"].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white/70">
-                  <svg className="h-4 w-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <svg className="h-4 w-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   {f}
                 </li>
               ))}
             </ul>
-            <Link href="/app" className="block w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-center text-sm font-semibold text-white/90 hover:bg-white/10 transition">
-              Get started free
-            </Link>
+            <Link href="/app" className="block w-full rounded-xl border border-white/15 bg-white/5 py-2.5 text-center text-sm font-semibold text-white/90 hover:bg-white/10 transition">Get started free</Link>
           </div>
-
-          {/* Pro tier (CHANGED: $4.99 price, kept "Soon" badge and waitlist) */}
           <div className="rounded-2xl border border-purple-500/30 bg-gradient-to-b from-purple-500/10 to-transparent p-6 relative">
-            <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">Soon</span>
+            <span className="absolute -top-2.5 right-4 rounded-full bg-purple-500 px-2 py-0.5 text-[11px] font-semibold text-white">Best Value</span>
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-3xl font-bold text-white/95">$4.99</span>
               <span className="text-sm text-white/50">one-time</span>
             </div>
             <ul className="space-y-2 mb-6">
-              {["Unlimited cards", "Points portfolio tracker", "Welcome bonus tracker", "Card anniversary alerts"].map((f) => (
+              {["Unlimited cards", "Points portfolio tracker", "Welcome bonus tracker", "Card anniversary alerts", "Credit calendar", "Spending optimizer", "Family/household mode"].map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-white/70">
-                  <svg className="h-4 w-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
+                  <svg className="h-4 w-4 text-purple-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   {f}
                 </li>
               ))}
             </ul>
-            <button disabled className="block w-full rounded-xl bg-purple-500/30 py-2.5 text-center text-sm font-semibold text-purple-200 cursor-not-allowed">
-              Join waitlist
-            </button>
+            <Link href="/app" className="block w-full rounded-xl bg-purple-500 py-2.5 text-center text-sm font-semibold text-white hover:bg-purple-400 transition">Upgrade to Pro</Link>
           </div>
         </div>
       </div>
 
-      {/* Final CTA - Compact (UNCHANGED) */}
+      {/* Final CTA */}
       <div className="relative z-10 mx-auto max-w-4xl px-6 pb-16">
         <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 p-8 text-center">
           <h2 className="text-2xl font-bold text-white/95">Ready to claw back your credits?</h2>
-          <p className="mt-2 text-sm text-white/60 max-w-md mx-auto">
-            Start tracking today. Free, takes 30 seconds, and could save you hundreds.
-          </p>
-          <Link
-            href="/app"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90 transition"
-          >
+          <p className="mt-2 text-sm text-white/60 max-w-md mx-auto">Start tracking today. Free, takes 30 seconds, and could save you hundreds.</p>
+          <Link href="/app" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-black hover:bg-white/90 transition">
             Get started for free
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </Link>
         </div>
       </div>
 
-      {/* Footer - Minimal (UNCHANGED) */}
+      {/* Footer */}
       <footer className="relative z-10 border-t border-white/10">
         <div className="mx-auto max-w-6xl px-6 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-white/40">
