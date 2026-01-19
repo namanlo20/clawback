@@ -2249,7 +2249,7 @@ export default function AppDashboardPage() {
         getPeriodsForFrequency={getPeriodsForFrequency}
         getPeriodStateKey={getPeriodStateKey}
         onCardSelect={(cardKey) => {
-          setActiveCard(CARDS.find(c => c.key === cardKey) || CARDS[0]);
+          setActiveCardKey(cardKey);
           setActiveTab('dashboard');
         }}
       />
