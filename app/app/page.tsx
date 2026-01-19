@@ -453,7 +453,26 @@ function CreditCalendar({
   const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
   const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
   
-  // Get credits that reset at end of month with color coding
+  // Helper to get the period key for a specific month/frequency
+  const getPeriodKeyForMonth = (freq: CreditFrequency, month: number, year: number): string | null => {
+    switch (freq) {
+      case 'monthly':
+        return `${year}-${String(month + 1).padStart(2, '0')}`;
+      case 'quarterly':
+        // Q1: months 0,1,2 -> Q1, Q2: months 3,4,5 -> Q2, etc.
+        const quarter = Math.floor(month / 3) + 1;
+        return `${year}-Q${quarter}`;
+      case 'semiannual':
+        const half = month < 6 ? 1 : 2;
+        return `${year}-H${half}`;
+      case 'annual':
+        return `${year}`;
+      default:
+        return null;
+    }
+  };
+  
+  // Get credits that reset at end of this month with color coding
   const creditResets = useMemo(() => {
     const resets: Array<{ day: number; credits: Array<{ card: Card; credit: Credit; color: string; isUsed: boolean }> }> = [];
     
@@ -475,29 +494,33 @@ function CreditCalendar({
         
         switch (credit.frequency) {
           case 'monthly':
+            // Monthly credits reset at end of every month
             resetDay = daysInMonth;
             break;
           case 'quarterly':
+            // Quarterly resets at end of Mar (2), Jun (5), Sep (8), Dec (11)
             if ([2, 5, 8, 11].includes(viewMonth)) {
               resetDay = daysInMonth;
             }
             break;
           case 'semiannual':
+            // Semi-annual resets at end of Jun (5) and Dec (11)
             if (viewMonth === 5 || viewMonth === 11) {
               resetDay = daysInMonth;
             }
             break;
           case 'annual':
+            // Annual resets at end of Dec (11)
             if (viewMonth === 11) {
-              resetDay = 31;
+              resetDay = daysInMonth;
             }
             break;
         }
         
         if (resetDay > 0 && resetDay <= daysInMonth) {
-          const periods = getPeriodsForFrequency(credit.frequency);
-          const currentPeriod = periods[periods.length - 1];
-          const stateKey = currentPeriod ? getPeriodStateKey(card.key, credit.id, currentPeriod.key) : '';
+          // Get the period key for the viewed month
+          const periodKey = getPeriodKeyForMonth(credit.frequency, viewMonth, viewYear);
+          const stateKey = periodKey ? getPeriodStateKey(card.key, credit.id, periodKey) : '';
           const isUsed = !!used[stateKey];
           
           resets[resetDay - 1].credits.push({ card, credit, color, isUsed });
@@ -506,7 +529,18 @@ function CreditCalendar({
     });
     
     return resets;
-  }, [cards, savedCards, viewMonth, viewYear, daysInMonth, used, getPeriodsForFrequency, getPeriodStateKey]);
+  }, [cards, savedCards, viewMonth, viewYear, daysInMonth, used, getPeriodStateKey]);
+  
+  // Count unused credits expiring this month
+  const unusedCount = useMemo(() => {
+    let count = 0;
+    creditResets.forEach(day => {
+      day.credits.forEach(c => {
+        if (!c.isUsed) count++;
+      });
+    });
+    return count;
+  }, [creditResets]);
   
   const prevMonth = () => {
     if (viewMonth === 0) {
@@ -544,6 +578,13 @@ function CreditCalendar({
         </button>
       </div>
       
+      {/* Unused credits warning */}
+      {unusedCount > 0 && viewMonth === currentMonth && viewYear === currentYear && (
+        <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-400/20 text-center">
+          <span className="text-xs text-amber-300">⚠️ {unusedCount} unused credit{unusedCount > 1 ? 's' : ''} expiring this month</span>
+        </div>
+      )}
+      
       <div className="grid grid-cols-7 gap-1">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
           <div key={i} className="text-center text-xs text-white/40 py-1">{day}</div>
@@ -556,15 +597,17 @@ function CreditCalendar({
         {creditResets.map(({ day, credits }) => {
           const isToday = day === now.getDate() && viewMonth === currentMonth && viewYear === currentYear;
           const hasCredits = credits.length > 0;
+          const hasUnused = credits.some(c => !c.isUsed);
           
           return (
             <div
               key={day}
               className={`aspect-square rounded-lg relative flex flex-col items-center justify-center text-xs transition ${
                 isToday ? 'bg-purple-500/30 ring-1 ring-purple-400' : 
+                hasCredits && hasUnused ? 'bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer border border-amber-400/20' :
                 hasCredits ? 'bg-white/5 hover:bg-white/10 cursor-pointer' : ''
               }`}
-              title={hasCredits ? credits.map(c => `${c.credit.title} (${c.card.name})${c.isUsed ? ' ✓' : ''}`).join('\n') : undefined}
+              title={hasCredits ? credits.map(c => `${c.credit.title} (${c.card.name})${c.isUsed ? ' ✓' : ' ⚠️ UNUSED'}`).join('\n') : undefined}
             >
               <span className={isToday ? 'text-white font-medium' : 'text-white/60'}>{day}</span>
               {hasCredits && (
@@ -572,7 +615,7 @@ function CreditCalendar({
                   {credits.slice(0, 3).map((c, i) => (
                     <div
                       key={i}
-                      className={`w-1.5 h-1.5 rounded-full ${c.isUsed ? 'opacity-40' : ''}`}
+                      className={`w-1.5 h-1.5 rounded-full ${c.isUsed ? 'opacity-40' : 'ring-1 ring-white/50'}`}
                       style={{ backgroundColor: c.color }}
                     />
                   ))}
@@ -599,6 +642,18 @@ function CreditCalendar({
             </div>
           );
         })}
+      </div>
+      
+      {/* Legend for used vs unused */}
+      <div className="flex items-center gap-4 text-xs text-white/40">
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 opacity-40" />
+          <span>Used</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white/50" />
+          <span>Not used</span>
+        </div>
       </div>
     </div>
   );
@@ -827,7 +882,7 @@ export default function AppDashboardPage() {
     badges: [],
   });
 
-  // Hidden Benefits Guide modal
+  // Non-Monetary Benefits Guide modal
   const [benefitsGuideOpen, setBenefitsGuideOpen] = useState(false);
 
   // Check Pro status + hash routing on mount
@@ -2110,11 +2165,10 @@ export default function AppDashboardPage() {
   ) : null;
 
   // Credit Calendar Widget (Pro)
-  const CreditCalendarWidget = isPro ? (
+  const CreditCalendarWidget = (
     <div className={surfaceCardClass("p-5")}>
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-base font-semibold text-white/95">📅 Credit Calendar</h3>
-        <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
       </div>
       
       <CreditCalendar 
@@ -2125,7 +2179,7 @@ export default function AppDashboardPage() {
         getPeriodStateKey={getPeriodStateKey}
       />
     </div>
-  ) : null;
+  );
 
   // Spending Optimizer Widget (Pro)
   const SpendingOptimizerWidget = isPro ? (
@@ -2236,58 +2290,95 @@ export default function AppDashboardPage() {
     </div>
   ) : null;
 
-  // Hidden Benefits Guide Widget (Pro)
-  const hiddenBenefitsData: Record<string, { title: string; benefits: { name: string; description: string; howToUse: string }[] }> = {
+  // Non-Monetary Benefits Data
+  const nonMonetaryBenefitsData: Record<string, { title: string; benefits: { name: string; description: string }[] }> = {
     'amex-platinum': {
-      title: 'Amex Platinum Hidden Benefits',
+      title: 'Amex Platinum Non-Monetary Benefits',
       benefits: [
-        { name: 'Purchase Protection', description: 'Up to $10,000 per item for 90 days against theft/damage', howToUse: 'File claim at americanexpress.com/purchaseprotection within 90 days with receipt' },
-        { name: 'Return Protection', description: "Refund up to $300 if merchant won't accept return", howToUse: 'Submit within 90 days of purchase if merchant refuses return' },
-        { name: 'Trip Delay Insurance', description: '$500 for delays over 6 hours - covers food, hotel, toiletries', howToUse: 'Keep all receipts, file claim online within 60 days' },
-        { name: 'Cell Phone Protection', description: 'Up to $800 for damage/theft when you pay your bill with the card', howToUse: 'Pay monthly phone bill with Platinum, file claim within 90 days' },
-        { name: 'Car Rental Loss & Damage', description: 'Primary coverage up to $75,000 when you decline rental insurance', howToUse: 'Decline rental company insurance, pay full rental with card' },
-        { name: 'Global Assist Hotline', description: '24/7 emergency assistance while traveling - medical, legal, travel help', howToUse: 'Call 1-800-333-2639 for emergencies abroad' },
-      ]
-    },
-    'amex-gold': {
-      title: 'Amex Gold Hidden Benefits',
-      benefits: [
-        { name: 'Purchase Protection', description: 'Up to $10,000 per item for 90 days', howToUse: 'File claim at americanexpress.com/purchaseprotection' },
-        { name: 'Return Protection', description: 'Up to $300 refund if merchant refuses return', howToUse: 'Submit within 90 days of purchase' },
-        { name: 'Baggage Insurance', description: 'Up to $1,250 for carry-on, $500 for checked bags', howToUse: 'File claim within 30 days of incident' },
-        { name: 'Car Rental Insurance', description: 'Secondary coverage when you decline rental insurance', howToUse: 'Decline rental insurance, pay with card' },
+        { name: 'Global Lounge Collection', description: 'Access to 1,550+ lounges including Centurion Lounges, Priority Pass Select, Delta Sky Club when flying Delta (valued $850+/year)' },
+        { name: 'Hotel Elite Status', description: 'Complimentary Marriott Bonvoy Gold and Hilton Honors Gold elite status with room upgrades, bonuses, late checkout' },
+        { name: 'Fine Hotels + Resorts Perks', description: 'Room upgrades when available, daily breakfast for two, $100 property credit, early check-in/late checkout' },
+        { name: 'Global Dining Access by Resy', description: 'Priority reservations and exclusive dining events at top restaurants' },
+        { name: 'Travel Protections', description: 'Trip delay/cancellation/interruption insurance, baggage insurance, car rental loss/damage waiver' },
+        { name: 'Purchase Protections', description: 'Extended warranty, return protection up to $300, purchase protection up to $10,000 per item' },
+        { name: 'Concierge Service', description: '24/7 premium concierge service and no foreign transaction fees' },
       ]
     },
     'chase-sapphire-reserve': {
-      title: 'Chase Sapphire Reserve Hidden Benefits',
+      title: 'Chase Sapphire Reserve Non-Monetary Benefits',
       benefits: [
-        { name: 'Trip Cancellation Insurance', description: 'Up to $10,000 per trip for covered reasons', howToUse: 'Book travel with card, file claim within 60 days' },
-        { name: 'Trip Delay Reimbursement', description: '$500 per ticket for delays over 6 hours', howToUse: 'Keep receipts for meals/lodging, submit claim online' },
-        { name: 'Primary Car Rental Insurance', description: 'Covers theft and collision damage', howToUse: 'Decline rental insurance, pay full rental with card' },
-        { name: 'Emergency Medical Evacuation', description: 'Up to $100,000 in coverage', howToUse: 'Call benefit administrator before arranging transport' },
-        { name: 'Lost Luggage Reimbursement', description: '$3,000 per passenger for lost bags', howToUse: 'File claim with airline first, then Chase within 30 days' },
-        { name: 'DoorDash DashPass', description: 'Free DashPass membership ($0 delivery fees)', howToUse: 'Activate at doordash.com/sapphirereserve' },
+        { name: 'Lounge Access', description: 'Priority Pass Select membership + Chase Sapphire Lounges with unlimited access for cardholder + guests' },
+        { name: 'IHG Platinum Elite Status', description: 'Complimentary IHG One Rewards Platinum Elite through 12/31/2027 with room upgrades, bonuses, late checkout' },
+        { name: 'Primary Car Rental Insurance', description: 'Primary coverage for theft and collision damage when you decline rental insurance' },
+        { name: 'Trip Protections', description: 'Trip cancellation/interruption up to $10,000/person, trip delay reimbursement $500, lost luggage up to $3,000' },
+        { name: 'Points Transfer Partners', description: 'Transfer points 1:1 to airline/hotel partners including United, Southwest, Hyatt' },
+        { name: 'Reserve Travel Designer', description: 'Personalized booking service for travel arrangements' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'hilton-aspire': {
+      title: 'Hilton Aspire Non-Monetary Benefits',
+      benefits: [
+        { name: 'Hilton Diamond Elite Status', description: 'Top-tier status with room upgrades, executive lounge access, bonus points, priority late checkout' },
+        { name: 'Annual Free Night Reward', description: 'One complimentary night at participating Hilton properties on card anniversary' },
+        { name: '5th Night Free on Awards', description: 'Book 5+ nights with points and get the 5th night free' },
+        { name: 'National Car Rental Status', description: 'Complimentary Emerald Club Executive status with upgrades and faster service' },
+        { name: 'Travel Protections', description: 'Baggage insurance and car rental coverage included' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'amex-gold': {
+      title: 'Amex Gold Non-Monetary Benefits',
+      benefits: [
+        { name: 'Earning Power', description: '4X points on restaurants worldwide (up to $50K/year) and U.S. supermarkets (up to $25K/year)' },
+        { name: 'Amex Offers', description: 'Targeted deals for extra points and credits at various merchants' },
+        { name: 'Purchase Protections', description: 'Extended warranty, return protection up to $300, purchase protection' },
+        { name: 'No Foreign Transaction Fees', description: 'Available on some versions - check your card terms' },
+        { name: 'Amex Experiences', description: 'Access to exclusive events and experiences through American Express' },
+      ]
+    },
+    'capitalone-venture-x': {
+      title: 'Capital One Venture X Non-Monetary Benefits',
+      benefits: [
+        { name: 'Unlimited Lounge Access', description: 'Capital One Lounges + Priority Pass (1,300+ lounges worldwide). Note: Guest access policy changes Feb 2026' },
+        { name: 'Premier Collection Hotels', description: '$100 experience credit, room upgrades when available, daily breakfast for two, early check-in/late checkout' },
+        { name: 'Hertz President\'s Circle', description: 'Complimentary elite status with upgrades and faster service' },
+        { name: 'Travel Protections', description: 'Trip delay, lost luggage, and primary car rental coverage' },
+        { name: 'Points Transfer Partners', description: 'Transfer points to airline and hotel partners' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'delta-reserve': {
+      title: 'Delta Reserve Non-Monetary Benefits',
+      benefits: [
+        { name: 'Delta Sky Club Access', description: '15 visits per Medallion Year when flying Delta; unlimited after $75K annual spend' },
+        { name: 'Centurion & Escape Lounge Access', description: 'Access when purchasing Delta flights with card - you + up to 2 guests' },
+        { name: 'Annual Companion Certificate', description: 'Round-trip companion ticket (First, Comfort+, or Main Cabin) on domestic/Caribbean flights - pay taxes/fees only ($400-$1,000+ value)' },
+        { name: 'MQD Headstart', description: '$2,500 Medallion Qualification Dollars annually + $1 MQD per $10 spent toward Delta elite status' },
+        { name: 'Complimentary Upgrades', description: 'Priority for upgrades after Medallion Members' },
+        { name: 'Hertz President\'s Circle', description: 'Complimentary elite status with rental car benefits' },
+        { name: 'Travel Protections', description: 'Trip delay/cancellation and baggage insurance' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
       ]
     },
     'chase-sapphire-preferred': {
-      title: 'Chase Sapphire Preferred Hidden Benefits',
+      title: 'Chase Sapphire Preferred Non-Monetary Benefits',
       benefits: [
-        { name: 'Trip Cancellation Insurance', description: 'Up to $5,000 per trip', howToUse: 'Book travel with card, file claim within 60 days' },
-        { name: 'Trip Delay Reimbursement', description: '$500 per ticket for 12+ hour delays', howToUse: 'Keep receipts, submit claim online' },
-        { name: 'Primary Car Rental Insurance', description: 'Covers collision damage', howToUse: 'Decline rental insurance, pay with card' },
-        { name: 'Purchase Protection', description: '120 days coverage against damage/theft', howToUse: 'File claim within 120 days with proof of purchase' },
+        { name: 'Trip Cancellation Insurance', description: 'Up to $5,000 per trip for covered reasons' },
+        { name: 'Trip Delay Reimbursement', description: '$500 per ticket for 12+ hour delays' },
+        { name: 'Primary Car Rental Insurance', description: 'Covers collision damage when you decline rental insurance' },
+        { name: 'Purchase Protection', description: '120 days coverage against damage/theft' },
       ]
     },
   };
 
-  const activeCardBenefits = hiddenBenefitsData[activeCard?.key || ''];
+  const activeCardBenefits = nonMonetaryBenefitsData[activeCard?.key || ''];
 
-  const HiddenBenefitsWidget = isPro && activeCardBenefits ? (
+  const NonMonetaryBenefitsWidget = activeCardBenefits ? (
     <div className={surfaceCardClass("p-5")}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-white/95">💎 Hidden Benefits</h3>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
+          <h3 className="text-base font-semibold text-white/95">🎁 Non-Monetary Benefits</h3>
         </div>
         <button
           onClick={() => setBenefitsGuideOpen(true)}
@@ -2748,10 +2839,10 @@ export default function AppDashboardPage() {
     <div className="space-y-4">
       {ProUpgradeBanner}
       {MySavingsWidget}
+      {NonMonetaryBenefitsWidget}
       {StreaksBadgesWidget}
       {AnnualSummaryWidget}
       {CreditCalendarWidget}
-      {HiddenBenefitsWidget}
       {SUBTrackerWidget}
       {AnniversaryAlertsWidget}
       {SpendingOptimizerWidget}
@@ -3640,14 +3731,14 @@ export default function AppDashboardPage() {
     </div>
   );
 
-  // Hidden Benefits Guide Modal
+  // Non-Monetary Benefits Guide Modal
   const BenefitsGuideModal = !benefitsGuideOpen || !activeCardBenefits ? null : (
     <div className="fixed inset-0 z-50">
       <button className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setBenefitsGuideOpen(false)} aria-label="Close" />
       <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2 max-h-[85vh] overflow-y-auto">
         <div className={surfaceCardClass("p-6")}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white/95">💎 {activeCardBenefits.title}</h2>
+            <h2 className="text-xl font-semibold text-white/95">🎁 {activeCardBenefits.title.replace('Hidden', 'Non-Monetary')}</h2>
             <button onClick={() => setBenefitsGuideOpen(false)} className="text-white/40 hover:text-white/70">
               ✕
             </button>
@@ -3657,11 +3748,7 @@ export default function AppDashboardPage() {
             {activeCardBenefits.benefits.map((benefit, i) => (
               <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10">
                 <div className="text-base font-semibold text-white/95 mb-2">{benefit.name}</div>
-                <div className="text-sm text-white/70 mb-3">{benefit.description}</div>
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
-                  <div className="text-xs text-emerald-400 font-medium mb-1">How to use:</div>
-                  <div className="text-sm text-white/80">{benefit.howToUse}</div>
-                </div>
+                <div className="text-sm text-white/70">{benefit.description}</div>
               </div>
             ))}
           </div>
@@ -3669,7 +3756,7 @@ export default function AppDashboardPage() {
           <div className="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-400/20">
             <div className="text-sm text-white/70">
               💡 <strong className="text-white/90">Pro tip:</strong> Save this page or screenshot these benefits. 
-              Most people don't realize they have these protections until it's too late!
+              Most people don't realize they have these protections and perks!
             </div>
           </div>
         </div>
