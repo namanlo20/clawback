@@ -1637,18 +1637,22 @@ export default function AppDashboardPage() {
     }
     list = list.filter((c) => c.annualFee >= feeMin && c.annualFee <= feeMax);
 
-    // Define tiers
-    const tier1 = list.filter(c => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
-    const tier2 = list.filter(c => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
-    const tier3 = list.filter(c => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
+    // Separate pinned (saved) cards from the rest
+    const pinned = list.filter(c => savedCards.includes(c.key)).sort((a, b) => a.name.localeCompare(b.name));
+    const others = list.filter(c => !savedCards.includes(c.key));
 
-    return {
-      premium: { label: 'Premium ($500+)', cards: tier1 },
-      mid: { label: 'Mid-Tier ($250-$499)', cards: tier2 },
-      entry: { label: 'Entry ($0-$249)', cards: tier3 },
-      total: tier1.length + tier2.length + tier3.length,
+    const tier1 = others.filter((c) => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier2 = others.filter((c) => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier3 = others.filter((c) => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
+
+    return { 
+      pinned: { label: "Saved Cards", cards: pinned },
+      premium: { label: "Premium ($500+)", cards: tier1 }, 
+      mid: { label: "Mid-Tier ($250-$499)", cards: tier2 }, 
+      entry: { label: "Entry ($0-$249)", cards: tier3 }, 
+      total: list.length 
     };
-  }, [search, feeMin, feeMax]);
+  }, [search, feeMin, feeMax, savedCards]);
 
   // Updated X mins ago
   const updatedAgo = useMemo(() => {
