@@ -434,18 +434,21 @@ function CreditCalendar({
   used,
   getPeriodsForFrequency,
   getPeriodStateKey,
+  onCardSelect,
 }: { 
   cards: Card[]; 
   savedCards: string[]; 
   used: Record<string, boolean>;
   getPeriodsForFrequency: (freq: CreditFrequency, year?: number) => { key: string; label: string; shortLabel: string }[];
   getPeriodStateKey: (cardKey: string, creditId: string, periodKey: string) => string;
+  onCardSelect?: (cardKey: string) => void;
 }) {
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
   const [viewMonth, setViewMonth] = useState(currentMonth);
   const [viewYear, setViewYear] = useState(currentYear);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                       'July', 'August', 'September', 'October', 'November', 'December'];
@@ -474,7 +477,7 @@ function CreditCalendar({
   
   // Get credits that reset at end of this month with color coding
   const creditResets = useMemo(() => {
-    const resets: Array<{ day: number; credits: Array<{ card: Card; credit: Credit; color: string; isUsed: boolean }> }> = [];
+    const resets: Array<{ day: number; credits: Array<{ card: Card; credit: Credit; color: string; isUsed: boolean; periodKey: string }> }> = [];
     
     for (let d = 1; d <= daysInMonth; d++) {
       resets.push({ day: d, credits: [] });
@@ -519,11 +522,11 @@ function CreditCalendar({
         
         if (resetDay > 0 && resetDay <= daysInMonth) {
           // Get the period key for the viewed month
-          const periodKey = getPeriodKeyForMonth(credit.frequency, viewMonth, viewYear);
+          const periodKey = getPeriodKeyForMonth(credit.frequency, viewMonth, viewYear) || '';
           const stateKey = periodKey ? getPeriodStateKey(card.key, credit.id, periodKey) : '';
           const isUsed = !!used[stateKey];
           
-          resets[resetDay - 1].credits.push({ card, credit, color, isUsed });
+          resets[resetDay - 1].credits.push({ card, credit, color, isUsed, periodKey });
         }
       });
     });
@@ -549,6 +552,7 @@ function CreditCalendar({
     } else {
       setViewMonth(viewMonth - 1);
     }
+    setSelectedDay(null);
   };
   
   const nextMonth = () => {
@@ -558,7 +562,10 @@ function CreditCalendar({
     } else {
       setViewMonth(viewMonth + 1);
     }
+    setSelectedDay(null);
   };
+
+  const selectedDayCredits = selectedDay ? creditResets[selectedDay - 1]?.credits || [] : [];
   
   return (
     <div className="space-y-4">
@@ -598,16 +605,18 @@ function CreditCalendar({
           const isToday = day === now.getDate() && viewMonth === currentMonth && viewYear === currentYear;
           const hasCredits = credits.length > 0;
           const hasUnused = credits.some(c => !c.isUsed);
+          const isSelected = selectedDay === day;
           
           return (
             <div
               key={day}
+              onClick={() => hasCredits && setSelectedDay(isSelected ? null : day)}
               className={`aspect-square rounded-lg relative flex flex-col items-center justify-center text-xs transition ${
+                isSelected ? 'bg-purple-500/30 ring-2 ring-purple-400' :
                 isToday ? 'bg-purple-500/30 ring-1 ring-purple-400' : 
                 hasCredits && hasUnused ? 'bg-amber-500/10 hover:bg-amber-500/20 cursor-pointer border border-amber-400/20' :
                 hasCredits ? 'bg-white/5 hover:bg-white/10 cursor-pointer' : ''
               }`}
-              title={hasCredits ? credits.map(c => `${c.credit.title} (${c.card.name})${c.isUsed ? ' ✓' : ' ⚠️ UNUSED'}`).join('\n') : undefined}
             >
               <span className={isToday ? 'text-white font-medium' : 'text-white/60'}>{day}</span>
               {hasCredits && (
@@ -629,6 +638,46 @@ function CreditCalendar({
         })}
       </div>
       
+      {/* Selected day popup */}
+      {selectedDay && selectedDayCredits.length > 0 && (
+        <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-white/90">
+              {monthNames[viewMonth]} {selectedDay} — {selectedDayCredits.length} credit{selectedDayCredits.length > 1 ? 's' : ''} expiring
+            </span>
+            <button onClick={() => setSelectedDay(null)} className="text-white/40 hover:text-white/70 text-xs">✕</button>
+          </div>
+          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            {selectedDayCredits.map((c, i) => (
+              <div 
+                key={i} 
+                className={`p-2 rounded-lg flex items-center justify-between ${c.isUsed ? 'bg-emerald-500/10 border border-emerald-400/20' : 'bg-amber-500/10 border border-amber-400/20'}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-white/90 truncate">{c.credit.title}</div>
+                  <div className="text-xs text-white/50">{c.card.name} • ${c.credit.amount}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {c.isUsed ? (
+                    <span className="text-xs text-emerald-400">✓ Used</span>
+                  ) : (
+                    <span className="text-xs text-amber-400">Not used</span>
+                  )}
+                  {onCardSelect && (
+                    <button
+                      onClick={() => onCardSelect(c.card.key)}
+                      className="text-xs text-purple-400 hover:text-purple-300"
+                    >
+                      View →
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       {/* Legend */}
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/10">
         {savedCards.slice(0, 4).map((cardKey, i) => {
@@ -648,6 +697,16 @@ function CreditCalendar({
       <div className="flex items-center gap-4 text-xs text-white/40">
         <div className="flex items-center gap-1">
           <div className="w-2 h-2 rounded-full bg-emerald-500 opacity-40" />
+          <span>Used</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white/50" />
+          <span>Not used</span>
+        </div>
+      </div>
+    </div>
+  );
+}
           <span>Used</span>
         </div>
         <div className="flex items-center gap-1">
@@ -2146,7 +2205,7 @@ export default function AppDashboardPage() {
     </div>
   ) : null;
 
-  // Credit Calendar Widget (Pro)
+  // Credit Calendar Widget (available to all users)
   const CreditCalendarWidget = (
     <div className={surfaceCardClass("p-5")}>
       <div className="flex items-center gap-2 mb-4">
@@ -2159,6 +2218,10 @@ export default function AppDashboardPage() {
         used={used}
         getPeriodsForFrequency={getPeriodsForFrequency}
         getPeriodStateKey={getPeriodStateKey}
+        onCardSelect={(cardKey) => {
+          setActiveCard(CARDS.find(c => c.key === cardKey) || CARDS[0]);
+          setActiveTab('dashboard');
+        }}
       />
     </div>
   );
@@ -2844,6 +2907,58 @@ export default function AppDashboardPage() {
     </div>
   );
 
+  // Pros and Cons data for cards
+  const cardProsConsData: Record<string, { pros: string[]; cons: string[] }> = {
+    'amex-platinum': {
+      pros: ['Best lounge access (Centurion, Priority Pass, Delta Sky Club)', 'Massive credits portfolio worth $1,500+/year'],
+      cons: ['$695 annual fee is steep', 'Amex not accepted everywhere internationally'],
+    },
+    'chase-sapphire-reserve': {
+      pros: ['Flexible Ultimate Rewards with great transfer partners (Hyatt!)', 'Primary car rental insurance included'],
+      cons: ['$550 effective fee (after $300 credit)', 'Fewer lounges than Amex Platinum'],
+    },
+    'hilton-honors-aspire': {
+      pros: ['Automatic Diamond status (top-tier)', 'Free night certificate worth $400+'],
+      cons: ['Value tied to Hilton loyalty', '$550 fee high if you don\'t stay at Hilton'],
+    },
+    'amex-gold': {
+      pros: ['4x on dining and groceries is excellent', '$240/year in dining credits'],
+      cons: ['Monthly credits are use-it-or-lose-it', 'No lounge access'],
+    },
+    'capitalone-venture-x': {
+      pros: ['Effectively ~$95 fee after credits + anniversary bonus', 'Growing Capital One lounge network'],
+      cons: ['Fewer transfer partners than Amex/Chase', 'Lounge guest policy changing Feb 2026'],
+    },
+    'delta-reserve': {
+      pros: ['Sky Club access + unlimited after $75K spend', 'Companion certificate worth $400-$1,000+'],
+      cons: ['Only valuable if you fly Delta frequently', '$650 fee is high for single-airline card'],
+    },
+    'chase-sapphire-preferred': {
+      pros: ['Low $95 annual fee for premium perks', 'Same great transfer partners as CSR'],
+      cons: ['No lounge access', 'Lower earning rates than CSR'],
+    },
+    'amex-green': {
+      pros: ['Good travel earning rates at low fee', '$189 CLEAR credit included'],
+      cons: ['Limited credits compared to Gold/Platinum', 'Overshadowed by Gold card value'],
+    },
+    'hilton-surpass': {
+      pros: ['Gold status automatic', 'Free night at $15K spend'],
+      cons: ['No lounge access', 'Aspire is better for frequent Hilton guests'],
+    },
+    'marriott-bonvoy-brilliant': {
+      pros: ['Platinum Elite status automatic', '$300 dining credit'],
+      cons: ['Marriott points less valuable than others', '$650 fee is premium'],
+    },
+    'citi-strata': {
+      pros: ['10x on hotels and 5x on flights', 'Good transfer partners'],
+      cons: ['New card, limited track record', 'Annual fee added in year 2'],
+    },
+    'citi-aadvantage-executive': {
+      pros: ['Admirals Club access for AA flyers', 'Good for AA loyalists'],
+      cons: ['Only valuable if flying American', '$595 fee for single airline'],
+    },
+  };
+
   // Compare Tab Content
   const CompareTabContent = (
     <div className={surfaceCardClass("p-6")}>
@@ -2890,86 +3005,152 @@ export default function AppDashboardPage() {
           <div className="text-white/50 text-sm mt-1">Click on card names above to add them</div>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left py-3 text-sm text-white/50 font-medium">Feature</th>
-                {compareCards.map((key) => {
-                  const card = CARDS.find(c => c.key === key)!;
-                  return (
-                    <th key={key} className="text-center py-3">
-                      <Image src={card.logo} alt={card.name} width={32} height={32} className="rounded-lg mx-auto mb-1" />
-                      <div className="text-sm text-white/90 font-medium">{card.name}</div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-white/5">
-                <td className="py-3 text-sm text-white/70">Annual Fee</td>
-                {compareCards.map((key) => {
-                  const card = CARDS.find(c => c.key === key)!;
-                  return <td key={key} className="text-center py-3 text-white/90 font-medium">{formatMoney(card.annualFee)}</td>;
-                })}
-              </tr>
-              <tr className="border-b border-white/5">
-                <td className="py-3 text-sm text-white/70">Credit Value</td>
-                {compareCards.map((key) => {
-                  const card = CARDS.find(c => c.key === key)!;
-                  return <td key={key} className="text-center py-3 text-emerald-400 font-medium">{formatMoney(card.creditsTrackedAnnualized)}</td>;
-                })}
-              </tr>
-              <tr className="border-b border-white/5">
-                <td className="py-3 text-sm text-white/70">Net Value</td>
-                {compareCards.map((key) => {
-                  const card = CARDS.find(c => c.key === key)!;
-                  const net = card.creditsTrackedAnnualized - card.annualFee;
-                  return (
-                    <td key={key} className={`text-center py-3 font-medium ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                      {net >= 0 ? '+' : ''}{formatMoney(net)}
-                    </td>
-                  );
-                })}
-              </tr>
-              <tr className="border-b border-white/5">
-                <td className="py-3 text-sm text-white/70">Points Program</td>
-                {compareCards.map((key) => {
-                  const card = CARDS.find(c => c.key === key)!;
-                  return <td key={key} className="text-center py-3 text-white/70 text-sm">{card.pointsProgram.replace('_', ' ').toUpperCase()}</td>;
-                })}
-              </tr>
-              <tr>
-                <td className="py-3 text-sm text-white/70"># Credits</td>
-                {compareCards.map((key) => {
-                  const card = CARDS.find(c => c.key === key)!;
-                  return <td key={key} className="text-center py-3 text-white/70">{card.credits.length}</td>;
-                })}
-              </tr>
-            </tbody>
-          </table>
+        <div className="space-y-6">
+          {/* Main comparison table */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left py-3 text-sm text-white/50 font-medium">Feature</th>
+                  {compareCards.map((key) => {
+                    const card = CARDS.find(c => c.key === key)!;
+                    return (
+                      <th key={key} className="text-center py-3">
+                        <Image src={card.logo} alt={card.name} width={32} height={32} className="rounded-lg mx-auto mb-1" />
+                        <div className="text-sm text-white/90 font-medium">{card.name}</div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-sm text-white/70">Annual Fee</td>
+                  {compareCards.map((key) => {
+                    const card = CARDS.find(c => c.key === key)!;
+                    return <td key={key} className="text-center py-3 text-white/90 font-medium">{formatMoney(card.annualFee)}</td>;
+                  })}
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-sm text-white/70">Credit Value</td>
+                  {compareCards.map((key) => {
+                    const card = CARDS.find(c => c.key === key)!;
+                    return <td key={key} className="text-center py-3 text-emerald-400 font-medium">{formatMoney(card.creditsTrackedAnnualized)}</td>;
+                  })}
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-sm text-white/70">Net Value</td>
+                  {compareCards.map((key) => {
+                    const card = CARDS.find(c => c.key === key)!;
+                    const net = card.creditsTrackedAnnualized - card.annualFee;
+                    return (
+                      <td key={key} className={`text-center py-3 font-medium ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        {net >= 0 ? '+' : ''}{formatMoney(net)}
+                      </td>
+                    );
+                  })}
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-sm text-white/70">Points Program</td>
+                  {compareCards.map((key) => {
+                    const card = CARDS.find(c => c.key === key)!;
+                    return <td key={key} className="text-center py-3 text-white/70 text-sm">{card.pointsProgram.replace('_', ' ').toUpperCase()}</td>;
+                  })}
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 text-sm text-white/70"># Credits</td>
+                  {compareCards.map((key) => {
+                    const card = CARDS.find(c => c.key === key)!;
+                    return <td key={key} className="text-center py-3 text-white/70">{card.credits.length}</td>;
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Earning Categories Comparison */}
+          <div className="pt-4 border-t border-white/10">
+            <h3 className="text-base font-semibold text-white/95 mb-4">💰 Earning Categories</h3>
+            <div className={`grid gap-4 ${compareCards.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {compareCards.map((key) => {
+                const earnings = cardEarningsData[key];
+                return (
+                  <div key={key} className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <div className="text-sm font-medium text-white/90 mb-3">{CARDS.find(c => c.key === key)?.name}</div>
+                    {earnings ? (
+                      <div className="space-y-2">
+                        {earnings.map((e, i) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-white/60">{e.category}</span>
+                            <span className={`font-medium ${parseInt(e.multiplier) >= 4 ? 'text-purple-400' : parseInt(e.multiplier) >= 2 ? 'text-emerald-400' : 'text-white/50'}`}>
+                              {e.multiplier}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-white/40">No earning data available</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Pros and Cons */}
+          <div className="pt-4 border-t border-white/10">
+            <h3 className="text-base font-semibold text-white/95 mb-4">⚖️ Pros & Cons</h3>
+            <div className={`grid gap-4 ${compareCards.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {compareCards.map((key) => {
+                const prosCons = cardProsConsData[key];
+                const card = CARDS.find(c => c.key === key);
+                return (
+                  <div key={key} className="rounded-xl bg-white/5 border border-white/10 p-4">
+                    <div className="text-sm font-medium text-white/90 mb-3">{card?.name}</div>
+                    {prosCons ? (
+                      <div className="space-y-3">
+                        <div>
+                          <div className="text-xs text-emerald-400 font-medium mb-1.5">✓ Pros</div>
+                          {prosCons.pros.map((pro, i) => (
+                            <div key={i} className="text-xs text-white/60 mb-1 pl-2">• {pro}</div>
+                          ))}
+                        </div>
+                        <div>
+                          <div className="text-xs text-red-400 font-medium mb-1.5">✗ Cons</div>
+                          {prosCons.cons.map((con, i) => (
+                            <div key={i} className="text-xs text-white/60 mb-1 pl-2">• {con}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-white/40">No data available</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {isPro && (
+            <button
+              onClick={() => {
+                let csv = "Feature," + compareCards.map(k => CARDS.find(c => c.key === k)!.name).join(",") + "\n";
+                csv += "Annual Fee," + compareCards.map(k => CARDS.find(c => c.key === k)!.annualFee).join(",") + "\n";
+                csv += "Credit Value," + compareCards.map(k => CARDS.find(c => c.key === k)!.creditsTrackedAnnualized).join(",") + "\n";
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'card-comparison.csv';
+                a.click();
+                showToast("Comparison exported ✓");
+              }}
+              className="text-sm text-purple-400 hover:text-purple-300"
+            >
+              Export comparison →
+            </button>
+          )}
         </div>
-      )}
-      
-      {isPro && compareCards.length > 0 && (
-        <button
-          onClick={() => {
-            let csv = "Feature," + compareCards.map(k => CARDS.find(c => c.key === k)!.name).join(",") + "\n";
-            csv += "Annual Fee," + compareCards.map(k => CARDS.find(c => c.key === k)!.annualFee).join(",") + "\n";
-            csv += "Credit Value," + compareCards.map(k => CARDS.find(c => c.key === k)!.creditsTrackedAnnualized).join(",") + "\n";
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'card-comparison.csv';
-            a.click();
-            showToast("Comparison exported ✓");
-          }}
-          className="mt-4 text-sm text-purple-400 hover:text-purple-300"
-        >
-          Export comparison →
-        </button>
       )}
     </div>
   );
