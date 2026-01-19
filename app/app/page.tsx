@@ -969,6 +969,16 @@ export default function AppDashboardPage() {
   const FOUNDER_EMAIL = "namanlohia02@gmail.com";
   const isFounder = (user?.email ?? "").toLowerCase() === FOUNDER_EMAIL.toLowerCase();
 
+  // Grant Pro access to founder
+  useEffect(() => {
+    if (isFounder) {
+      setIsPro(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('clawback_isPro', 'true');
+      }
+    }
+  }, [isFounder]);
+
   const pinnedOrder: Card["key"][] = ["amex-platinum", "chase-sapphire-reserve", "capitalone-venture-x"];
 
   const [search, setSearch] = useState("");
@@ -1631,18 +1641,25 @@ export default function AppDashboardPage() {
     }
     list = list.filter((c) => c.annualFee >= feeMin && c.annualFee <= feeMax);
 
-    // Define tiers
-    const tier1 = list.filter(c => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
-    const tier2 = list.filter(c => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
-    const tier3 = list.filter(c => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
+    // Get saved cards first (sorted by annual fee descending)
+    const mySavedCards = list.filter(c => savedCards.includes(c.key)).sort((a, b) => b.annualFee - a.annualFee);
+    
+    // Get remaining cards (not saved) for tiers
+    const remainingCards = list.filter(c => !savedCards.includes(c.key));
+
+    // Define tiers from remaining cards
+    const tier1 = remainingCards.filter(c => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier2 = remainingCards.filter(c => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier3 = remainingCards.filter(c => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
 
     return {
+      myCards: { label: '⭐ My Cards', cards: mySavedCards },
       premium: { label: 'Premium ($500+)', cards: tier1 },
       mid: { label: 'Mid-Tier ($250-$499)', cards: tier2 },
       entry: { label: 'Entry ($0-$249)', cards: tier3 },
-      total: tier1.length + tier2.length + tier3.length,
+      total: mySavedCards.length + tier1.length + tier2.length + tier3.length,
     };
-  }, [search, feeMin, feeMax]);
+  }, [search, feeMin, feeMax, savedCards]);
 
   // Updated X mins ago
   const updatedAgo = useMemo(() => {
@@ -2402,14 +2419,16 @@ export default function AppDashboardPage() {
         onClick={() => setActiveCardKey(card.key)}
         className={[
           "w-full text-left rounded-xl border p-3 transition flex items-center gap-3",
-          isActive ? "border-purple-500/50 bg-purple-500/10" : "border-white/10 bg-white/5 hover:bg-white/10",
+          isActive ? "border-purple-500/50 bg-purple-500/10" : 
+          isSaved ? "border-amber-400/30 bg-amber-500/5 hover:bg-amber-500/10" : 
+          "border-white/10 bg-white/5 hover:bg-white/10",
         ].join(" ")}
       >
         <Image src={card.logo} alt={card.name} width={40} height={40} className="rounded-lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
+            {isSaved && <span className="text-amber-400">⭐</span>}
             <span className="font-medium text-white/95 truncate">{card.name}</span>
-            {isSaved && <span className="text-xs text-emerald-400">✓</span>}
           </div>
           <div className="text-xs text-white/50">{card.issuer} • {formatMoney(card.annualFee)}/yr</div>
         </div>
@@ -2430,6 +2449,28 @@ export default function AppDashboardPage() {
     </div>
   ) : (
     <div className="space-y-4">
+      {/* My Cards Section (Saved cards at top) */}
+      {cardsByTier.myCards.cards.length > 0 && (
+        <div>
+          <button
+            onClick={() => setCollapsedTiers(prev => ({ ...prev, myCards: !prev.myCards }))}
+            className="w-full flex items-center gap-2 mb-2 group cursor-pointer"
+          >
+            <span className={`text-white/50 transition-transform duration-200 text-xs ${collapsedTiers.myCards ? '' : 'rotate-90'}`}>
+              ▶
+            </span>
+            <span className="text-xs font-semibold text-amber-400">{cardsByTier.myCards.label}</span>
+            <div className="flex-1 h-px bg-amber-500/30" />
+            <span className="text-xs text-white/40">{cardsByTier.myCards.cards.length}</span>
+          </button>
+          {!collapsedTiers.myCards && (
+            <div className="space-y-2">
+              {cardsByTier.myCards.cards.map(renderCardButton)}
+            </div>
+          )}
+        </div>
+      )}
+      
       {/* Premium Tier ($500+) */}
       {cardsByTier.premium.cards.length > 0 && (
         <div>
