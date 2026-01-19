@@ -1404,13 +1404,7 @@ export default function AppDashboardPage() {
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!alive) return;
-      const sess = data.session ?? null;
-      setSession(sess);
-
-      // Founder Access
-      if (sess?.user?.email?.toLowerCase() === "namanlohia02@gmail.com") {
-        setIsPro(true);
-      }
+      setSession(data.session ?? null);
     })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
@@ -1637,22 +1631,18 @@ export default function AppDashboardPage() {
     }
     list = list.filter((c) => c.annualFee >= feeMin && c.annualFee <= feeMax);
 
-    // Separate pinned (saved) cards from the rest
-    const pinned = list.filter(c => savedCards.includes(c.key)).sort((a, b) => a.name.localeCompare(b.name));
-    const others = list.filter(c => !savedCards.includes(c.key));
+    // Define tiers
+    const tier1 = list.filter(c => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier2 = list.filter(c => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
+    const tier3 = list.filter(c => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
 
-    const tier1 = others.filter((c) => c.annualFee >= 500).sort((a, b) => b.annualFee - a.annualFee);
-    const tier2 = others.filter((c) => c.annualFee >= 250 && c.annualFee < 500).sort((a, b) => b.annualFee - a.annualFee);
-    const tier3 = others.filter((c) => c.annualFee < 250).sort((a, b) => b.annualFee - a.annualFee);
-
-    return { 
-      pinned: { label: "Saved Cards", cards: pinned },
-      premium: { label: "Premium ($500+)", cards: tier1 }, 
-      mid: { label: "Mid-Tier ($250-$499)", cards: tier2 }, 
-      entry: { label: "Entry ($0-$249)", cards: tier3 }, 
-      total: list.length 
+    return {
+      premium: { label: 'Premium ($500+)', cards: tier1 },
+      mid: { label: 'Mid-Tier ($250-$499)', cards: tier2 },
+      entry: { label: 'Entry ($0-$249)', cards: tier3 },
+      total: tier1.length + tier2.length + tier3.length,
     };
-  }, [search, feeMin, feeMax, savedCards]);
+  }, [search, feeMin, feeMax]);
 
   // Updated X mins ago
   const updatedAgo = useMemo(() => {
@@ -2418,14 +2408,7 @@ export default function AppDashboardPage() {
         <Image src={card.logo} alt={card.name} width={40} height={40} className="rounded-lg" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
-                <span className="font-medium text-white/95 truncate">{card.name}</span>
-                {savedCards.includes(card.key) && (
-                    <svg className="h-3.5 w-3.5 text-yellow-400 fill-current shrink-0" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                )}
-            </div>
+            <span className="font-medium text-white/95 truncate">{card.name}</span>
             {isSaved && <span className="text-xs text-emerald-400">✓</span>}
           </div>
           <div className="text-xs text-white/50">{card.issuer} • {formatMoney(card.annualFee)}/yr</div>
