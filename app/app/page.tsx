@@ -707,16 +707,6 @@ function CreditCalendar({
     </div>
   );
 }
-          <span>Used</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white/50" />
-          <span>Not used</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // -----------------------------
 // SPENDING OPTIMIZER COMPONENT
@@ -1935,6 +1925,46 @@ export default function AppDashboardPage() {
       { category: 'Delta Purchases', multiplier: '3x', description: 'Delta purchases directly' },
       { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
     ],
+    'chase-sapphire-preferred': [
+      { category: 'Chase Travel', multiplier: '5x', description: 'Booked through Chase Travel portal' },
+      { category: 'Dining', multiplier: '3x', description: 'Restaurants worldwide' },
+      { category: 'Online Groceries', multiplier: '3x', description: 'Online grocery purchases' },
+      { category: 'Streaming', multiplier: '3x', description: 'Select streaming services' },
+      { category: 'Other Travel', multiplier: '2x', description: 'Travel outside Chase portal' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'amex-green': [
+      { category: 'Travel', multiplier: '3x', description: 'Flights, hotels, cruises, tours' },
+      { category: 'Transit', multiplier: '3x', description: 'Trains, buses, rideshare, parking' },
+      { category: 'Dining', multiplier: '3x', description: 'Restaurants worldwide' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'hilton-surpass': [
+      { category: 'Hilton Hotels', multiplier: '12x', description: 'Purchases at Hilton properties' },
+      { category: 'Dining', multiplier: '6x', description: 'Restaurants worldwide' },
+      { category: 'U.S. Supermarkets', multiplier: '6x', description: 'Grocery stores' },
+      { category: 'Gas Stations', multiplier: '6x', description: 'U.S. gas stations' },
+      { category: 'U.S. Online Retail', multiplier: '4x', description: 'Online shopping' },
+      { category: 'Everything Else', multiplier: '3x', description: 'All other purchases' },
+    ],
+    'marriott-brilliant': [
+      { category: 'Marriott Hotels', multiplier: '6x', description: 'Marriott Bonvoy properties' },
+      { category: 'Restaurants', multiplier: '3x', description: 'Restaurants worldwide' },
+      { category: 'Flights', multiplier: '3x', description: 'Airlines directly' },
+      { category: 'Everything Else', multiplier: '2x', description: 'All other purchases' },
+    ],
+    'citi-strata-elite': [
+      { category: 'Hotels/Cars/Attractions', multiplier: '12x', description: 'Booked through Citi Travel' },
+      { category: 'Air Travel (Citi)', multiplier: '6x', description: 'Flights through Citi Travel' },
+      { category: 'Dining (Fri/Sat Night)', multiplier: '6x', description: 'Restaurants on Citi Nights (Fri/Sat 6pm-6am)' },
+      { category: 'Dining (Other)', multiplier: '3x', description: 'Restaurants at other times' },
+      { category: 'Everything Else', multiplier: '1.5x', description: 'All other purchases' },
+    ],
+    'citi-aa-executive': [
+      { category: 'AA Portal Hotels/Cars', multiplier: '10x', description: 'Hotels & car rentals via AA portal' },
+      { category: 'American Airlines', multiplier: '4x', description: 'AA purchases directly' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
   };
 
   const activeCardEarnings = cardEarningsData[activeCard?.key || ''];
@@ -2999,7 +3029,7 @@ export default function AppDashboardPage() {
         'Aspire offers significantly better value for frequent Hilton guests',
       ],
     },
-    'marriott-bonvoy-brilliant': {
+    'marriott-brilliant': {
       pros: [
         'Automatic Platinum Elite status with suite upgrades and late checkout',
         '$300 dining credit + annual free night certificate (up to 85K points value)',
@@ -3009,17 +3039,17 @@ export default function AppDashboardPage() {
         'High $650 annual fee requires significant Marriott stays to justify',
       ],
     },
-    'citi-strata': {
+    'citi-strata-elite': {
       pros: [
         '10x on hotels and 5x on flights booked through Citi Travel portal',
         'Good ThankYou Points transfer partners for award travel',
       ],
       cons: [
         'New card with limited track record and evolving benefits',
-        '$95 annual fee kicks in after first year',
+        '$595 annual fee is significant',
       ],
     },
-    'citi-aadvantage-executive': {
+    'citi-aa-executive': {
       pros: [
         'Admirals Club access for American Airlines flyers and their guests',
         'Good for dedicated AA loyalists who value lounge access',
