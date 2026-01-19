@@ -802,18 +802,6 @@ export default function AppDashboardPage() {
   // Collapsed tier sections for card list (default: all expanded)
   const [collapsedTiers, setCollapsedTiers] = useState<Record<string, boolean>>({});
 
-  // Family/Household Mode (Pro feature)
-  type FamilyMember = {
-    id: string;
-    name: string;
-    relationship: 'self' | 'spouse' | 'partner' | 'authorized_user' | 'other';
-    cards: string[];
-  };
-  const [familyMembers, setFamilyMembers] = useState<FamilyMember[]>([]);
-  const [familyModeEnabled, setFamilyModeEnabled] = useState(false);
-  const [newFamilyMember, setNewFamilyMember] = useState<Partial<FamilyMember>>({});
-  const [familyModalOpen, setFamilyModalOpen] = useState(false);
-
   // Auth
   const [session, setSession] = useState<Session | null>(null);
   const user: User | null = session?.user ?? null;
@@ -914,18 +902,6 @@ export default function AppDashboardPage() {
         try { setSubTrackers(JSON.parse(savedSubs)); } catch {}
       }
 
-      // Load family members
-      const savedFamily = localStorage.getItem('clawback_familyMembers');
-      if (savedFamily) {
-        try { setFamilyMembers(JSON.parse(savedFamily)); } catch {}
-      }
-      
-      // Load family mode enabled
-      const savedFamilyMode = localStorage.getItem('clawback_familyModeEnabled');
-      if (savedFamilyMode) {
-        setFamilyModeEnabled(savedFamilyMode === 'true');
-      }
-
       // Load streak data
       const savedStreaks = localStorage.getItem('clawback_streakData');
       if (savedStreaks) {
@@ -967,14 +943,6 @@ export default function AppDashboardPage() {
       localStorage.setItem('clawback_subTrackers', JSON.stringify(subTrackers));
     }
   }, [subTrackers]);
-
-  // Save family members to localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('clawback_familyMembers', JSON.stringify(familyMembers));
-      localStorage.setItem('clawback_familyModeEnabled', String(familyModeEnabled));
-    }
-  }, [familyMembers, familyModeEnabled]);
 
   // Save streak data to localStorage
   useEffect(() => {
@@ -1202,19 +1170,7 @@ export default function AppDashboardPage() {
     let totalFees = 0;
     let cardCount = 0;
     
-    // Include family members' cards if family mode is enabled
-    let allCards = [...savedCards];
-    if (familyModeEnabled && familyMembers.length > 0) {
-      familyMembers.forEach(member => {
-        member.cards.forEach(cardKey => {
-          if (!allCards.includes(cardKey)) {
-            allCards.push(cardKey);
-          }
-        });
-      });
-    }
-    
-    for (const cardKey of allCards) {
+    for (const cardKey of savedCards) {
       const card = CARDS.find(c => c.key === cardKey);
       if (!card) continue;
       
@@ -1233,7 +1189,7 @@ export default function AppDashboardPage() {
     const percentRecovered = totalFees > 0 ? Math.round((totalRedeemed / totalFees) * 100) : 0;
     
     return { totalRedeemed, totalFees, netValue, cardCount, percentRecovered };
-  }, [savedCards, used, familyModeEnabled, familyMembers]);
+  }, [savedCards, used]);
 
   // Confetti on break-even
   useEffect(() => {
@@ -1884,11 +1840,51 @@ export default function AppDashboardPage() {
   );
 
   // Earning Categories Widget
+  // Earnings data for all cards (from highest to lowest)
+  const cardEarningsData: Record<string, { category: string; multiplier: string; description: string }[]> = {
+    'chase-sapphire-reserve': [
+      { category: 'Chase Travel', multiplier: '8x', description: 'Booked through Chase Travel portal' },
+      { category: 'Flights (Direct)', multiplier: '4x', description: 'Flights booked direct with airlines' },
+      { category: 'Hotels (Direct)', multiplier: '4x', description: 'Hotels booked direct' },
+      { category: 'Dining', multiplier: '3x', description: 'Restaurants worldwide' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'hilton-aspire': [
+      { category: 'Hilton Hotels', multiplier: '14x', description: 'Purchases directly with Hilton portfolio hotels' },
+      { category: 'Flights & Travel', multiplier: '7x', description: 'Booked through flight or Amex Travel or car rentals' },
+      { category: 'Dining', multiplier: '7x', description: 'Restaurants worldwide' },
+      { category: 'Everything Else', multiplier: '3x', description: 'All other purchases' },
+    ],
+    'amex-platinum': [
+      { category: 'Flights & Travel', multiplier: '5x', description: 'Booked directly or through Amex Travel' },
+      { category: 'Prepaid Hotels', multiplier: '5x', description: 'Prepaid hotels on Amex Travel' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'amex-gold': [
+      { category: 'Restaurants', multiplier: '4x', description: 'Restaurants worldwide' },
+      { category: 'Groceries', multiplier: '4x', description: 'U.S. supermarkets (up to $25K/yr)' },
+      { category: 'Flights & Travel', multiplier: '3x', description: 'Booked directly or through Amex Travel' },
+      { category: 'Prepaid Hotels', multiplier: '2x', description: 'Prepaid hotels' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'capitalone-venture-x': [
+      { category: 'Hotels & Rentals', multiplier: '10x', description: 'Hotels & rental cars through Capital One Travel' },
+      { category: 'Flights & Vacation Rentals', multiplier: '5x', description: 'Flights & vacation rentals through Capital One Travel' },
+      { category: 'Everything Else', multiplier: '2x', description: 'All other purchases' },
+    ],
+    'delta-reserve': [
+      { category: 'Delta Purchases', multiplier: '3x', description: 'Delta purchases directly' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+  };
+
+  const activeCardEarnings = cardEarningsData[activeCard?.key || ''];
+
   const EarningCategoriesWidget = (
     <div className={surfaceCardClass("p-5")}>
       <div className="flex items-center gap-2 mb-4">
-        <h3 className="text-base font-semibold text-white/95">Earning Categories</h3>
-        <Tooltip text="Points multipliers for different spending categories">
+        <h3 className="text-base font-semibold text-white/95">💰 Earning Categories</h3>
+        <Tooltip text="Points/miles multipliers for different spending categories">
           <IconInfo className="h-4 w-4 text-white/40 cursor-help" />
         </Tooltip>
       </div>
@@ -1898,51 +1894,40 @@ export default function AppDashboardPage() {
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
         </div>
-      ) : (
+      ) : activeCardEarnings ? (
         <div className="space-y-2">
-          {Object.entries(activeCard.earnRates).length === 0 ? (
-            <div className="text-sm text-white/50 text-center py-2">No category bonuses</div>
-          ) : (
-            Object.entries(activeCard.earnRates)
-              .sort(([, a], [, b]) => (b as number) - (a as number))
-              .map(([category, multiplier]) => {
-                const categoryIcons: Record<string, string> = {
-                  dining: '🍽️',
-                  travel: '✈️',
-                  groceries: '🛒',
-                  gas: '⛽',
-                  online: '🛍️',
-                  other: '💳',
-                };
-                const categoryLabels: Record<string, string> = {
-                  dining: 'Dining',
-                  travel: 'Travel',
-                  groceries: 'Groceries',
-                  gas: 'Gas',
-                  online: 'Online Shopping',
-                  other: 'Everything Else',
-                };
-                const mult = multiplier as number;
-                const isHighMultiplier = mult >= 3;
-                
-                return (
-                  <div
-                    key={category}
-                    className={`flex items-center justify-between p-3 rounded-xl ${
-                      isHighMultiplier ? 'bg-purple-500/10 border border-purple-400/20' : 'bg-white/5 border border-white/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-lg">{categoryIcons[category] || '💳'}</span>
-                      <span className="text-sm text-white/90">{categoryLabels[category] || category}</span>
-                    </div>
-                    <div className={`text-sm font-bold ${isHighMultiplier ? 'text-purple-300' : 'text-white/70'}`}>
-                      {mult}x
-                    </div>
-                  </div>
-                );
-              })
-          )}
+          {activeCardEarnings.map((earning, i) => {
+            const mult = parseInt(earning.multiplier);
+            const isHighMultiplier = mult >= 4;
+            const isMidMultiplier = mult >= 2 && mult < 4;
+            
+            return (
+              <div
+                key={i}
+                className={`flex items-center justify-between p-3 rounded-xl ${
+                  isHighMultiplier ? 'bg-purple-500/10 border border-purple-400/20' : 
+                  isMidMultiplier ? 'bg-emerald-500/10 border border-emerald-400/20' :
+                  'bg-white/5 border border-white/10'
+                }`}
+              >
+                <div className="flex-1">
+                  <div className="text-sm text-white/90">{earning.category}</div>
+                  <div className="text-xs text-white/50">{earning.description}</div>
+                </div>
+                <div className={`text-sm font-bold ml-3 ${
+                  isHighMultiplier ? 'text-purple-300' : 
+                  isMidMultiplier ? 'text-emerald-300' :
+                  'text-white/70'
+                }`}>
+                  {earning.multiplier}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="text-sm text-white/50 text-center py-4">
+          No earning rate data available for this card
         </div>
       )}
       
@@ -2016,9 +2001,6 @@ export default function AppDashboardPage() {
       <div className="flex items-center gap-2 mb-4">
         <h3 className="text-base font-semibold text-white/95">📊 Annual Summary</h3>
         <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
-        {familyModeEnabled && familyMembers.length > 0 && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">+Family</span>
-        )}
       </div>
       
       <div className="text-center mb-4">
@@ -2190,80 +2172,6 @@ export default function AppDashboardPage() {
       </div>
       
       <SpendingOptimizer cards={CARDS} savedCards={savedCards} />
-    </div>
-  ) : null;
-
-  // Family/Household Widget (Pro)
-  const FamilyWidget = isPro ? (
-    <div className={surfaceCardClass("p-5")}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold text-white/95">👨‍👩‍👧 Family Mode</h3>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO</span>
-        </div>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={familyModeEnabled}
-            onChange={(e) => setFamilyModeEnabled(e.target.checked)}
-            className="w-4 h-4 rounded border-white/20 bg-white/10"
-          />
-          <span className="text-xs text-white/60">Enable</span>
-        </label>
-      </div>
-      
-      {!familyModeEnabled ? (
-        <div className="text-center py-4">
-          <div className="text-2xl mb-2">👥</div>
-          <div className="text-sm text-white/50 mb-2">Track spouse/AU cards together</div>
-          <div className="text-xs text-white/40">Combined household savings</div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {familyMembers.length === 0 ? (
-            <div className="text-center py-2 text-sm text-white/50">
-              No family members added yet
-            </div>
-          ) : (
-            familyMembers.map((member) => (
-              <div key={member.id} className="p-3 rounded-lg bg-white/5 border border-white/10">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <div className="text-sm font-medium text-white/90">{member.name}</div>
-                    <div className="text-xs text-white/50 capitalize">{member.relationship.replace('_', ' ')}</div>
-                  </div>
-                  <button
-                    onClick={() => setFamilyMembers(prev => prev.filter(m => m.id !== member.id))}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {member.cards.map((cardKey) => {
-                    const card = CARDS.find(c => c.key === cardKey);
-                    return card ? (
-                      <span key={cardKey} className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70">
-                        {card.name}
-                      </span>
-                    ) : null;
-                  })}
-                  {member.cards.length === 0 && (
-                    <span className="text-xs text-white/40">No cards assigned</span>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-          
-          <button
-            onClick={() => setFamilyModalOpen(true)}
-            className="w-full p-3 rounded-lg border border-dashed border-white/20 text-sm text-white/50 hover:bg-white/5 transition"
-          >
-            + Add family member
-          </button>
-        </div>
-      )}
     </div>
   ) : null;
 
@@ -2839,6 +2747,7 @@ export default function AppDashboardPage() {
     <div className="space-y-4">
       {ProUpgradeBanner}
       {MySavingsWidget}
+      {EarningCategoriesWidget}
       {NonMonetaryBenefitsWidget}
       {StreaksBadgesWidget}
       {AnnualSummaryWidget}
@@ -2847,8 +2756,6 @@ export default function AppDashboardPage() {
       {AnniversaryAlertsWidget}
       {SpendingOptimizerWidget}
       {PointsPortfolioWidget}
-      {FamilyWidget}
-      {EarningCategoriesWidget}
       {FeeDefenseWidget}
       
       {/* Partner Offers */}
@@ -3764,96 +3671,6 @@ export default function AppDashboardPage() {
     </div>
   );
 
-  // Family Modal
-  const FamilyModal = !familyModalOpen ? null : (
-    <div className="fixed inset-0 z-50">
-      <button className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFamilyModalOpen(false)} aria-label="Close" />
-      <div className="absolute left-1/2 top-1/2 w-[92vw] max-w-md -translate-x-1/2 -translate-y-1/2">
-        <div className={surfaceCardClass("p-6")}>
-          <h2 className="text-xl font-semibold text-white/95 mb-4">Add Family Member</h2>
-          
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Name"
-              value={newFamilyMember.name || ''}
-              onChange={(e) => setNewFamilyMember(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:border-purple-500/50"
-            />
-            
-            <select
-              value={newFamilyMember.relationship || ''}
-              onChange={(e) => setNewFamilyMember(prev => ({ ...prev, relationship: e.target.value as 'self' | 'spouse' | 'partner' | 'authorized_user' | 'other' }))}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white focus:outline-none focus:border-purple-500/50"
-            >
-              <option value="">Select relationship...</option>
-              <option value="spouse">Spouse</option>
-              <option value="partner">Partner</option>
-              <option value="authorized_user">Authorized User</option>
-              <option value="other">Other</option>
-            </select>
-            
-            <div>
-              <label className="block text-sm text-white/70 mb-2">Cards</label>
-              <div className="flex flex-wrap gap-2 max-h-[200px] overflow-y-auto">
-                {CARDS.map((card) => {
-                  const isSelected = newFamilyMember.cards?.includes(card.key);
-                  return (
-                    <button
-                      key={card.key}
-                      onClick={() => {
-                        setNewFamilyMember(prev => ({
-                          ...prev,
-                          cards: isSelected 
-                            ? (prev.cards || []).filter(k => k !== card.key)
-                            : [...(prev.cards || []), card.key]
-                        }));
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs transition ${
-                        isSelected 
-                          ? 'bg-purple-500/30 text-purple-200 border border-purple-400/30' 
-                          : 'bg-white/5 text-white/60 border border-white/10'
-                      }`}
-                    >
-                      {card.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => setFamilyModalOpen(false)}
-              className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70 hover:bg-white/10 transition"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (newFamilyMember.name && newFamilyMember.relationship) {
-                  setFamilyMembers(prev => [...prev, {
-                    id: `family-${Date.now()}`,
-                    name: newFamilyMember.name!,
-                    relationship: newFamilyMember.relationship as 'self' | 'spouse' | 'partner' | 'authorized_user' | 'other',
-                    cards: newFamilyMember.cards || [],
-                  }]);
-                  setNewFamilyMember({});
-                  setFamilyModalOpen(false);
-                  showToast("Family member added ✓");
-                }
-              }}
-              className="flex-1 rounded-xl bg-purple-500 px-4 py-3 text-sm font-semibold text-white hover:bg-purple-400 transition"
-            >
-              Add Member
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
   // Quiz Modal
   const QuizModal = !quizOpen ? null : (
     <div className="fixed inset-0 z-50">
@@ -4201,7 +4018,6 @@ export default function AppDashboardPage() {
       {QuizModal}
       {UpgradeModal}
       {OfferModal}
-      {FamilyModal}
       {BenefitsGuideModal}
 
       {/* Toast */}
