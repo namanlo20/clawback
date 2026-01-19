@@ -2910,52 +2910,124 @@ export default function AppDashboardPage() {
   // Pros and Cons data for cards
   const cardProsConsData: Record<string, { pros: string[]; cons: string[] }> = {
     'amex-platinum': {
-      pros: ['Best lounge access (Centurion, Priority Pass, Delta Sky Club)', 'Massive credits portfolio worth $1,500+/year'],
-      cons: ['$695 annual fee is steep', 'Amex not accepted everywhere internationally'],
+      pros: [
+        'Unmatched global lounge access (Centurion, Priority Pass, Delta Sky Clubs) — perfect for frequent flyers',
+        'Massive stack of annual credits (Uber, Resy, lululemon, Equinox, etc.) totaling $1,000+ if maximized',
+      ],
+      cons: [
+        'Rewards heavily skewed toward travel; weak 1x on most everyday spending outside bonus categories',
+        'Many credits are "use-it-or-lose-it" with enrollment required and strict terms, making full value hard to capture',
+      ],
     },
     'chase-sapphire-reserve': {
-      pros: ['Flexible Ultimate Rewards with great transfer partners (Hyatt!)', 'Primary car rental insurance included'],
-      cons: ['$550 effective fee (after $300 credit)', 'Fewer lounges than Amex Platinum'],
+      pros: [
+        'High earning on travel/dining (4x on flights/hotels) plus flexible Ultimate Rewards with excellent transfer partners',
+        'Strong travel protections and growing lounge network (Sapphire Lounges + Priority Pass)',
+      ],
+      cons: [
+        'Perks and credits (dining, StubHub, The Edit) have different reset periods and activation requirements — easy to miss value',
+        'Redemption bonuses through Chase Travel changed (no guaranteed 1.5x for new applicants), reducing simplicity',
+      ],
     },
     'hilton-honors-aspire': {
-      pros: ['Automatic Diamond status (top-tier)', 'Free night certificate worth $400+'],
-      cons: ['Value tied to Hilton loyalty', '$550 fee high if you don\'t stay at Hilton'],
+      pros: [
+        'Automatic Hilton Diamond status + up to $400 resort credits annually for elite perks on stays',
+        'Annual free night award redeemable at most Hilton properties worldwide (often worth $500+ at high-end spots)',
+      ],
+      cons: [
+        'Rewards and benefits almost entirely locked to Hilton — little value if you prefer other hotel chains',
+        'Limited everyday earning outside Hilton purchases, making it niche for non-loyalists',
+      ],
     },
     'amex-gold': {
-      pros: ['4x on dining and groceries is excellent', '$240/year in dining credits'],
-      cons: ['Monthly credits are use-it-or-lose-it', 'No lounge access'],
+      pros: [
+        'Top-tier 4x points on dining worldwide and U.S. supermarkets — ideal for food and grocery-heavy spenders',
+        'Monthly dining/Uber credits that frequently offset a big chunk of the fee for everyday users',
+      ],
+      cons: [
+        'No meaningful lounge access or broad travel protections — feels limited for frequent flyers',
+        'Rewards structure favors food categories but offers lower value on non-bonus spend (gas, utilities)',
+      ],
     },
     'capitalone-venture-x': {
-      pros: ['Effectively ~$95 fee after credits + anniversary bonus', 'Growing Capital One lounge network'],
-      cons: ['Fewer transfer partners than Amex/Chase', 'Lounge guest policy changing Feb 2026'],
+      pros: [
+        'Flat 2x miles on everything (higher on Capital One Travel) with transferable miles for flexible redemptions',
+        'Easy offset via $300 travel credit + 10,000 anniversary bonus miles annually (~$100+ value)',
+      ],
+      cons: [
+        'Lounge network (Priority Pass + Capital One Lounges) is solid but smaller than Amex or Chase in many airports',
+        'Guest policies tightened (no free lounge guests for AUs starting 2026), reducing family/group value',
+      ],
     },
     'delta-reserve': {
-      pros: ['Sky Club access + unlimited after $75K spend', 'Companion certificate worth $400-$1,000+'],
-      cons: ['Only valuable if you fly Delta frequently', '$650 fee is high for single-airline card'],
+      pros: [
+        'Delta Sky Club access + elite status boosts and priority perks for loyal Delta flyers',
+        'Annual companion certificate (free round-trip for companion — pay taxes/fees only, often $22–$250)',
+      ],
+      cons: [
+        'SkyMiles have lower average redemption value and less flexibility compared to transferable points programs',
+        'Perks deeply tied to Delta ecosystem — major downside if routes change or you switch airlines',
+      ],
     },
     'chase-sapphire-preferred': {
-      pros: ['Low $95 annual fee for premium perks', 'Same great transfer partners as CSR'],
-      cons: ['No lounge access', 'Lower earning rates than CSR'],
+      pros: [
+        'Low $95 annual fee for premium travel card perks and benefits',
+        'Same excellent Ultimate Rewards transfer partners as the Reserve',
+      ],
+      cons: [
+        'No lounge access included',
+        'Lower earning rates than Chase Sapphire Reserve (3x vs 5x on travel)',
+      ],
     },
     'amex-green': {
-      pros: ['Good travel earning rates at low fee', '$189 CLEAR credit included'],
-      cons: ['Limited credits compared to Gold/Platinum', 'Overshadowed by Gold card value'],
+      pros: [
+        '3x points on travel and transit categories at a lower fee than Gold/Platinum',
+        '$189 CLEAR Plus credit included for faster airport security',
+      ],
+      cons: [
+        'Limited credits compared to Gold/Platinum cards',
+        'Overshadowed by Gold card value for most users who spend on dining',
+      ],
     },
     'hilton-surpass': {
-      pros: ['Gold status automatic', 'Free night at $15K spend'],
-      cons: ['No lounge access', 'Aspire is better for frequent Hilton guests'],
+      pros: [
+        'Automatic Gold status with room upgrades when available',
+        'Free night certificate at $15K annual spend threshold',
+      ],
+      cons: [
+        'No lounge access included',
+        'Aspire offers significantly better value for frequent Hilton guests',
+      ],
     },
     'marriott-bonvoy-brilliant': {
-      pros: ['Platinum Elite status automatic', '$300 dining credit'],
-      cons: ['Marriott points less valuable than others', '$650 fee is premium'],
+      pros: [
+        'Automatic Platinum Elite status with suite upgrades and late checkout',
+        '$300 dining credit + annual free night certificate (up to 85K points value)',
+      ],
+      cons: [
+        'Marriott points generally less valuable than transferable points currencies',
+        'High $650 annual fee requires significant Marriott stays to justify',
+      ],
     },
     'citi-strata': {
-      pros: ['10x on hotels and 5x on flights', 'Good transfer partners'],
-      cons: ['New card, limited track record', 'Annual fee added in year 2'],
+      pros: [
+        '10x on hotels and 5x on flights booked through Citi Travel portal',
+        'Good ThankYou Points transfer partners for award travel',
+      ],
+      cons: [
+        'New card with limited track record and evolving benefits',
+        '$95 annual fee kicks in after first year',
+      ],
     },
     'citi-aadvantage-executive': {
-      pros: ['Admirals Club access for AA flyers', 'Good for AA loyalists'],
-      cons: ['Only valuable if flying American', '$595 fee for single airline'],
+      pros: [
+        'Admirals Club access for American Airlines flyers and their guests',
+        'Good for dedicated AA loyalists who value lounge access',
+      ],
+      cons: [
+        'Only valuable if flying American Airlines frequently',
+        '$595 annual fee for single airline perks is steep',
+      ],
     },
   };
 
