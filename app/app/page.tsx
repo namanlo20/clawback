@@ -853,7 +853,7 @@ export default function AppDashboardPage() {
   const [newSub, setNewSub] = useState<Partial<SUBTracker>>({});
 
   // Compare tool
-  const [compareCards, setCompareCards] = useState<string[]>([]);
+  const [compareCards, setCompareCards] = useState<string[]>(['amex-platinum', 'chase-sapphire-reserve']);
   const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   // Streaks & Badges (Pro feature)
@@ -1849,7 +1849,7 @@ export default function AppDashboardPage() {
       { category: 'Dining', multiplier: '3x', description: 'Restaurants worldwide' },
       { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
     ],
-    'hilton-aspire': [
+    'hilton-honors-aspire': [
       { category: 'Hilton Hotels', multiplier: '14x', description: 'Purchases directly with Hilton portfolio hotels' },
       { category: 'Flights & Travel', multiplier: '7x', description: 'Booked through flight or Amex Travel or car rentals' },
       { category: 'Dining', multiplier: '7x', description: 'Restaurants worldwide' },
@@ -2224,7 +2224,7 @@ export default function AppDashboardPage() {
         { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
       ]
     },
-    'hilton-aspire': {
+    'hilton-honors-aspire': {
       title: 'Hilton Aspire Non-Monetary Benefits',
       benefits: [
         { name: 'Hilton Diamond Elite Status', description: 'Top-tier status with room upgrades, executive lounge access, bonus points, priority late checkout' },
@@ -2977,82 +2977,83 @@ export default function AppDashboardPage() {
   // Learn Tab Content
   const LearnTabContent = (
     <div className={surfaceCardClass("p-6")}>
-      <h2 className="text-xl font-bold text-white/95 mb-6">Learn</h2>
-      
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Card Reviews */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-          <div className="text-2xl mb-3">📝</div>
-          <h3 className="text-base font-semibold text-white/95 mb-2">Card Reviews</h3>
-          <p className="text-sm text-white/60 mb-4">In-depth analysis of each premium card's value proposition.</p>
-          <div className="space-y-2">
-            {['Amex Platinum Review', 'CSR vs Venture X', 'Amex Gold Deep Dive'].map((title, i) => (
-              <button key={i} className="w-full text-left p-3 rounded-lg bg-white/5 text-sm text-white/70 hover:bg-white/10 transition">
-                {title}
-                {!isPro && i > 0 && <span className="text-purple-400 text-xs ml-2">PRO</span>}
-              </button>
-            ))}
+      <div className="text-center py-8">
+        <div className="text-6xl mb-6">📚</div>
+        <h2 className="text-2xl font-bold text-white/95 mb-3">Learn Hub Coming Soon</h2>
+        <p className="text-white/60 max-w-md mx-auto mb-8">
+          We're building the ultimate credit card education center. Here's what's coming:
+        </p>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 text-left max-w-4xl mx-auto">
+          {/* Card Reviews */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">📝</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Card Reviews</h3>
+            <p className="text-sm text-white/50">In-depth analysis of each premium card — is it worth it for YOU?</p>
+          </div>
+          
+          {/* Strategy Guides */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">🎯</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Strategy Guides</h3>
+            <p className="text-sm text-white/50">Amex Trifecta, Chase Trifecta, credit stacking strategies</p>
+          </div>
+          
+          {/* Video Tutorials */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">🎬</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Video Tutorials</h3>
+            <p className="text-sm text-white/50">Step-by-step walkthroughs for redeeming every credit</p>
+          </div>
+          
+          {/* Points Valuations */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">💎</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Points Valuations</h3>
+            <p className="text-sm text-white/50">Live valuations and best redemption sweet spots</p>
+          </div>
+          
+          {/* Transfer Partner Guide */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">✈️</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Transfer Partners</h3>
+            <p className="text-sm text-white/50">Which airlines & hotels to transfer to and when</p>
+          </div>
+          
+          {/* Beginner Bootcamp */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">🚀</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Beginner Bootcamp</h3>
+            <p className="text-sm text-white/50">New to premium cards? Start here with the basics</p>
+          </div>
+          
+          {/* Annual Fee Defense */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">🛡️</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Annual Fee Defense</h3>
+            <p className="text-sm text-white/50">Scripts and tips for retention calls & downgrades</p>
+          </div>
+          
+          {/* Credit Card News */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">📰</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Credit Card News</h3>
+            <p className="text-sm text-white/50">Latest devaluations, new cards, and benefit changes</p>
+          </div>
+          
+          {/* Community Q&A */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <div className="text-2xl mb-3">💬</div>
+            <h3 className="text-base font-semibold text-white/95 mb-2">Community Q&A</h3>
+            <p className="text-sm text-white/50">Ask questions and learn from other cardholders</p>
           </div>
         </div>
         
-        {/* Strategy Guides */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-          <div className="text-2xl mb-3">🎯</div>
-          <h3 className="text-base font-semibold text-white/95 mb-2">Strategy Guides</h3>
-          <p className="text-sm text-white/60 mb-4">Maximize your rewards with proven strategies.</p>
-          <div className="space-y-2">
-            {['Amex Trifecta Guide', 'Chase Trifecta Guide', 'Credit Stacking 101'].map((title, i) => (
-              <button key={i} className="w-full text-left p-3 rounded-lg bg-white/5 text-sm text-white/70 hover:bg-white/10 transition">
-                {title}
-                {!isPro && <span className="text-purple-400 text-xs ml-2">PRO</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Card Playbooks */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-          <div className="text-2xl mb-3">📚</div>
-          <h3 className="text-base font-semibold text-white/95 mb-2">Card Playbooks</h3>
-          <p className="text-sm text-white/60 mb-4">Step-by-step guides for each card.</p>
-          <div className="space-y-2">
-            {['First 30 Days', 'Monthly Routine', 'Annual Routine'].map((title, i) => (
-              <button key={i} className="w-full text-left p-3 rounded-lg bg-white/5 text-sm text-white/70 hover:bg-white/10 transition flex items-center justify-between">
-                <span>{title}</span>
-                {isPro ? (
-                  <span className="text-xs text-white/40">✓ Checklist</span>
-                ) : (
-                  <span className="text-purple-400 text-xs">PRO</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-        
-        {/* Redemption Guides */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
-          <div className="text-2xl mb-3">💰</div>
-          <h3 className="text-base font-semibold text-white/95 mb-2">Redemption Guides</h3>
-          <p className="text-sm text-white/60 mb-4">Get the most value from your points.</p>
-          <div className="space-y-2">
-            {['Transfer Partners 101', 'Best Redemptions 2026', 'Sweet Spots Guide'].map((title, i) => (
-              <button key={i} className="w-full text-left p-3 rounded-lg bg-white/5 text-sm text-white/70 hover:bg-white/10 transition">
-                {title}
-                {!isPro && i > 0 && <span className="text-purple-400 text-xs ml-2">PRO</span>}
-              </button>
-            ))}
-          </div>
+        <div className="mt-10 p-4 rounded-xl bg-purple-500/10 border border-purple-400/20 max-w-md mx-auto">
+          <p className="text-sm text-white/70 mb-2">Want to be notified when Learn launches?</p>
+          <p className="text-xs text-white/50">We'll email Pro users when new content is available</p>
         </div>
       </div>
-      
-      {!isPro && (
-        <div className="mt-6 p-4 rounded-xl bg-purple-500/10 border border-purple-400/20 text-center">
-          <p className="text-sm text-white/70 mb-3">Unlock all guides, playbooks, and checklists</p>
-          <button onClick={() => setUpgradeModalOpen(true)} className="px-4 py-2 rounded-lg bg-purple-500 text-white text-sm font-medium hover:bg-purple-400 transition">
-            Upgrade to Pro — $4.99
-          </button>
-        </div>
-      )}
     </div>
   );
 
