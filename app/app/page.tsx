@@ -1009,27 +1009,19 @@ export default function AppDashboardPage() {
   const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIcYpcsV7on6sz0co00';
 
   const handleUpgrade = () => {
-    // Redirect to Stripe Payment Link
-    if (typeof window !== 'undefined') {
+    // Require account before paying
+    if (!user) {
+      setAuthMode("signup");
+      setAuthModalOpen(true);
+      showToast("Create an account or sign in to upgrade.");
+      return;
+    }
+  
+    // Redirect to Stripe Payment Link (temporary until webhook-based upgrade)
+    if (typeof window !== "undefined") {
       window.location.href = STRIPE_PAYMENT_LINK;
     }
   };
-
-  // Check for successful payment on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('payment') === 'success') {
-        // Mark as Pro
-        localStorage.setItem('clawback_isPro', 'true');
-        setIsPro(true);
-        showToast("🎉 Payment successful! Pro features unlocked.");
-        
-        // Clean up URL
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-    }
-  }, []);
 
   // Display name
   const displayName = useMemo(() => {
