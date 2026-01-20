@@ -70,7 +70,7 @@ export default function HomePage() {
 
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
-            href="/app"
+            href="/app#signup"
             className="group inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-base font-semibold text-black hover:bg-white/90 transition shadow-lg shadow-white/10"
           >
             Go to Dashboard
@@ -115,7 +115,7 @@ export default function HomePage() {
             <div className="text-2xl font-bold text-white/95">$4.99</div>
             <div className="text-xs text-white/50">lifetime access</div>
             <Link
-              href="/app"
+              href="/app#signup"
               className="mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:opacity-90 transition"
             >
               Get Pro →
