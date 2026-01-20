@@ -2373,6 +2373,27 @@ export default function AppDashboardPage() {
         { name: 'Amex Experiences', description: 'Access to exclusive events and experiences through American Express' },
       ]
     },
+    'amex-green': {
+      title: 'American Express® Green Card',
+      benefits: [
+        { name: 'Broad 3x Membership Rewards Points Earning', description: 'Earn 3x on travel (including flights, hotels, car rentals), transit (rideshare/taxis/public transport/parking/tolls), and restaurants worldwide (including takeout/delivery) — accelerates points for transfers to airline/hotel partners or other redemptions.' },
+        { name: 'No Foreign Transaction Fees', description: 'Avoids typical ~3% fees on international purchases and travel spend abroad.' },
+        { name: 'Premium Travel & Purchase Protections', description: 'Trip delay coverage (if delayed 6+ hours), baggage insurance, secondary car rental loss/damage coverage, purchase protection (up to $1,000/item within 90 days), extended warranty (adds up to 1 year), and return protection (eligible items).' },
+        { name: 'Global Assist Hotline', description: '24/7 travel assistance for medical/legal referrals, translations, and other support while traveling.' },
+        { name: 'Flexible Payment Options', description: 'Pay Over Time and Plan It for added flexibility on eligible purchases.' },
+      ]
+    },
+    'hilton-surpass': {
+      title: 'Hilton Honors American Express Surpass® Card',
+      benefits: [
+        { name: 'Automatic Hilton Honors Gold Elite Status', description: 'Includes ~80% bonus points on paid stays, space-available room upgrades, late checkout when available, welcome gift at check-in, and priority service; at many brands this includes free breakfast (or a food/beverage credit) and lounge access where offered.' },
+        { name: 'Path to Hilton Honors Diamond Status', description: 'After $40,000 in eligible annual spend, earn Diamond status through the end of the next calendar year (100% bonus points on stays, executive lounge access where offered, space-available upgrades, and more).' },
+        { name: 'National Car Rental Emerald Club Executive Status', description: 'After enrollment, access Executive Area benefits like faster service, upgrades when available, and accelerated earning in the U.S. and Canada.' },
+        { name: 'Free Night Reward Earning Potential', description: 'Earn a Free Night Reward after $15,000 in eligible purchases in a calendar year (redeemable for standard room nights; value varies by property).' },
+        { name: 'No Foreign Transaction Fees', description: 'Avoids extra fees on international Hilton stays or other purchases abroad.' },
+        { name: 'Premium Travel & Purchase Protections', description: 'Standard Amex protections such as trip delay/cancellation/interruption coverage, baggage insurance, secondary car rental loss/damage coverage, purchase protection, extended warranty, and return protection (see terms for details).' },
+      ]
+    },
     'capitalone-venture-x': {
       title: 'Capital One Venture X Non-Monetary Benefits',
       benefits: [
@@ -3046,22 +3067,22 @@ export default function AppDashboardPage() {
     },
     'amex-green': {
       pros: [
-        '3x points on travel and transit categories at a lower fee than Gold/Platinum',
-        '$189 CLEAR Plus credit included for faster airport security',
+        'Broad 3x earning on travel, transit, and dining — flexible Membership Rewards points that transfer to many airline/hotel partners',
+        'Up to $209 CLEAR credit helps offset the fee for people who use CLEAR lanes regularly (and it\'s still easy to maximize)',
       ],
       cons: [
-        'Limited credits compared to Gold/Platinum cards',
-        'Overshadowed by Gold card value for most users who spend on dining',
+        'Loss of the LoungeBuddy credit reduces the card\'s value for occasional travelers who liked occasional lounge access without a premium card',
+        'No airport lounge membership (like Priority Pass) or other strong non-monetary perks — less competitive against higher-tier cards for frequent flyers',
       ],
     },
     'hilton-surpass': {
       pros: [
-        'Automatic Gold status with room upgrades when available',
-        'Free night certificate at $15K annual spend threshold',
+        'Automatic Hilton Honors Gold elite status (upgrades when available, bonus points on stays, late checkout, free breakfast at many brands) plus a path to Diamond after $40,000 annual spend — excellent for frequent Hilton stays',
+        'High earning potential (12x at Hilton, 6x on common U.S. categories) plus up to $200 quarterly Hilton credits and an annual Free Night Reward after $15,000 spend — strong offset for Hilton loyalists',
       ],
       cons: [
-        'No lounge access included',
-        'Aspire offers significantly better value for frequent Hilton guests',
+        'Rewards are locked into the Hilton Honors ecosystem (less flexible than transferable points like Membership Rewards)',
+        'Credits are Hilton-specific and quarterly (use-or-lose), so value drops if you don\'t stay at Hilton often — the $150 fee can feel high without regular use',
       ],
     },
     'marriott-brilliant': {
@@ -3713,27 +3734,19 @@ export default function AppDashboardPage() {
   // Top bar
   const TopBar = (
     <div className="flex items-center justify-between mb-6">
-      <a
-        href="/"
-        className="flex items-center gap-4 hover:opacity-90 transition cursor-pointer"
-      >
-        <Image
-          src="/logos/clawback-mark.png"
-          alt="ClawBack"
-          width={64}
-          height={64}
-          className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10"
+      <div className="flex items-center gap-4">
+        <Image 
+          src="/logos/clawback-mark.png" 
+          alt="ClawBack" 
+          width={64} 
+          height={64} 
+          className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10" 
         />
         <div>
           <h1 className="text-xl font-bold text-white/95">ClawBack</h1>
-          {user && (
-            <div className="text-xs text-white/50">
-              Welcome{displayName ? `, ${displayName}` : ""}
-            </div>
-          )}
+          {user && <div className="text-xs text-white/50">Welcome{displayName ? `, ${displayName}` : ''}</div>}
         </div>
-      </a>
-
+      </div>
       
       <div className="flex items-center gap-2">
         <button
