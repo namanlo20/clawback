@@ -3713,19 +3713,27 @@ export default function AppDashboardPage() {
   // Top bar
   const TopBar = (
     <div className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-4">
-        <Image 
-          src="/logos/clawback-mark.png" 
-          alt="ClawBack" 
-          width={64} 
-          height={64} 
-          className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10" 
+      <a
+        href="/"
+        className="flex items-center gap-4 hover:opacity-90 transition cursor-pointer"
+      >
+        <Image
+          src="/logos/clawback-mark.png"
+          alt="ClawBack"
+          width={64}
+          height={64}
+          className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10"
         />
         <div>
           <h1 className="text-xl font-bold text-white/95">ClawBack</h1>
-          {user && <div className="text-xs text-white/50">Welcome{displayName ? `, ${displayName}` : ''}</div>}
+          {user && (
+            <div className="text-xs text-white/50">
+              Welcome{displayName ? `, ${displayName}` : ""}
+            </div>
+          )}
         </div>
-      </div>
+      </a>
+
       
       <div className="flex items-center gap-2">
         <button
