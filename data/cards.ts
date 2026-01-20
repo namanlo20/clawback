@@ -320,7 +320,7 @@ export const CARDS: Card[] = [
     name: "Marriott Bonvoy Brilliant (Amex)",
     issuer: "American Express",
     annualFee: 650,
-    creditsTrackedAnnualized: 400,
+    creditsTrackedAnnualized: 995,
     logo: "/logos/marriott-brilliant.png",
     pointsProgram: "marriott_points",
     earnRates: { travel: 6, dining: 3, other: 2 },
@@ -334,6 +334,7 @@ export const CARDS: Card[] = [
     credits: [
       { id: "brilliant-dining", title: "Dining", amount: 25, frequency: "monthly" },
       { id: "brilliant-ritz-stregis", title: "Ritz-Carlton / St. Regis", amount: 100, frequency: "annual" },
+      { id: "brilliant-free-night", title: "Free Night Award (up to 85,000 points)", amount: 595, frequency: "annual", notes: "Value varies by redemption" },
       { id: "brilliant-global-entry", title: "Global Entry", amount: 120, frequency: "every4years" },
       { id: "brilliant-tsa-precheck", title: "TSA PreCheck / NEXUS fee", amount: 85, frequency: "every5years" },
     ],
@@ -357,10 +358,12 @@ export const CARDS: Card[] = [
       { label: "Everything else", x: 1.5 },
     ],
     credits: [
-      { id: "strata-hotel", title: "Hotel", amount: 300, frequency: "annual" },
+      { id: "strata-hotel", title: "Hotel (2+ nights via Citi Travel)", amount: 300, frequency: "annual" },
       { id: "strata-splurge", title: "Splurge (1stDibs / AA / Best Buy / Future / Live Nation)", amount: 200, frequency: "annual" },
       { id: "strata-blacklane", title: "Annual Blacklane", amount: 200, frequency: "annual" },
       { id: "strata-priority-pass", title: "Priority Pass", amount: 469, frequency: "annual", notes: "Value in sheet" },
+      { id: "strata-global-entry", title: "Global Entry", amount: 120, frequency: "every4years" },
+      { id: "strata-tsa-precheck", title: "TSA PreCheck / NEXUS fee", amount: 85, frequency: "every5years" },
     ],
   },
 
@@ -383,6 +386,8 @@ export const CARDS: Card[] = [
       { id: "aaexec-lyft", title: "Lyft", amount: 10, frequency: "monthly", notes: "After 3 rides" },
       { id: "aaexec-grubhub", title: "Grubhub", amount: 10, frequency: "monthly" },
       { id: "aaexec-car-rentals", title: "Car rentals", amount: 120, frequency: "annual" },
+      { id: "aaexec-global-entry", title: "Global Entry", amount: 120, frequency: "every4years" },
+      { id: "aaexec-tsa-precheck", title: "TSA PreCheck / NEXUS fee", amount: 85, frequency: "every5years" },
     ],
   },
 ];
