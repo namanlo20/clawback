@@ -3031,32 +3031,32 @@ export default function AppDashboardPage() {
     },
     'marriott-brilliant': {
       pros: [
-        'Automatic Platinum Elite status with suite upgrades and late checkout',
-        '$300 dining credit + annual free night certificate (up to 85K points value)',
+        'Massive value from annual Free Night Award (up to 85,000 points, often worth $595–$680+) combined with up to 21x total points on Marriott stays (6x card + 10x base + 5x Platinum Elite bonus)',
+        'Strong offset from $300 dining credit, $100 Ritz/St. Regis credit, automatic Platinum Elite status (upgrades/late checkout), 25 Elite Night Credits, and Priority Pass lounge access',
       ],
       cons: [
-        'Marriott points generally less valuable than transferable points currencies',
-        'High $650 annual fee requires significant Marriott stays to justify',
+        'Many perks have restrictions — Free Night requires specific stays, $100 property credit needs 2-night min, dining credit is monthly use-it-or-lose-it',
+        'Rewards heavily tied to Marriott ecosystem; everyday 2x is solid but not top-tier if you prefer other chains or airlines',
       ],
     },
     'citi-strata-elite': {
       pros: [
-        '10x on hotels and 5x on flights booked through Citi Travel portal',
-        'Good ThankYou Points transfer partners for award travel',
+        'High earning rates on travel (12x hotels/cars/attractions, 6x air via Citi Travel) plus generous lounge access (Priority Pass + Admirals Club)',
+        'Multiple stackable credits ($300 hotel, $200 Splurge, $200 Blacklane) that can easily offset the $595 fee for heavy travelers',
       ],
       cons: [
-        'New card with limited track record and evolving benefits',
-        '$595 annual fee is significant',
+        'Many credits require bookings through Citi Travel or specific brands (1stDibs, Best Buy, Live Nation), reducing flexibility',
+        'ThankYou Points are transferable but less valuable if you don\'t use Citi\'s airline partners (e.g., American Airlines)',
       ],
     },
     'citi-aa-executive': {
       pros: [
-        'Admirals Club access for American Airlines flyers and their guests',
-        'Good for dedicated AA loyalists who value lounge access',
+        'Unlimited Admirals Club lounge access (high value for frequent AA flyers) plus free first checked bag for you + up to 8 companions (savings up to $720/round trip for families)',
+        'Full Admirals Club membership (not just passes), priority boarding, and inflight savings make this a powerhouse for dedicated AA travelers',
       ],
       cons: [
-        'Only valuable if flying American Airlines frequently',
-        '$595 annual fee for single airline perks is steep',
+        'Rewards locked into American Airlines ecosystem with low everyday earning (1x base on non-AA purchases)',
+        'High $595 fee only worth it if you fly AA often; credits (Lyft, Grubhub, car rentals) may not fully offset for casual flyers',
       ],
     },
   };
