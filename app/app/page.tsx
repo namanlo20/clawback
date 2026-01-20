@@ -2293,6 +2293,41 @@ export default function AppDashboardPage() {
 
   // Non-Monetary Benefits Data
   const nonMonetaryBenefitsData: Record<string, { title: string; benefits: { name: string; description: string }[] }> = {
+    "marriott-brilliant": {
+      title: "Marriott Bonvoy Brilliant® American Express® Card",
+      benefits: [
+        { name: "Automatic Marriott Bonvoy Platinum Elite Status", description: "Includes room upgrades (when available), late checkout, welcome gift at check-in, enhanced bonus points on stays (50% extra), and lounge access at many participating Marriott brands (e.g., executive lounges with free breakfast/snacks at select properties)." },
+        { name: "25 Elite Night Credits", description: "Added each calendar year toward qualifying for higher Marriott Bonvoy Elite tiers (e.g., Titanium at 75 nights)." },
+        { name: "Priority PassTM Select Membership", description: "Unlimited visits to over 1,200 airport lounges in 130+ countries (for the primary cardholder; guests may be allowed in some lounges)." },
+        { name: "Brilliant Earned Choice Award", description: "After $60,000 in annual eligible spend, select one special benefit (e.g., additional Suite Night Awards, gift options, or other Marriott perks; one per year)." },
+        { name: "Up to 21x Total Points Earning on Hotel Stays", description: "Stacks card earning (6x) with base membership (up to 10x) and Platinum Elite bonus (up to 5x) for accelerated rewards accumulation." },
+        { name: "Standard premium travel protections", description: "Trip delay/cancellation insurance, baggage insurance, car rental coverage — details via Amex terms." },
+      ],
+    },
+    "citi-strata-elite": {
+      title: "Citi Strata EliteSM Card",
+      benefits: [
+        { name: "Priority PassTM Select Membership", description: "Unlimited lounge visits to 1,500+ airports worldwide (for primary cardholder and authorized users; up to 2 guests often included)." },
+        { name: "4 Annual Admirals Club® Passes", description: "For access to nearly 50 American Airlines Admirals Club lounges each calendar year (great for AA flyers)." },
+        { name: "Access to Citi Travel Portal Perks", description: "Exclusive offers, discounts, or enhanced availability on hotels, car rentals, and attractions when booking through the portal (beyond just earning rates)." },
+        { name: "Premium Travel Protections", description: "Includes trip cancellation/interruption coverage, trip delay reimbursement, lost luggage protection, baggage delay, and purchase/return protections (Mastercard World Elite level benefits like extended warranty)." },
+        { name: "No Foreign Transaction Fees", description: "Saves on international purchases." },
+        { name: "High earning multipliers", description: "High earning multipliers (e.g., 12x/6x on portal bookings) act as an indirect non-monetary boost by accelerating points accumulation for transfers to partners like American Airlines." },
+      ],
+    },
+    "citi-aa-executive": {
+      title: "Citi® / AAdvantage® Executive World Elite Mastercard®",
+      benefits: [
+        { name: "Unlimited Admirals Club® Membership", description: "Full access to American Airlines Admirals Club lounges (and partner lounges when flying AA/oneworld) for the primary cardholder every year (authorized users get access to AA lounges only; high value for hub users or frequent flyers)." },
+        { name: "Free First Checked Bag", description: "On domestic American Airlines flights for you and up to 8 companions on the same reservation (saves time and hassle at check-in)." },
+        { name: "Priority Services on AA", description: "Priority check-in (business-class counters where available), priority security screening (when offered), and priority boarding for you and up to 8 companions on the same reservation." },
+        { name: "Loyalty Points Earning", description: "Earn 1 Loyalty Point toward AAdvantage status for every eligible AAdvantage mile earned with the card (helps qualify for elite status faster)." },
+        { name: "AAdvantage Miles Booster", description: "After $150,000 annual spend, earn 5x miles (instead of 4x) on eligible AA purchases for the rest of the year." },
+        { name: "Premium Travel Protections", description: "Trip cancellation/interruption, trip delay, lost baggage, and worldwide car rental insurance coverage." },
+        { name: "No Foreign Transaction Fees", description: "No foreign transaction fees." },
+      ],
+    },
+
     'amex-platinum': {
       title: 'Amex Platinum Non-Monetary Benefits',
       benefits: [
