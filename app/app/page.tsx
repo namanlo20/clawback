@@ -1552,7 +1552,7 @@ export default function AppDashboardPage() {
       if (authMode === "signup") {
         const { error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
         if (error) throw error;
-        setAuthMsg("Check your email for the confirmation link!");
+        setAuthMsg("Account created — you can sign in now. If email verification is enabled, you may also receive a confirmation email");
       } else if (authMode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
         if (error) throw error;
