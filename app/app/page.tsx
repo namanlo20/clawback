@@ -94,6 +94,10 @@ type DbCreditState = {
 
 type DbProfile = {
   user_id: string;
+  is_pro: boolean | null;
+  pro_activated_at: string | null; // timestamptz
+  stripe_customer_id: string | null;
+  stripe_checkout_session_id: string | null;
   full_name: string | null;
   phone_e164: string | null;
   phone_verified: boolean;
@@ -925,8 +929,6 @@ export default function AppDashboardPage() {
   // Check Pro status + hash routing on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setIsPro(localStorage.getItem('clawback_isPro') === 'true');
-      
       // Load partner offers
       const savedOffers = localStorage.getItem('clawback_partnerOffers');
       if (savedOffers) {
@@ -1068,7 +1070,6 @@ export default function AppDashboardPage() {
     if (isFounder) {
       setIsPro(true);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('clawback_isPro', 'true');
       }
     }
   }, [isFounder]);
