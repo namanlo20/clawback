@@ -1006,21 +1006,51 @@ export default function AppDashboardPage() {
   };
 
   // Stripe Payment Link
-  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/6oU6oIcYpcsV7on6sz0co00';
+  const handleUpgrade = async () => {
+  // Require account before paying
+  if (!user) {
+    setAuthMode("signup");
+    setAuthModalOpen(true);
+    showToast("Create an account or sign in to upgrade.");
+    return;
+  }
 
-  const handleUpgrade = () => {
-    // Require account before paying
-    if (!user) {
-      setAuthMode("signup");
-      setAuthModalOpen(true);
-      showToast("Create an account or sign in to upgrade.");
+  try {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError || !session?.access_token) {
+      showToast("Session error. Please sign in again.");
       return;
     }
-  
-    // Redirect to Stripe Payment Link (temporary until webhook-based upgrade)
-    if (typeof window !== "undefined") {
-      window.location.href = STRIPE_PAYMENT_LINK;
+
+    const res = await fetch("/api/stripe/create-checkout-session", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Create checkout session failed:", data);
+      showToast(data?.error || "Stripe checkout failed.");
+      return;
     }
+
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      showToast("Stripe checkout missing URL.");
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Upgrade failed. Try again.");
+  }
   };
 
   // Display name
