@@ -10,7 +10,7 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET!;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2025-12-15.clover" });
+const stripe = new Stripe(STRIPE_SECRET_KEY);
 
 function getRawBody(req: Request): Promise<Buffer> {
   return req.arrayBuffer().then((ab) => Buffer.from(ab));
