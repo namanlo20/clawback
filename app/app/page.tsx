@@ -926,7 +926,82 @@ export default function AppDashboardPage() {
   // Non-Monetary Benefits Guide modal
   const [benefitsGuideOpen, setBenefitsGuideOpen] = useState(false);
 
-  // Check Pro status + hash routing on mount
+  // Onboarding Tour
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  
+  const onboardingSteps = [
+    {
+      title: "Welcome to ClawBack! 👋",
+      description: "Let's take a quick tour to help you maximize your credit card rewards. This only takes 30 seconds.",
+      target: null,
+      position: "center" as const,
+    },
+    {
+      title: "1. Save Your Cards",
+      description: "Start by clicking '+ Save Card' to add the credit cards you have. We'll track all the credits for you.",
+      target: "save-card-btn",
+      position: "right" as const,
+    },
+    {
+      title: "2. Track Your Credits",
+      description: "Each card has credits that reset monthly, quarterly, or annually. Click the checkmark when you use one!",
+      target: "credits-section",
+      position: "left" as const,
+    },
+    {
+      title: "3. Watch Your Savings Grow",
+      description: "See how much you've redeemed vs your annual fee. Beat your fee and you're winning! 🎉",
+      target: "savings-widget",
+      position: "left" as const,
+    },
+    {
+      title: "4. Never Miss a Credit",
+      description: "We'll send you email/SMS reminders before credits expire. Set this up in Settings.",
+      target: "settings-btn",
+      position: "bottom" as const,
+    },
+    {
+      title: "You're All Set! 🚀",
+      description: "Start by saving your first card. Pro tip: Take the 'Find My Card' quiz if you're not sure which card to get!",
+      target: null,
+      position: "center" as const,
+    },
+  ];
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    if (typeof window !== 'undefined' && user && !isLoading) {
+      const hasSeenOnboarding = localStorage.getItem('clawback_onboarding_complete');
+      if (!hasSeenOnboarding && savedCards.length === 0) {
+        // Show onboarding for new users who haven't saved any cards
+        setTimeout(() => setShowOnboarding(true), 1000);
+      }
+    }
+  }, [user, isLoading, savedCards.length]);
+
+  const completeOnboarding = () => {
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_onboarding_complete', 'true');
+    }
+  };
+
+  const nextOnboardingStep = () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      setOnboardingStep(prev => prev + 1);
+    } else {
+      completeOnboarding();
+    }
+  };
+
+  const prevOnboardingStep = () => {
+    if (onboardingStep > 0) {
+      setOnboardingStep(prev => prev - 1);
+    }
+  };
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Load partner offers
@@ -3873,6 +3948,36 @@ export default function AppDashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Help & Support */}
+        <div className="pt-6 border-t border-white/10">
+          <div className="text-sm font-medium text-white/90 mb-3">Help & Support</div>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                setOnboardingStep(0);
+                setShowOnboarding(true);
+              }}
+              className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 text-left hover:bg-white/10 transition"
+            >
+              <span className="text-lg">🎓</span>
+              <div>
+                <div className="text-sm text-white/90">Take the Tour</div>
+                <div className="text-xs text-white/50">Learn how to use ClawBack</div>
+              </div>
+            </button>
+            <a
+              href="mailto:hello@clawback.app"
+              className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10 text-left hover:bg-white/10 transition"
+            >
+              <span className="text-lg">💬</span>
+              <div>
+                <div className="text-sm text-white/90">Contact Support</div>
+                <div className="text-xs text-white/50">hello@clawback.app</div>
+              </div>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -4561,6 +4666,131 @@ export default function AppDashboardPage() {
           </div>
         </footer>
       </div>
+
+      {/* Onboarding Tour */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[60]">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+          
+          {/* Tour Card */}
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-md">
+            <div className={surfaceCardClass("p-6 border-purple-500/30")}>
+              {/* Progress dots */}
+              <div className="flex justify-center gap-1.5 mb-6">
+                {onboardingSteps.map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`h-2 rounded-full transition-all ${
+                      i === onboardingStep 
+                        ? 'w-6 bg-purple-500' 
+                        : i < onboardingStep 
+                          ? 'w-2 bg-purple-500/50' 
+                          : 'w-2 bg-white/20'
+                    }`}
+                  />
+                ))}
+              </div>
+              
+              {/* Step content */}
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-white/95 mb-3">
+                  {onboardingSteps[onboardingStep].title}
+                </h3>
+                <p className="text-white/60 leading-relaxed">
+                  {onboardingSteps[onboardingStep].description}
+                </p>
+              </div>
+              
+              {/* Illustration based on step */}
+              {onboardingStep === 0 && (
+                <div className="flex justify-center mb-6">
+                  <div className="text-6xl">💳</div>
+                </div>
+              )}
+              {onboardingStep === 1 && (
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold">+</div>
+                      <span className="text-white/70">Save Card</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {onboardingStep === 2 && (
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span className="text-white/70">$15 Uber Cash</span>
+                      <span className="text-emerald-400 text-sm">Used ✓</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {onboardingStep === 3 && (
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-400/30">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-emerald-400">$1,247</div>
+                      <div className="text-xs text-white/50">Redeemed this year</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {onboardingStep === 4 && (
+                <div className="flex justify-center mb-6">
+                  <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">🔔</span>
+                      <div>
+                        <div className="text-sm text-white/90">Credit expiring soon!</div>
+                        <div className="text-xs text-white/50">7 days before reset</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {onboardingStep === 5 && (
+                <div className="flex justify-center mb-6">
+                  <div className="text-6xl">🚀</div>
+                </div>
+              )}
+              
+              {/* Navigation buttons */}
+              <div className="flex gap-3">
+                {onboardingStep > 0 && (
+                  <button
+                    onClick={prevOnboardingStep}
+                    className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white/70 hover:bg-white/10 transition"
+                  >
+                    ← Back
+                  </button>
+                )}
+                <button
+                  onClick={nextOnboardingStep}
+                  className="flex-1 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-3 text-sm font-semibold text-white hover:opacity-90 transition"
+                >
+                  {onboardingStep === onboardingSteps.length - 1 ? "Get Started!" : "Next →"}
+                </button>
+              </div>
+              
+              {/* Skip link */}
+              <button
+                onClick={completeOnboarding}
+                className="w-full mt-4 text-sm text-white/40 hover:text-white/60 transition"
+              >
+                Skip tour
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {AuthModal}
       {SettingsModal}
