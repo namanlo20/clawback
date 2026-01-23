@@ -3047,7 +3047,6 @@ export default function AppDashboardPage() {
       {NonMonetaryBenefitsWidget}
       {StreaksBadgesWidget}
       {AnnualSummaryWidget}
-      {CreditCalendarWidget}
       {SUBTrackerWidget}
       {AnniversaryAlertsWidget}
       {SpendingOptimizerWidget}
