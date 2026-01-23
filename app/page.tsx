@@ -20,28 +20,28 @@ export default function HomePage() {
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-10 mx-auto max-w-6xl px-6 py-4">
+      <nav className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 py-4">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-4">
+          <Link href="/" className="flex items-center gap-2 sm:gap-4">
             <Image 
               src="/logos/clawback-mark.png" 
               alt="ClawBack" 
               width={96} 
               height={96} 
-              className="rounded-2xl shadow-2xl shadow-purple-500/50 ring-2 ring-white/20 ring-offset-2 ring-offset-[#070A12]" 
+              className="w-12 h-12 sm:w-16 sm:h-16 md:w-24 md:h-24 rounded-xl sm:rounded-2xl shadow-2xl shadow-purple-500/50 ring-2 ring-white/20 ring-offset-2 ring-offset-[#070A12]" 
             />
-            <span className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-purple-200 bg-clip-text text-transparent">ClawBack</span>
+            <span className="hidden sm:inline text-2xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-purple-200 bg-clip-text text-transparent">ClawBack</span>
           </Link>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link 
               href="/app#signin"
-              className="rounded-full bg-white/10 border border-white/10 px-4 py-2 text-sm font-medium text-white/90 hover:bg-white/15 transition"
+              className="rounded-full bg-white/10 border border-white/10 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white/90 hover:bg-white/15 transition"
             >
               Sign In
             </Link>
             <Link 
               href="/app#signup"
-              className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black hover:bg-white/90 transition"
+              className="rounded-full bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-black hover:bg-white/90 transition"
             >
               Get Started
             </Link>
@@ -50,8 +50,8 @@ export default function HomePage() {
       </nav>
 
       {/* Hero */}
-      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
-        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-300 mb-6">
+      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 pt-8 sm:pt-12 pb-6 sm:pb-8 text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1.5 text-xs sm:text-sm text-emerald-300 mb-4 sm:mb-6">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
@@ -59,19 +59,19 @@ export default function HomePage() {
           Now tracking 12+ premium cards
         </div>
 
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
           Stop leaving money on the table.
         </h1>
         
-        <p className="mt-5 text-lg text-white/60 leading-relaxed max-w-2xl mx-auto">
+        <p className="mt-4 sm:mt-5 text-base sm:text-lg text-white/60 leading-relaxed max-w-2xl mx-auto px-2">
           Track your credit card credits. Mark them used. Get reminders before they expire.
           <span className="text-white/80 font-medium"> ClawBack helps you maximize every dollar.</span>
         </p>
 
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row flex-wrap justify-center gap-3">
           <Link
             href="/app#signup"
-            className="group inline-flex items-center gap-2 rounded-2xl bg-white px-6 py-3 text-base font-semibold text-black hover:bg-white/90 transition shadow-lg shadow-white/10"
+            className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-base font-semibold text-black hover:bg-white/90 transition shadow-lg shadow-white/10"
           >
             Go to Dashboard
             <svg className="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -79,7 +79,7 @@ export default function HomePage() {
             </svg>
           </Link>
 
-          <div className="inline-flex items-center gap-2 rounded-2xl border border-white/15 bg-white/5 backdrop-blur px-5 py-3 text-sm text-white/70">
+          <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 backdrop-blur px-5 py-3 text-sm text-white/70">
             <svg className="h-4 w-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17H9m10-2V11a7 7 0 10-14 0v4l-2 2h18l-2-2z" />
               <path strokeLinecap="round" strokeWidth={1.8} d="M14 19a2 2 0 01-4 0" />
@@ -88,10 +88,10 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="mt-8 flex items-center justify-center gap-3 text-sm text-white/50">
+        <div className="mt-6 sm:mt-8 flex items-center justify-center gap-3 text-xs sm:text-sm text-white/50">
           <div className="flex -space-x-2">
             {[1,2,3,4].map((i) => (
-              <div key={i} className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border-2 border-[#070A12]" />
+              <div key={i} className="h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border-2 border-[#070A12]" />
             ))}
           </div>
           <span>Join 100+ users tracking their credits</span>
