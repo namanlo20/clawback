@@ -840,7 +840,7 @@ function SpendingOptimizer({ cards, savedCards }: { cards: Card[]; savedCards: s
 // -----------------------------
 export default function AppDashboardPage() {
   const [mobileView, setMobileView] = useState<"cards" | "credits" | "insights">("credits");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "compare" | "learn" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "calendar" | "compare" | "learn" | "settings">("dashboard");
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
@@ -1418,19 +1418,27 @@ export default function AppDashboardPage() {
     includeWelcomeBonus: true,
   });
 
-  // Quiz results
+  // Quiz results - improved scoring that properly weights earning rates vs credits
   const quizResults = useMemo(() => {
     const feeTol = qFeeTolerance === '0-250' ? 250 : qFeeTolerance === '250-500' ? 500 : 1000;
-    const utilization = qOptimize === 'maximize' ? 0.85 : 0.6;
+    
+    // Credit utilization depends on travel frequency and optimization style
+    // Most people don't use 100% of credits - be realistic
+    const baseUtil = qOptimize === 'maximize' ? 0.70 : 0.45;
+    const travelBonus = qTravelFreq === '10+' ? 0.15 : qTravelFreq === '5-10' ? 0.10 : qTravelFreq === '2-4' ? 0.05 : 0;
+    const utilization = Math.min(baseUtil + travelBonus, 0.85);
+    
+    // Estimate groceries based on dining (correlated spending)
+    const estimatedGroceries = qDining < 200 ? 300 : qDining < 500 ? 450 : 600;
     
     const modifiedQuiz: QuizInputs = {
       spend: { 
         dining: qDining, 
         travel: qTravel, 
-        groceries: 400, 
-        gas: 100, 
-        online: qUsesDelivery ? 300 : 100, 
-        other: 300 
+        groceries: estimatedGroceries, 
+        gas: 150, 
+        online: qUsesDelivery ? 250 : 100, 
+        other: 400 
       },
       annualFeeTolerance: feeTol,
       creditUtilizationPct: utilization,
@@ -1438,20 +1446,76 @@ export default function AppDashboardPage() {
     };
     
     let scored = CARDS.map((c) => {
-      const base = scoreCard(c, modifiedQuiz);
-      let score = base.score;
+      let score = 0;
+      const detailLines: string[] = [];
+      const pvUsd = pointValueUsd(c.pointsProgram);
       
-      if (qBrandPref === 'chase' && c.issuer === 'Chase') score *= 1.2;
-      else if (qBrandPref === 'amex' && c.issuer === 'American Express') score *= 1.2;
-      else if (qBrandPref === 'cap1' && c.issuer === 'Capital One') score *= 1.2;
-      else if (qBrandPref === 'citi' && c.issuer === 'Citi') score *= 1.2;
-      else if (qBrandPref === 'avoid-amex' && c.issuer === 'American Express') score *= 0.3;
+      // EARNING VALUE - weight this heavily (2x multiplier for importance)
+      let earningValue = 0;
+      for (const cat of Object.keys(modifiedQuiz.spend) as SpendCategory[]) {
+        const spend = modifiedQuiz.spend[cat];
+        const rate = c.earnRates[cat] ?? 1;
+        const pts = spend * 12 * rate;
+        const val = pts * pvUsd;
+        earningValue += val;
+        if (spend > 0 && rate > 1) {
+          detailLines.push(`${cat}: ${rate}x → ${formatMoney(val)}/yr`);
+        }
+      }
+      score += earningValue * 1.5; // Boost earning importance
       
-      return { card: c, ...base, score };
+      // CREDITS VALUE - cap at realistic usage
+      // High fee cards have credits that many people can't fully use
+      const creditCap = c.annualFee <= 200 ? 1.0 : c.annualFee <= 400 ? 0.8 : c.annualFee <= 600 ? 0.6 : 0.5;
+      const creditVal = c.creditsTrackedAnnualized * utilization * creditCap;
+      score += creditVal;
+      if (creditVal > 0) detailLines.push(`Credits: ${formatMoney(creditVal)}/yr (${Math.round(utilization * creditCap * 100)}% util)`);
+      
+      // Welcome bonus (amortized over 2 years)
+      if (c.signupBonusEstUsd) {
+        const subVal = c.signupBonusEstUsd * 0.5; // 2-year amortization
+        score += subVal;
+        detailLines.push(`SUB: ~${formatMoney(c.signupBonusEstUsd)} (${formatMoney(subVal)}/yr avg)`);
+      }
+      
+      // Subtract annual fee
+      score -= c.annualFee;
+      detailLines.push(`Annual fee: -${formatMoney(c.annualFee)}`);
+      
+      // PENALTY for fee exceeding tolerance
+      if (c.annualFee > feeTol) {
+        score *= 0.4; // Stronger penalty
+        detailLines.push(`(Fee exceeds ${formatMoney(feeTol)} tolerance → penalized)`);
+      }
+      
+      // BONUS for matching spending patterns
+      // Dining-heavy user? Boost cards with high dining rates
+      if (qDining >= 400 && (c.earnRates.dining ?? 1) >= 3) {
+        score *= 1.15;
+        detailLines.push(`(Great dining rewards match!)`);
+      }
+      // Travel-heavy user? Boost cards with high travel rates  
+      if (qTravel >= 400 && (c.earnRates.travel ?? 1) >= 3) {
+        score *= 1.15;
+        detailLines.push(`(Great travel rewards match!)`);
+      }
+      // Grocery-heavy? Boost grocery cards
+      if (estimatedGroceries >= 450 && (c.earnRates.groceries ?? 1) >= 3) {
+        score *= 1.12;
+      }
+      
+      // Brand preference
+      if (qBrandPref === 'chase' && c.issuer === 'Chase') score *= 1.25;
+      else if (qBrandPref === 'amex' && c.issuer === 'American Express') score *= 1.25;
+      else if (qBrandPref === 'cap1' && c.issuer === 'Capital One') score *= 1.25;
+      else if (qBrandPref === 'citi' && c.issuer === 'Citi') score *= 1.25;
+      else if (qBrandPref === 'avoid-amex' && c.issuer === 'American Express') score *= 0.2;
+      
+      return { card: c, detailLines, score };
     }).sort((a, b) => b.score - a.score);
     
     return scored.slice(0, 3);
-  }, [qDining, qTravel, qFeeTolerance, qOptimize, qUsesDelivery, qBrandPref]);
+  }, [qDining, qTravel, qTravelFreq, qFeeTolerance, qOptimize, qUsesDelivery, qBrandPref]);
 
   const resetQuiz = useCallback(() => {
     setQuizStep('intro');
@@ -3881,20 +3945,22 @@ export default function AppDashboardPage() {
   const TabBar = (
     <div className="flex gap-1 p-1 rounded-xl bg-white/5 border border-white/10 mb-6 w-fit">
       {[
-        { key: 'dashboard', label: 'Dashboard' },
-        { key: 'compare', label: 'Compare' },
-        { key: 'learn', label: 'Learn' },
-        { key: 'settings', label: 'Settings' },
+        { key: 'dashboard', label: 'Dashboard', pro: false },
+        { key: 'calendar', label: 'Calendar', pro: true },
+        { key: 'compare', label: 'Compare', pro: false },
+        { key: 'learn', label: 'Learn', pro: false },
+        { key: 'settings', label: 'Settings', pro: false },
       ].map((tab) => (
         <button
           key={tab.key}
           onClick={() => setActiveTab(tab.key as typeof activeTab)}
           className={[
-            "px-4 py-2 rounded-lg text-sm font-medium transition",
+            "px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1.5",
             activeTab === tab.key ? "bg-white/10 text-white" : "text-white/50 hover:text-white/70",
           ].join(" ")}
         >
           {tab.label}
+          {tab.pro && !isPro && <span className="text-purple-400 text-[10px]">PRO</span>}
         </button>
       ))}
     </div>
@@ -4414,6 +4480,63 @@ export default function AppDashboardPage() {
             <div className={["lg:block", mobileView === "cards" ? "block" : "hidden", "lg:col-span-4"].join(" ")}>{LeftPanel}</div>
             <div className={["lg:block", mobileView === "credits" ? "block" : "hidden", "lg:col-span-5"].join(" ")}>{MiddlePanel}</div>
             <div className={["lg:block", mobileView === "insights" ? "block" : "hidden", "lg:col-span-3"].join(" ")}>{RightPanel}</div>
+          </div>
+        )}
+        
+        {activeTab === 'calendar' && (
+          <div className="max-w-4xl mx-auto">
+            {!isPro ? (
+              <div className={surfaceCardClass("p-8 text-center")}>
+                <div className="text-4xl mb-4">📅</div>
+                <h2 className="text-xl font-bold text-white/95 mb-2">Credit Calendar</h2>
+                <p className="text-white/60 mb-6">See all your credits on a calendar view. Never miss an expiring credit again.</p>
+                <button
+                  onClick={() => setUpgradeModalOpen(true)}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-semibold hover:opacity-90 transition"
+                >
+                  Unlock with Pro — $4.99
+                </button>
+              </div>
+            ) : savedCards.length === 0 ? (
+              <div className={surfaceCardClass("p-8 text-center")}>
+                <div className="text-4xl mb-4">📅</div>
+                <h2 className="text-xl font-bold text-white/95 mb-2">Credit Calendar</h2>
+                <p className="text-white/60 mb-6">Save a card to see your credits on the calendar.</p>
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className="px-6 py-3 rounded-xl bg-white/10 border border-white/20 text-white font-semibold hover:bg-white/15 transition"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
+            ) : (
+              <div className={surfaceCardClass("p-6")}>
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 className="text-xl font-bold text-white/95">Credit Calendar</h2>
+                    <p className="text-sm text-white/50">Track when your credits reset and expire</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 text-xs text-white/50">
+                      <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                      <span>Used</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-white/50">
+                      <div className="w-3 h-3 rounded-full bg-amber-500" />
+                      <span>Unused</span>
+                    </div>
+                  </div>
+                </div>
+                <CreditCalendar 
+                  cards={CARDS} 
+                  savedCards={savedCards} 
+                  used={used}
+                  getPeriodsForFrequency={getPeriodsForFrequency}
+                  getPeriodStateKey={getPeriodStateKey}
+                  onCardSelect={(cardKey) => { setActiveCardKey(cardKey); setActiveTab('dashboard'); }}
+                />
+              </div>
+            )}
           </div>
         )}
         
