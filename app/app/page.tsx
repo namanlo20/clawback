@@ -969,17 +969,6 @@ export default function AppDashboardPage() {
     },
   ];
 
-  // Check if user has completed onboarding
-  useEffect(() => {
-    if (typeof window !== 'undefined' && user && !isLoading) {
-      const hasSeenOnboarding = localStorage.getItem('clawback_onboarding_complete');
-      if (!hasSeenOnboarding && savedCards.length === 0) {
-        // Show onboarding for new users who haven't saved any cards
-        setTimeout(() => setShowOnboarding(true), 1000);
-      }
-    }
-  }, [user, isLoading, savedCards.length]);
-
   const completeOnboarding = () => {
     setShowOnboarding(false);
     setOnboardingStep(0);
@@ -1160,6 +1149,17 @@ export default function AppDashboardPage() {
   const [remind, setRemind] = useState<ToggleState>({});
   const [dbWarning, setDbWarning] = useState<string | null>(null);
   const [hasCelebrated, setHasCelebrated] = useState<Record<string, boolean>>({});
+
+  // Check if user has completed onboarding (must be after savedCards declaration)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && user && !isLoading) {
+      const hasSeenOnboarding = localStorage.getItem('clawback_onboarding_complete');
+      if (!hasSeenOnboarding && savedCards.length === 0) {
+        // Show onboarding for new users who haven't saved any cards
+        setTimeout(() => setShowOnboarding(true), 1000);
+      }
+    }
+  }, [user, isLoading, savedCards.length]);
 
   const feeBounds = useMemo(() => {
     const fees = CARDS.map((c) => c.annualFee);
