@@ -5,49 +5,67 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 
 export default function HomePage() {
+  const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
-  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   const tourSteps = [
     {
-      title: "Save Your Cards",
-      description: "Add the premium credit cards you have. We support 12+ cards including Amex Platinum, Chase Sapphire Reserve, and more.",
+      title: "Welcome to ClawBack! 👋",
+      description: "Stop leaving money on the table. We help you track and redeem every credit card benefit you're paying for.",
+      visual: "welcome",
+    },
+    {
+      title: "1. Save Your Cards",
+      description: "Add the premium credit cards you have. We support Amex Platinum, Chase Sapphire Reserve, Venture X, and 12+ more.",
       visual: "cards",
     },
     {
-      title: "Track Every Credit",
-      description: "See all your credits organized by frequency. Tap to mark them used when you redeem.",
+      title: "2. Track Every Credit",
+      description: "See all your credits organized by frequency. Tap to mark them used when you redeem. Never forget one again.",
       visual: "credits",
     },
     {
-      title: "Watch Your Savings",
-      description: "Track how much you've redeemed vs your annual fee. Beat your fee and celebrate! 🎉",
-      visual: "savings",
-    },
-    {
-      title: "Never Miss Again",
-      description: "Get email and SMS reminders 7 days and 1 day before credits expire. Set it and forget it.",
+      title: "3. Get Reminders",
+      description: "Email and SMS alerts 7 days and 1 day before credits expire. Set it and forget it.",
       visual: "reminders",
     },
     {
-      title: "Go Pro for $4.99",
-      description: "One-time payment. Unlimited cards, calendar view, welcome bonus tracker, and more. Lifetime access.",
+      title: "Go Pro — Just $4.99",
+      description: "One-time payment, lifetime access. Unlimited cards, calendar view, welcome bonus tracker, CSV export, and priority support.",
       visual: "pro",
     },
   ];
 
-  // Auto-advance tour
+  // Show tour popup on first visit
   useEffect(() => {
-    if (!isAutoPlaying) return;
-    const timer = setInterval(() => {
-      setTourStep((prev) => (prev + 1) % tourSteps.length);
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [isAutoPlaying, tourSteps.length]);
+    if (typeof window !== 'undefined') {
+      const hasSeenTour = localStorage.getItem('clawback_landing_tour_seen');
+      if (!hasSeenTour) {
+        setTimeout(() => setShowTour(true), 600);
+      }
+    }
+  }, []);
 
-  const goToStep = (step: number) => {
-    setIsAutoPlaying(false);
-    setTourStep(step);
+  const closeTour = () => {
+    setShowTour(false);
+    setTourStep(0);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clawback_landing_tour_seen', 'true');
+    }
+  };
+
+  const nextStep = () => {
+    if (tourStep < tourSteps.length - 1) {
+      setTourStep(prev => prev + 1);
+    } else {
+      closeTour();
+    }
+  };
+
+  const prevStep = () => {
+    if (tourStep > 0) {
+      setTourStep(prev => prev - 1);
+    }
   };
 
   return (
@@ -57,13 +75,6 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[#070A12]" />
         <div className="absolute inset-0 bg-[radial-gradient(60%_40%_at_20%_20%,rgba(88,101,242,0.18),transparent_60%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(50%_40%_at_80%_30%,rgba(139,92,246,0.16),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,0.04),transparent_40%,transparent_60%,rgba(255,255,255,0.03))]" />
-        <div 
-          className="absolute inset-0 opacity-[0.02]" 
-          style={{ 
-            backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' 
-          }} 
-        />
       </div>
 
       {/* Navigation */}
@@ -119,192 +130,35 @@ export default function HomePage() {
             href="/app#signup"
             className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3 text-base font-semibold text-black hover:bg-white/90 transition shadow-lg shadow-white/10"
           >
-            Start Free
+            Get Started Free
             <svg className="h-4 w-4 transition group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
+          <button
+            onClick={() => { setTourStep(0); setShowTour(true); }}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 backdrop-blur px-5 py-3 text-sm text-white/70 hover:bg-white/10 transition"
+          >
+            <svg className="h-4 w-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            See How It Works
+          </button>
+        </div>
+
+        <div className="mt-6 flex items-center justify-center gap-3 text-xs sm:text-sm text-white/50">
+          <div className="flex -space-x-2">
+            {[1,2,3,4].map((i) => (
+              <div key={i} className="h-6 w-6 sm:h-7 sm:w-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border-2 border-[#070A12]" />
+            ))}
+          </div>
+          <span>Join 100+ users tracking their credits</span>
         </div>
       </div>
 
-      {/* Interactive Tour Section */}
-      <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 pb-12">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur overflow-hidden">
-          {/* Tour Header */}
-          <div className="px-4 sm:px-6 py-4 border-b border-white/10 flex items-center justify-between">
-            <div className="text-sm font-medium text-white/70">See How It Works</div>
-            <div className="flex items-center gap-2">
-              {tourSteps.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goToStep(i)}
-                  className={`h-2 rounded-full transition-all ${
-                    i === tourStep 
-                      ? 'w-6 bg-purple-500' 
-                      : 'w-2 bg-white/20 hover:bg-white/40'
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Tour Content */}
-          <div className="grid md:grid-cols-2 gap-0">
-            {/* Visual Side */}
-            <div className="p-6 sm:p-8 bg-gradient-to-br from-purple-500/5 to-indigo-500/5 flex items-center justify-center min-h-[280px] sm:min-h-[320px]">
-              {tourStep === 0 && (
-                <div className="space-y-3 w-full max-w-xs animate-fade-in">
-                  {["Amex Platinum", "Chase Sapphire Reserve", "Capital One Venture X"].map((card, i) => (
-                    <div key={card} className={`flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 transition-all ${i === 0 ? 'ring-2 ring-purple-500/50' : ''}`}>
-                      <div className={`w-10 h-10 rounded-lg ${i === 0 ? 'bg-gradient-to-br from-slate-700 to-slate-900' : i === 1 ? 'bg-gradient-to-br from-blue-900 to-slate-900' : 'bg-gradient-to-br from-slate-800 to-slate-900'}`} />
-                      <span className="text-sm text-white/80">{card}</span>
-                      {i === 0 && <span className="ml-auto text-xs text-emerald-400">✓ Saved</span>}
-                    </div>
-                  ))}
-                  <button className="w-full p-3 rounded-xl border-2 border-dashed border-white/20 text-white/50 text-sm hover:border-white/40 transition">
-                    + Save Card
-                  </button>
-                </div>
-              )}
-
-              {tourStep === 1 && (
-                <div className="space-y-3 w-full max-w-xs animate-fade-in">
-                  <div className="text-xs text-white/50 uppercase tracking-wide mb-2">Monthly Credits</div>
-                  {[
-                    { name: "$15 Uber Cash", used: true },
-                    { name: "$20 Digital Credit", used: true },
-                    { name: "$10 Grubhub", used: false },
-                  ].map((credit) => (
-                    <div key={credit.name} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${credit.used ? 'bg-emerald-500/20 border border-emerald-400/30' : 'bg-white/10 border border-white/20'}`}>
-                        {credit.used && <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
-                      </div>
-                      <span className="text-sm text-white/80">{credit.name}</span>
-                      <span className={`ml-auto text-xs ${credit.used ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {credit.used ? 'Used' : 'Unused'}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {tourStep === 2 && (
-                <div className="w-full max-w-xs animate-fade-in">
-                  <div className="p-6 rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-400/20">
-                    <div className="text-center mb-4">
-                      <div className="text-3xl font-bold text-emerald-400">$1,847</div>
-                      <div className="text-xs text-white/50">Redeemed This Year</div>
-                    </div>
-                    <div className="h-3 bg-white/10 rounded-full overflow-hidden mb-2">
-                      <div className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full" style={{ width: '73%' }} />
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-white/50">$695 Annual Fee</span>
-                      <span className="text-emerald-400">+$1,152 Net Value!</span>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-center text-2xl">🎉</div>
-                </div>
-              )}
-
-              {tourStep === 3 && (
-                <div className="w-full max-w-xs space-y-3 animate-fade-in">
-                  <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-400/20">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">🔔</div>
-                      <div>
-                        <div className="text-sm font-medium text-white/90">$15 Uber Cash expiring!</div>
-                        <div className="text-xs text-white/50">Resets in 7 days</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-400/20">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">⏰</div>
-                      <div>
-                        <div className="text-sm font-medium text-white/90">Last chance: $200 airline credit</div>
-                        <div className="text-xs text-white/50">Expires tomorrow!</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-center text-xs text-white/40">Email + SMS reminders</div>
-                </div>
-              )}
-
-              {tourStep === 4 && (
-                <div className="w-full max-w-xs animate-fade-in">
-                  <div className="p-6 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-400/30">
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                      <span className="text-xl">✨</span>
-                      <span className="text-lg font-bold text-white">ClawBack Pro</span>
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      {[
-                        "Unlimited card tracking",
-                        "Credit calendar view",
-                        "Welcome bonus tracker",
-                        "CSV export",
-                        "Priority support",
-                      ].map((feature) => (
-                        <div key={feature} className="flex items-center gap-2">
-                          <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          <span className="text-white/80">{feature}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                      <div className="text-2xl font-bold text-white">$4.99</div>
-                      <div className="text-xs text-white/50">one-time payment • lifetime access</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Text Side */}
-            <div className="p-6 sm:p-8 flex flex-col justify-center">
-              <div className="text-xs text-purple-400 uppercase tracking-wide mb-2">
-                Step {tourStep + 1} of {tourSteps.length}
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white/95 mb-3">
-                {tourSteps[tourStep].title}
-              </h3>
-              <p className="text-white/60 leading-relaxed mb-6">
-                {tourSteps[tourStep].description}
-              </p>
-              
-              {/* Navigation */}
-              <div className="flex gap-3">
-                <button
-                  onClick={() => goToStep(tourStep > 0 ? tourStep - 1 : tourSteps.length - 1)}
-                  className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white/70 hover:bg-white/10 transition"
-                >
-                  ← Prev
-                </button>
-                <button
-                  onClick={() => goToStep((tourStep + 1) % tourSteps.length)}
-                  className="px-4 py-2 rounded-lg bg-purple-500 text-sm text-white font-medium hover:bg-purple-400 transition"
-                >
-                  Next →
-                </button>
-                {tourStep === tourSteps.length - 1 && (
-                  <Link
-                    href="/app#signup"
-                    className="px-4 py-2 rounded-lg bg-white text-sm text-black font-semibold hover:bg-white/90 transition ml-auto"
-                  >
-                    Get Started Free
-                  </Link>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pro Banner */}
-      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-12">
+      {/* Coffee Banner - Value Prop */}
+      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-10">
         <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 p-6 flex flex-col md:flex-row items-center gap-6">
           <div className="text-5xl">☕</div>
           <div className="flex-1 text-center md:text-left">
@@ -312,7 +166,8 @@ export default function HomePage() {
               Less than a coffee. Save hundreds.
             </div>
             <div className="text-sm text-white/60">
-              That $15 credit you forgot last month? Pro reminders would have saved it.
+              That $15 credit you forgot last month? Pro reminders would've saved it.
+              Unlock unlimited tracking for a one-time payment.
             </div>
           </div>
           <div className="flex flex-col items-center gap-1">
@@ -322,23 +177,19 @@ export default function HomePage() {
               href="/app#signup"
               className="mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:opacity-90 transition"
             >
-              Upgrade to Pro →
+              Get Pro →
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Features Grid */}
+      {/* Features */}
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 pb-16">
-        <h2 className="text-2xl font-bold text-center text-white/95 mb-8">Why ClawBack?</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {[
-            { icon: "💳", title: "12+ Premium Cards", desc: "Amex Platinum, Gold, CSR, Venture X, Hilton Aspire, and more." },
-            { icon: "🔔", title: "Smart Reminders", desc: "Email + SMS alerts 7 days and 1 day before credits expire." },
-            { icon: "📈", title: "Track Progress", desc: "See your redeemed value vs annual fee in real-time." },
-            { icon: "📅", title: "Calendar View", desc: "Pro: See all your credits on a visual calendar." },
-            { icon: "🎯", title: "Bonus Tracker", desc: "Pro: Track welcome bonus spend requirements." },
-            { icon: "🧠", title: "Card Quiz", desc: "Not sure which card to get? We'll help you decide." },
+            { icon: "🔔", title: "Never miss a credit", desc: "7-day + 1-day reminders via email and SMS before credits expire." },
+            { icon: "📈", title: "Addictive progress", desc: "Watch your redeemed totals grow. 🎉 Confetti when you beat your annual fee!" },
+            { icon: "💡", title: "Smart recommendations", desc: "Take a quick quiz and we'll find the perfect card for your spending." },
           ].map((feature) => (
             <div key={feature.title} className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur p-5 hover:bg-white/[0.05] transition">
               <div className="text-2xl mb-3">{feature.icon}</div>
@@ -349,22 +200,61 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Social Proof */}
-      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-16 text-center">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <div className="flex -space-x-2">
-            {[1,2,3,4,5].map((i) => (
-              <div key={i} className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 border-2 border-[#070A12]" />
+      {/* Cards Preview */}
+      <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 pb-16">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div>
+              <h2 className="text-xl font-bold text-white/95">Premium cards supported</h2>
+              <p className="text-sm text-white/50">All the major premium cards with complex credit systems</p>
+            </div>
+            <Link href="/app" className="text-sm text-purple-400 hover:text-purple-300 font-medium">View all cards →</Link>
+          </div>
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+            {[
+              { name: "Amex Platinum", value: "$3,074" },
+              { name: "CSR", value: "$2,817" },
+              { name: "Venture X", value: "$400" },
+              { name: "Amex Gold", value: "$424" },
+              { name: "Hilton Aspire", value: "$909" },
+              { name: "Bonvoy Brilliant", value: "$600" },
+            ].map((card) => (
+              <div key={card.name} className="rounded-xl bg-white/5 border border-white/10 p-3 text-center hover:bg-white/[0.08] transition">
+                <div className="w-10 h-7 rounded bg-gradient-to-br from-slate-600 to-slate-800 mx-auto mb-2" />
+                <div className="text-xs text-white/70 truncate">{card.name}</div>
+                <div className="text-xs text-emerald-400 font-medium">{card.value}/yr</div>
+              </div>
             ))}
           </div>
         </div>
-        <p className="text-white/50 text-sm">Join 100+ users already tracking their credits</p>
+      </div>
+
+      {/* Pro Features */}
+      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-16">
+        <h2 className="text-2xl font-bold text-center text-white/95 mb-2">ClawBack Pro</h2>
+        <p className="text-center text-white/50 mb-8">One-time $4.99 payment • Lifetime access</p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          {[
+            { icon: "♾️", title: "Unlimited Cards", desc: "Track all your premium cards in one place" },
+            { icon: "📅", title: "Credit Calendar", desc: "Visual calendar showing when credits reset" },
+            { icon: "🎯", title: "Bonus Tracker", desc: "Track welcome bonus spend requirements" },
+            { icon: "📊", title: "CSV Export", desc: "Export your data for spreadsheets" },
+          ].map((feature) => (
+            <div key={feature.title} className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.03] border border-white/10">
+              <div className="text-xl">{feature.icon}</div>
+              <div>
+                <div className="font-medium text-white/90">{feature.title}</div>
+                <div className="text-sm text-white/50">{feature.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Final CTA */}
       <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-16 text-center">
         <h2 className="text-2xl sm:text-3xl font-bold text-white/95 mb-4">Ready to stop leaving money on the table?</h2>
-        <p className="text-white/60 mb-6">Start free. Upgrade to Pro anytime for $4.99.</p>
+        <p className="text-white/60 mb-6">Start free. Upgrade to Pro anytime.</p>
         <Link
           href="/app#signup"
           className="inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-4 text-lg font-semibold text-black hover:bg-white/90 transition shadow-lg shadow-white/10"
@@ -388,6 +278,159 @@ export default function HomePage() {
         </div>
       </footer>
 
+      {/* Tour Popup Modal */}
+      {showTour && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeTour}
+          />
+          
+          {/* Modal */}
+          <div className="relative w-full max-w-lg rounded-2xl border border-white/10 bg-[#0d1117] shadow-2xl overflow-hidden">
+            {/* Progress bar */}
+            <div className="h-1 bg-white/10">
+              <div 
+                className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 transition-all duration-300"
+                style={{ width: `${((tourStep + 1) / tourSteps.length) * 100}%` }}
+              />
+            </div>
+
+            {/* Close button */}
+            <button
+              onClick={closeTour}
+              className="absolute top-4 right-4 p-1 rounded-full bg-white/10 hover:bg-white/20 transition z-10"
+            >
+              <svg className="w-5 h-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Visual */}
+            <div className="p-6 sm:p-8 bg-gradient-to-br from-purple-500/10 to-indigo-500/10 flex items-center justify-center min-h-[200px]">
+              {tourStep === 0 && (
+                <div className="text-center animate-fade-in">
+                  <div className="text-6xl mb-4">💳</div>
+                  <div className="text-white/50 text-sm">Your credits. Your savings. Your way.</div>
+                </div>
+              )}
+
+              {tourStep === 1 && (
+                <div className="space-y-2 w-full max-w-xs animate-fade-in">
+                  {["Amex Platinum", "Chase Sapphire Reserve", "Capital One Venture X"].map((card, i) => (
+                    <div key={card} className={`flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10 ${i === 0 ? 'ring-2 ring-purple-500/50' : ''}`}>
+                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-700 to-slate-900" />
+                      <span className="text-sm text-white/80">{card}</span>
+                      {i === 0 && <span className="ml-auto text-xs text-emerald-400">✓</span>}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {tourStep === 2 && (
+                <div className="space-y-2 w-full max-w-xs animate-fade-in">
+                  {[
+                    { name: "$15 Uber Cash", used: true },
+                    { name: "$20 Digital Credit", used: true },
+                    { name: "$10 Grubhub", used: false },
+                  ].map((credit) => (
+                    <div key={credit.name} className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${credit.used ? 'bg-emerald-500/20 border border-emerald-400/30' : 'bg-white/10 border border-white/20'}`}>
+                        {credit.used && <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>}
+                      </div>
+                      <span className="text-sm text-white/80">{credit.name}</span>
+                      <span className={`ml-auto text-xs ${credit.used ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {credit.used ? 'Used' : 'Unused'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {tourStep === 3 && (
+                <div className="space-y-3 w-full max-w-xs animate-fade-in">
+                  <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-400/20">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🔔</span>
+                      <div>
+                        <div className="text-sm font-medium text-white/90">$15 Uber Cash expiring!</div>
+                        <div className="text-xs text-white/50">Resets in 7 days</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-center text-xs text-white/40">via Email + SMS</div>
+                </div>
+              )}
+
+              {tourStep === 4 && (
+                <div className="w-full max-w-xs animate-fade-in">
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-400/30">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <span className="text-lg">✨</span>
+                      <span className="font-bold text-white">ClawBack Pro</span>
+                    </div>
+                    <div className="space-y-2 text-sm mb-4">
+                      {["Unlimited card tracking", "Credit calendar view", "Welcome bonus tracker", "CSV export"].map((f) => (
+                        <div key={f} className="flex items-center gap-2">
+                          <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span className="text-white/80">{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-center pt-3 border-t border-white/10">
+                      <div className="text-xl font-bold text-white">$4.99</div>
+                      <div className="text-xs text-white/50">one-time • lifetime</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="p-6 sm:p-8">
+              <div className="text-xs text-purple-400 uppercase tracking-wide mb-1">
+                {tourStep + 1} of {tourSteps.length}
+              </div>
+              <h3 className="text-xl font-bold text-white/95 mb-2">
+                {tourSteps[tourStep].title}
+              </h3>
+              <p className="text-white/60 text-sm leading-relaxed mb-6">
+                {tourSteps[tourStep].description}
+              </p>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-3">
+                {tourStep > 0 && (
+                  <button
+                    onClick={prevStep}
+                    className="px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white/70 hover:bg-white/10 transition"
+                  >
+                    ← Back
+                  </button>
+                )}
+                <button
+                  onClick={nextStep}
+                  className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-sm text-white font-semibold hover:opacity-90 transition"
+                >
+                  {tourStep === tourSteps.length - 1 ? "Get Started! 🚀" : "Next →"}
+                </button>
+              </div>
+
+              {/* Skip */}
+              <button
+                onClick={closeTour}
+                className="w-full mt-3 text-xs text-white/40 hover:text-white/60 transition"
+              >
+                Skip tour
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CSS for animations */}
       <style jsx>{`
         @keyframes fade-in {
@@ -395,7 +438,7 @@ export default function HomePage() {
           to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in {
-          animation: fade-in 0.4s ease-out;
+          animation: fade-in 0.3s ease-out;
         }
       `}</style>
     </main>
