@@ -1791,13 +1791,16 @@ export default function AppDashboardPage() {
     setProfileLoading(true);
     setProfileMsg(null);
 
+    // Non-Pro users always get default timing [1, 7]
+    const timingToSave = isPro ? offsetsDays : [7, 1];
+
     const payload: Partial<DbProfile> = {
       user_id: user.id,
       full_name: fullName || null,
       phone_e164: phoneE164 || null,
       notif_email_enabled: notifEmailEnabled,
       notif_sms_enabled: notifSmsEnabled,
-      notif_offsets_days: offsetsDays,
+      notif_offsets_days: timingToSave,
       sms_consent: smsConsent,
     };
 
@@ -3672,16 +3675,20 @@ export default function AppDashboardPage() {
         </div>
         
         <div>
-          <label className="block text-sm text-white/70 mb-3">Reminder timing (days before expiry)</label>
+          <div className="flex items-center gap-2 mb-3">
+            <label className="block text-sm text-white/70">Reminder timing (days before expiry)</label>
+            {!isPro && <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300">PRO to customize</span>}
+          </div>
           <div className="flex flex-wrap gap-2">
             {[1, 3, 5, 7, 10, 14].map((d) => {
-              const isActive = offsetsDays.includes(d);
-              const isCustom = d > 7;
+              const isDefault = d === 1 || d === 7;
+              const isActive = isPro ? offsetsDays.includes(d) : isDefault;
+              const isLocked = !isPro;
               return (
                 <button
                   key={d}
                   onClick={() => {
-                    if (isCustom && !isPro) {
+                    if (isLocked) {
                       setUpgradeModalOpen(true);
                       return;
                     }
@@ -3691,17 +3698,22 @@ export default function AppDashboardPage() {
                       setOffsetsDays(prev => [...prev, d].sort((a, b) => b - a));
                     }
                   }}
+                  disabled={isLocked}
                   className={[
                     "px-3 py-2 rounded-lg text-sm transition",
-                    isActive ? "bg-purple-500/20 border-purple-400/30 text-purple-200" : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10",
+                    isActive ? "bg-purple-500/20 border-purple-400/30 text-purple-200" : "bg-white/5 border-white/10 text-white/70",
+                    isLocked ? "opacity-50 cursor-not-allowed" : "hover:bg-white/10",
                     "border",
                   ].join(" ")}
                 >
-                  {d}d {isCustom && !isPro && <span className="text-purple-400 text-xs">PRO</span>}
+                  {d}d
                 </button>
               );
             })}
           </div>
+          {!isPro && (
+            <p className="text-xs text-white/40 mt-2">Free plan: 1-day and 7-day reminders. Upgrade to Pro to customize.</p>
+          )}
         </div>
         
         <button
