@@ -2,7 +2,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default function HomePage() {
   const [showTour, setShowTour] = useState(false);
@@ -30,28 +30,15 @@ export default function HomePage() {
       visual: "reminders",
     },
     {
-      title: "Go Pro — Just $4.99",
-      description: "One-time payment, lifetime access. Unlimited cards, calendar view, welcome bonus tracker, CSV export, and priority support.",
+      title: "Upgrade to Pro",
+      description: "Unlimited cards, calendar view, welcome bonus tracker, CSV export, and custom reminder timing. One-time payment, lifetime access.",
       visual: "pro",
     },
   ];
 
-  // Show tour popup on first visit
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hasSeenTour = localStorage.getItem('clawback_landing_tour_seen');
-      if (!hasSeenTour) {
-        setTimeout(() => setShowTour(true), 600);
-      }
-    }
-  }, []);
-
   const closeTour = () => {
     setShowTour(false);
     setTourStep(0);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('clawback_landing_tour_seen', 'true');
-    }
   };
 
   const nextStep = () => {
@@ -91,6 +78,12 @@ export default function HomePage() {
             <span className="hidden sm:inline text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-r from-white via-white to-purple-200 bg-clip-text text-transparent">ClawBack</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={() => { setTourStep(0); setShowTour(true); }}
+              className="rounded-full bg-purple-500/20 border border-purple-400/30 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-purple-200 hover:bg-purple-500/30 transition"
+            >
+              Take a Tour
+            </button>
             <Link 
               href="/app#signin"
               className="rounded-full bg-white/10 border border-white/10 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white/90 hover:bg-white/15 transition"
@@ -135,16 +128,13 @@ export default function HomePage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
-          <button
-            onClick={() => { setTourStep(0); setShowTour(true); }}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 backdrop-blur px-5 py-3 text-sm text-white/70 hover:bg-white/10 transition"
-          >
+          <div className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 backdrop-blur px-5 py-3 text-sm text-white/70">
             <svg className="h-4 w-4 text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17H9m10-2V11a7 7 0 10-14 0v4l-2 2h18l-2-2z" />
+              <path strokeLinecap="round" strokeWidth={1.8} d="M14 19a2 2 0 01-4 0" />
             </svg>
-            See How It Works
-          </button>
+            Email + SMS reminders
+          </div>
         </div>
 
         <div className="mt-6 flex items-center justify-center gap-3 text-xs sm:text-sm text-white/50">
@@ -154,32 +144,6 @@ export default function HomePage() {
             ))}
           </div>
           <span>Join 100+ users tracking their credits</span>
-        </div>
-      </div>
-
-      {/* Coffee Banner - Value Prop */}
-      <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-10">
-        <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-purple-500/10 p-6 flex flex-col md:flex-row items-center gap-6">
-          <div className="text-5xl">☕</div>
-          <div className="flex-1 text-center md:text-left">
-            <div className="text-lg font-semibold text-white/95 mb-1">
-              Less than a coffee. Save hundreds.
-            </div>
-            <div className="text-sm text-white/60">
-              That $15 credit you forgot last month? Pro reminders would've saved it.
-              Unlock unlimited tracking for a one-time payment.
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <div className="text-2xl font-bold text-white/95">$4.99</div>
-            <div className="text-xs text-white/50">lifetime access</div>
-            <Link
-              href="/app#signup"
-              className="mt-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-sm font-semibold hover:opacity-90 transition"
-            >
-              Get Pro →
-            </Link>
-          </div>
         </div>
       </div>
 
@@ -232,7 +196,7 @@ export default function HomePage() {
       {/* Pro Features */}
       <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 pb-16">
         <h2 className="text-2xl font-bold text-center text-white/95 mb-2">ClawBack Pro</h2>
-        <p className="text-center text-white/50 mb-8">One-time $4.99 payment • Lifetime access</p>
+        <p className="text-center text-white/50 mb-8">Unlock the full experience</p>
         <div className="grid sm:grid-cols-2 gap-4">
           {[
             { icon: "♾️", title: "Unlimited Cards", desc: "Track all your premium cards in one place" },
@@ -370,8 +334,8 @@ export default function HomePage() {
                       <span className="text-lg">✨</span>
                       <span className="font-bold text-white">ClawBack Pro</span>
                     </div>
-                    <div className="space-y-2 text-sm mb-4">
-                      {["Unlimited card tracking", "Credit calendar view", "Welcome bonus tracker", "CSV export"].map((f) => (
+                    <div className="space-y-2 text-sm">
+                      {["Unlimited card tracking", "Credit calendar view", "Welcome bonus tracker", "Custom reminder timing", "CSV export"].map((f) => (
                         <div key={f} className="flex items-center gap-2">
                           <svg className="w-4 h-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -379,10 +343,6 @@ export default function HomePage() {
                           <span className="text-white/80">{f}</span>
                         </div>
                       ))}
-                    </div>
-                    <div className="text-center pt-3 border-t border-white/10">
-                      <div className="text-xl font-bold text-white">$4.99</div>
-                      <div className="text-xs text-white/50">one-time • lifetime</div>
                     </div>
                   </div>
                 </div>
@@ -444,3 +404,4 @@ export default function HomePage() {
     </main>
   );
 }
+]
