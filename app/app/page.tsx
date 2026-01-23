@@ -1524,8 +1524,68 @@ export default function AppDashboardPage() {
       setNotifSmsEnabled(p.notif_sms_enabled ?? false);
       setSmsConsent(p.sms_consent ?? false);
       setOffsetsDays(parseOffsets(p.notif_offsets_days));
+      // Set Pro status from database (source of truth)
+      setIsPro(p.is_pro === true);
     })();
     return () => { alive = false; };
+  }, [user]);
+
+  // Handle upgrade success URL parameter (after returning from Stripe)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const upgradeStatus = params.get('upgrade');
+    
+    if (upgradeStatus === 'success' && user) {
+      // Clear the URL parameter
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      
+      // Poll for Pro status (webhook may take a moment)
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      const pollProStatus = async () => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("is_pro")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        
+        if (data?.is_pro === true) {
+          setIsPro(true);
+          showToast("✅ Pro Activated! Welcome to ClawBack Pro.");
+          return;
+        }
+        
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(pollProStatus, 1000);
+        } else {
+          // After 10 seconds, check one more time then show appropriate message
+          showToast("Payment received! Pro access activating...");
+          // Final check after a longer delay
+          setTimeout(async () => {
+            const { data: finalCheck } = await supabase
+              .from("profiles")
+              .select("is_pro")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            if (finalCheck?.is_pro === true) {
+              setIsPro(true);
+              showToast("✅ Pro Activated!");
+            }
+          }, 3000);
+        }
+      };
+      
+      pollProStatus();
+    } else if (upgradeStatus === 'cancel') {
+      // Clear the URL parameter
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+      showToast("Upgrade cancelled. No charge was made.");
+    }
   }, [user]);
 
   // Load saved cards + credit states
