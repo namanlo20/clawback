@@ -151,6 +151,22 @@ export const CARDS: Card[] = [
       { id: "plat-equinox", title: "Equinox", amount: 300, frequency: "annual" },
       { id: "plat-walmartplus", title: "Walmart+ Subscription", amount: 12.95, frequency: "monthly" },
     ],
+    perks: [
+      "Centurion Lounge access (cardholder + 2 guests)",
+      "Priority Pass Select (1,400+ lounges)",
+      "Global Entry/TSA PreCheck credit ($100 every 4 years)",
+      "Marriott Bonvoy Gold & Hilton Honors Gold status",
+      "Fine Hotels + Resorts perks (room upgrades, late checkout)",
+      "No foreign transaction fees",
+    ],
+    pros: [
+      "Extensive credits ($3,000+/year potential) and elite lounge access make it ideal for frequent travelers",
+      "Transferable MR points to 20+ airline/hotel partners provide flexibility",
+    ],
+    cons: [
+      "High $895 annual fee requires maximizing credits to justify",
+      "Credits are spread across many categories, making them harder to fully utilize",
+    ],
   },
 
   {
@@ -184,6 +200,21 @@ export const CARDS: Card[] = [
       { id: "csr-peloton", title: "Peloton", amount: 10, frequency: "monthly" },
       { id: "csr-global-entry", title: "Global Entry / TSA PreCheck / NEXUS fee", amount: 120, frequency: "every4years" },
       { id: "csr-priority-pass", title: "Priority Pass", amount: 469, frequency: "annual", notes: "Value in sheet" },
+    ],
+    perks: [
+      "Priority Pass Select (1,500+ lounges worldwide)",
+      "1:1 point transfers to airline/hotel partners",
+      "50% more value when redeeming for travel through Chase",
+      "Trip cancellation/interruption insurance up to $10,000",
+      "No foreign transaction fees",
+    ],
+    pros: [
+      "Extensive credits ($2,800+/year) and Priority Pass make it excellent for frequent travelers",
+      "Strong earning on travel and dining with valuable transfer partners",
+    ],
+    cons: [
+      "High $795 annual fee (effective $495 after $300 travel credit)",
+      "Many credits require specific merchants like DoorDash and Lyft",
     ],
   },
 
@@ -247,8 +278,24 @@ export const CARDS: Card[] = [
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      { id: "csp-dashpass", title: "DoorDash DashPass Subscription", amount: 120, frequency: "annual" },
-      { id: "csp-hotel-credit", title: "Hotels booked via Chase Travel portal", amount: 50, frequency: "annual" },
+      { id: "csp-hotel-credit", title: "Chase Travel Hotel Credit", amount: 50, frequency: "annual" },
+      { id: "csp-dashpass", title: "DoorDash DashPass Subscription", amount: 120, frequency: "annual", notes: "Activate by 12/31/2027" },
+      { id: "csp-doordash", title: "DoorDash Credit", amount: 10, frequency: "monthly", notes: "Non-restaurant orders; through 12/31/2027" },
+    ],
+    perks: [
+      "1:1 point transfers to airline and hotel partners",
+      "Trip cancellation up to $20,000 per trip",
+      "10% anniversary points bonus",
+      "No foreign transaction fees",
+      "5x on Lyft through 09/30/2027",
+    ],
+    pros: [
+      "High earning in dining, online groceries, and streaming, plus 1:1 transfers to partners like United and Hyatt",
+      "Comprehensive protections like trip cancellation and no FX fees enhance travel security",
+    ],
+    cons: [
+      "Hotel credit requires Chase Travel bookings, limiting direct hotel deals",
+      "Category exclusions (e.g., no points on certain groceries) reduce earning potential",
     ],
   },
 
@@ -267,7 +314,22 @@ export const CARDS: Card[] = [
       { label: "Dining", x: 3 },
       { label: "Everything else", x: 1 },
     ],
-    credits: [{ id: "green-clear", title: "Clear Plus", amount: 209, frequency: "annual" }],
+    credits: [{ id: "green-clear", title: "Clear Plus", amount: 209, frequency: "annual", notes: "Excludes taxes/fees; auto-renews" }],
+    perks: [
+      "No foreign transaction fees",
+      "Events with Amex (presale tickets, exclusive benefits)",
+      "Plan It (split purchases into installments)",
+      "Send & Split via Venmo/PayPal",
+      "Amex Offers for extra rewards",
+    ],
+    pros: [
+      "Broad 3x earning on travel, transit, and dining accelerates rewards",
+      "No FX fees suit international use",
+    ],
+    cons: [
+      "CLEAR credit requires enrollment and may not appeal to all",
+      "1x on non-bonus categories limits everyday rewards",
+    ],
   },
 
   {
@@ -287,7 +349,21 @@ export const CARDS: Card[] = [
       { label: "US Online Retail", x: 4 },
       { label: "Everything else", x: 3 },
     ],
-    credits: [{ id: "surpass-hilton-credit", title: "Hilton credit", amount: 50, frequency: "quarterly" }],
+    credits: [{ id: "surpass-hilton-credit", title: "Hilton Resort Credit", amount: 50, frequency: "quarterly", notes: "Eligible purchases at Hilton properties" }],
+    perks: [
+      "Hilton Honors Gold elite status (room upgrades, late checkout, 80% bonus points)",
+      "Path to Diamond status after $40,000 annual spend",
+      "No foreign transaction fees",
+      "Travel protections (baggage insurance, car rental coverage)",
+    ],
+    pros: [
+      "Gold status and resort credit enhance Hilton stays",
+      "High earning on everyday U.S. categories like dining and groceries",
+    ],
+    cons: [
+      "Credits limited to Hilton resorts, reducing versatility",
+      "U.S.-focused earning excludes international spend bonuses",
+    ],
   },
 
   {
@@ -313,6 +389,20 @@ export const CARDS: Card[] = [
       { id: "gold-resy", title: "Resy Restaurants", amount: 50, frequency: "semiannual" },
       { id: "gold-dining", title: "Dining", amount: 10, frequency: "monthly" },
     ],
+    perks: [
+      "No foreign transaction fees",
+      "Plan It (split purchases into installments)",
+      "Travel protections (baggage insurance, car rental loss/damage)",
+      "Transferable MR points to airline/hotel partners",
+    ],
+    pros: [
+      "High earning on dining and groceries (4x) boosts everyday rewards",
+      "Flexible points transferable to partners add significant value",
+    ],
+    cons: [
+      "Category caps ($50k dining, $25k groceries) limit high spenders",
+      "No lounge access reduces travel perks compared to Platinum",
+    ],
   },
 
   {
@@ -337,6 +427,20 @@ export const CARDS: Card[] = [
       { id: "aspire-conrad-waldorf-2night", title: "Conrad/Waldorf Astoria (2 Night)", amount: 100, frequency: "annual" },
       { id: "aspire-hilton-resort", title: "Hilton Resort", amount: 200, frequency: "semiannual" },
     ],
+    perks: [
+      "Annual Free Night Reward (redeemable for one night at any Hilton property)",
+      "Hilton Honors Diamond status",
+      "No foreign transaction fees",
+      "Travel protections (baggage insurance, car rental coverage)",
+    ],
+    pros: [
+      "Diamond status and annual free night provide exceptional value for Hilton loyalists",
+      "High earning on travel and dining accelerates points accumulation",
+    ],
+    cons: [
+      "High annual fee requires significant Hilton usage to justify",
+      "Credits focused on Hilton properties limit flexibility",
+    ],
   },
 
   {
@@ -357,6 +461,23 @@ export const CARDS: Card[] = [
       { id: "delta-resy", title: "Resy Restaurants", amount: 20, frequency: "monthly" },
       { id: "delta-rideshare", title: "Rideshare", amount: 10, frequency: "monthly" },
       { id: "delta-delta-stays", title: "Delta Stays", amount: 200, frequency: "annual" },
+    ],
+    perks: [
+      "Delta Sky Club access (15 visits/year; unlimited after $75k spend)",
+      "Centurion Lounge access when flying Delta",
+      "Annual Companion Certificate (domestic First, Comfort+, or Main)",
+      "First checked bag free for cardholder + 8 companions",
+      "MQD Headstart ($2,500) + MQD Boost ($1 per $10 spend)",
+      "Hertz President's Circle status",
+      "No foreign transaction fees",
+    ],
+    pros: [
+      "Strong MQD boosts and upgrade priority help achieve Delta Medallion status faster",
+      "Lounge access (Sky Club + Centurion) and Companion Certificate provide high value for Delta flyers",
+    ],
+    cons: [
+      "Lounge visits limited to 15 unless hitting $75k spend threshold",
+      "Low everyday earning (only 1x outside Delta) reduces non-Delta value",
     ],
   },
 
@@ -724,7 +845,7 @@ export const CARDS: Card[] = [
     name: "IHG One Rewards Premier",
     issuer: "Chase",
     annualFee: 99,
-    creditsTrackedAnnualized: 230,
+    creditsTrackedAnnualized: 380,
     logo: "/logos/ihg-premier.png",
     pointsProgram: "ihg_points",
     earnRates: { travel: 5, dining: 5, gas: 5, other: 3 },
@@ -735,21 +856,24 @@ export const CARDS: Card[] = [
     ],
     credits: [
       { id: "ihg-free-night", title: "Annual Free Night Award", amount: 200, frequency: "annual", notes: "Up to 40,000 points value" },
-      { id: "ihg-global-entry", title: "Global Entry / TSA PreCheck", amount: 100, frequency: "every4years" },
+      { id: "ihg-united-travelbank", title: "United TravelBank Cash", amount: 50, frequency: "annual" },
+      { id: "ihg-spend-bonus", title: "Spend Bonus Credit", amount: 100, frequency: "annual", notes: "$100 + 10,000 points after $20,000 spend" },
+      { id: "ihg-global-entry", title: "Global Entry / TSA PreCheck / NEXUS", amount: 120, frequency: "every4years" },
     ],
     perks: [
       "IHG Platinum Elite status (upgrades, bonus points, late checkout)",
       "4th reward night free on stays of 3+ nights",
+      "Diamond status after $40,000 annual spend",
       "No foreign transaction fees",
       "Trip cancellation & baggage delay protection",
     ],
     pros: [
-      "Free night and Platinum status easily offset the low fee for IHG stays",
+      "Platinum status and free night easily offset the low fee for IHG stays",
       "High earning at IHG accelerates free nights and upgrades",
     ],
     cons: [
       "Free night cap at 40k points excludes many luxury properties",
-      "Rewards tied to IHG limit flexibility outside the chain",
+      "Spending thresholds for bonuses are high",
     ],
   },
 
@@ -774,7 +898,8 @@ export const CARDS: Card[] = [
     ],
     perks: [
       "Discoverist status (upgrades, bonus points, late checkout)",
-      "5 qualifying night credits toward status",
+      "5 tier-qualifying night credits annually",
+      "2 tier credits per $5,000 spend",
       "No foreign transaction fees",
       "Trip cancellation & baggage delay protection",
     ],
@@ -798,9 +923,8 @@ export const CARDS: Card[] = [
     pointsProgram: "southwest_points",
     earnRates: { travel: 3, dining: 2, other: 1 },
     multipliers: [
-      { label: "Southwest purchases", x: 3 },
-      { label: "Rapid Rewards hotel/car partners", x: 2 },
-      { label: "Transit, internet, cable, streaming", x: 2 },
+      { label: "Southwest/hotels/car rentals via portal", x: 4 },
+      { label: "Dining, transit, internet, cable, streaming", x: 2 },
       { label: "Everything else", x: 1 },
     ],
     credits: [
@@ -810,9 +934,10 @@ export const CARDS: Card[] = [
     ],
     perks: [
       "25% back on inflight purchases",
-      "Path to Companion Pass (counts toward qualifying points)",
+      "10,000 Companion Pass qualifying points annually",
+      "2,500 TQPs per $5,000 spend",
       "No foreign transaction fees",
-      "Trip cancellation & baggage delay protection",
+      "Auto rental & baggage delay protection",
     ],
     pros: [
       "Travel credit and anniversary points offset the fee for Southwest flyers",
@@ -832,29 +957,29 @@ export const CARDS: Card[] = [
     creditsTrackedAnnualized: 175,
     logo: "/logos/alaska-visa-signature.png",
     pointsProgram: "alaska_miles",
-    earnRates: { travel: 3, gas: 2, other: 1 },
+    earnRates: { travel: 3, other: 1 },
     multipliers: [
-      { label: "Alaska purchases", x: 3 },
-      { label: "Gas, transit, shipping", x: 2 },
+      { label: "Alaska/Hawaiian Airlines purchases", x: 3 },
       { label: "Everything else", x: 1 },
     ],
     credits: [
-      { id: "alaska-companion", title: "Companion Fare", amount: 99, frequency: "annual", notes: "After $6,000 spend (plus taxes from $23)" },
-      { id: "alaska-bags", title: "Free Checked Bags", amount: 75, frequency: "annual", notes: "Cardholder + up to 6 companions" },
+      { id: "alaska-companion", title: "Companion Fare", amount: 99, frequency: "annual", notes: "After $6,000 spend; for Alaska/Hawaiian flights" },
+      { id: "alaska-bags", title: "Free Checked Bags", amount: 75, frequency: "annual", notes: "Save up to $60/person roundtrip" },
     ],
     perks: [
       "Free first checked bag for cardholder + 6 companions",
-      "Path to elite status (status points on spend)",
+      "Path to elite status with Loyalty Points on spend",
+      "Companion Fare for Alaska/Hawaiian flights",
       "No foreign transaction fees",
-      "Trip cancellation & baggage delay protection",
+      "Travel protections (baggage insurance, car rental coverage)",
     ],
     pros: [
       "Companion Fare saves significantly on flights for pairs",
       "Free checked bags add value for group travel",
     ],
     cons: [
-      "Limited earning categories outside Alaska",
-      "Fewer partners than major airlines",
+      "Low everyday earning (only 1x outside Alaska/Hawaiian)",
+      "Limited partners compared to major airlines",
     ],
   },
 
@@ -912,10 +1037,11 @@ export const CARDS: Card[] = [
       { id: "wf-airline", title: "Annual Airline Credit", amount: 50, frequency: "annual" },
     ],
     perks: [
-      "Unlimited Priority Pass lounge visits (after enrollment)",
+      "Unlimited Priority Pass lounge visits (enrollment required)",
       "Points transferable to partners",
+      "Cellular protection ($1,000/claim)",
       "No foreign transaction fees",
-      "Trip cancellation & baggage delay protection",
+      "Trip cancellation & baggage reimbursement",
     ],
     pros: [
       "High earning on travel and Priority Pass access for modest fee",
@@ -949,8 +1075,9 @@ export const CARDS: Card[] = [
     perks: [
       "Free first checked bag for cardholder + 3 companions",
       "50% savings on inflight purchases",
+      "Points pooling with family/friends",
+      "No blackout dates on award flights",
       "Path to Mosaic elite status after $50,000 spend",
-      "No foreign transaction fees",
     ],
     pros: [
       "Checked bag and inflight perks save on JetBlue flights",
