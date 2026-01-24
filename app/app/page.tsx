@@ -4311,9 +4311,8 @@ export default function AppDashboardPage() {
             >
               <IconGear className="h-5 w-5" />
             </button>
-            <button onClick={handleSignOut} className="rounded-full border border-white/10 bg-white/5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white/70 hover:bg-white/10">
-              <span className="hidden sm:inline">Sign out</span>
-              <span className="sm:hidden">Out</span>
+            <button onClick={handleSignOut} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10 transition">
+              Sign out
             </button>
           </>
         ) : (
