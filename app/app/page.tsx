@@ -1164,6 +1164,26 @@ export default function AppDashboardPage() {
   const activeCard = useMemo(() => CARDS.find((c) => c.key === activeCardKey) ?? CARDS[0], [activeCardKey]);
 
   // Group credits by frequency for tiered display
+  // Helper to check if a credit is available in the current month
+  const isCreditAvailableThisMonth = useCallback((credit: Credit): boolean => {
+    const currentMonth = new Date().getMonth(); // 0 = Jan, 11 = Dec
+    const title = credit.title.toLowerCase();
+    const notes = (credit.notes || '').toLowerCase();
+    
+    // Check for December-only credits
+    if (title.includes('(dec)') || notes.includes('december only')) {
+      return currentMonth === 11; // December
+    }
+    
+    // Check for Jan-Nov credits
+    if (title.includes('(jan-nov)') || title.includes('jan-nov')) {
+      return currentMonth >= 0 && currentMonth <= 10; // January through November
+    }
+    
+    // Default: available all months
+    return true;
+  }, []);
+
   const creditsGrouped = useMemo(() => {
     const groups: Record<CreditFrequency, Credit[]> = {
       monthly: [],
@@ -1176,7 +1196,10 @@ export default function AppDashboardPage() {
     };
     
     for (const c of activeCard.credits) {
-      groups[c.frequency].push(c);
+      // Only include credits available this month
+      if (isCreditAvailableThisMonth(c)) {
+        groups[c.frequency].push(c);
+      }
     }
     
     // Sort each group alphabetically
@@ -1185,7 +1208,7 @@ export default function AppDashboardPage() {
     }
     
     return groups;
-  }, [activeCard]);
+  }, [activeCard, isCreditAvailableThisMonth]);
 
   // Frequency display order and labels
   const frequencyOrder: CreditFrequency[] = ['monthly', 'quarterly', 'semiannual', 'annual', 'every4years', 'every5years', 'onetime'];
