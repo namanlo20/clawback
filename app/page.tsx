@@ -107,7 +107,7 @@ export default function HomePage() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
           </span>
-          Now tracking 17 premium cards
+          Now tracking 25 premium cards
         </div>
 
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
@@ -176,17 +176,16 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
-              { name: "Amex Platinum", value: "$3,074", logo: "/logos/amex-platinum.png" },
-              { name: "CSR", value: "$2,817", logo: "/logos/chase-sapphire-reserve.png" },
-              { name: "Venture X", value: "$400", logo: "/logos/capitalone-venture-x.png" },
-              { name: "Amex Gold", value: "$424", logo: "/logos/amex-gold.png" },
-              { name: "Hilton Aspire", value: "$909", logo: "/logos/hilton-honors.png" },
-              { name: "Bonvoy Brilliant", value: "$600", logo: "/logos/marriott-brilliant.png" },
+              { name: "Amex Platinum", logo: "/logos/amex-platinum.png" },
+              { name: "CSR", logo: "/logos/chase-sapphire-reserve.png" },
+              { name: "Venture X", logo: "/logos/capitalone-venture-x.png" },
+              { name: "Amex Gold", logo: "/logos/amex-gold.png" },
+              { name: "Hilton Aspire", logo: "/logos/hilton-honors.png" },
+              { name: "Bonvoy Brilliant", logo: "/logos/marriott-brilliant.png" },
             ].map((card) => (
               <div key={card.name} className="rounded-xl bg-white/5 border border-white/10 p-3 text-center hover:bg-white/[0.08] transition">
                 <Image src={card.logo} alt={card.name} width={40} height={28} className="mx-auto mb-2 rounded" />
                 <div className="text-xs text-white/70 truncate">{card.name}</div>
-                <div className="text-xs text-emerald-400 font-medium">{card.value}/yr</div>
               </div>
             ))}
           </div>
