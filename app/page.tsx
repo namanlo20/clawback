@@ -176,15 +176,15 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
-              { name: "Amex Platinum", value: "$3,074" },
-              { name: "CSR", value: "$2,817" },
-              { name: "Venture X", value: "$400" },
-              { name: "Amex Gold", value: "$424" },
-              { name: "Hilton Aspire", value: "$909" },
-              { name: "Bonvoy Brilliant", value: "$600" },
+              { name: "Amex Platinum", value: "$3,074", logo: "/logos/amex-platinum.png" },
+              { name: "CSR", value: "$2,817", logo: "/logos/chase-sapphire-reserve.png" },
+              { name: "Venture X", value: "$400", logo: "/logos/capitalone-venture-x.png" },
+              { name: "Amex Gold", value: "$424", logo: "/logos/amex-gold.png" },
+              { name: "Hilton Aspire", value: "$909", logo: "/logos/hilton-honors.png" },
+              { name: "Bonvoy Brilliant", value: "$600", logo: "/logos/marriott-brilliant.png" },
             ].map((card) => (
               <div key={card.name} className="rounded-xl bg-white/5 border border-white/10 p-3 text-center hover:bg-white/[0.08] transition">
-                <div className="w-10 h-7 rounded bg-gradient-to-br from-slate-600 to-slate-800 mx-auto mb-2" />
+                <Image src={card.logo} alt={card.name} width={40} height={28} className="mx-auto mb-2 rounded" />
                 <div className="text-xs text-white/70 truncate">{card.name}</div>
                 <div className="text-xs text-emerald-400 font-medium">{card.value}/yr</div>
               </div>
