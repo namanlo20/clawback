@@ -1688,8 +1688,9 @@ export default function AppDashboardPage() {
       setNotifSmsEnabled(p.notif_sms_enabled ?? false);
       setSmsConsent(p.sms_consent ?? false);
       setOffsetsDays(parseOffsets(p.notif_offsets_days));
-      // Set Pro status from database (source of truth)
-      setIsPro(p.is_pro === true);
+      // Set Pro status from database OR founder status
+      const isFounderEmail = (user?.email ?? "").toLowerCase() === "namanlohia02@gmail.com";
+      setIsPro(p.is_pro === true || isFounderEmail);
     })();
     return () => { alive = false; };
   }, [user]);
