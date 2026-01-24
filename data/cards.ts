@@ -35,7 +35,13 @@ export type PointsProgram =
   | "united_miles"
   | "usbank_points"
   | "boa_points"
-  | "luxury_points";
+  | "luxury_points"
+  | "ihg_points"
+  | "hyatt_points"
+  | "southwest_points"
+  | "alaska_miles"
+  | "jetblue_points"
+  | "wells_fargo_points";
 
 export type SpendCategory =
   | "dining"
@@ -95,6 +101,12 @@ export const DEFAULT_POINT_VALUES_USD: Record<
   usbank_points: 0.015,
   boa_points: 0.01,
   luxury_points: 0.02,
+  ihg_points: 0.005,
+  hyatt_points: 0.017,
+  southwest_points: 0.014,
+  alaska_miles: 0.015,
+  jetblue_points: 0.013,
+  wells_fargo_points: 0.01,
 };
 
 export function pointValueUsd(program: PointsProgram): number {
@@ -599,6 +611,288 @@ export const CARDS: Card[] = [
     cons: [
       "Poor earning rates (only 1x on most spend) make it hard to accumulate points quickly",
       "Overpriced with limited rewards value—better alternatives exist for similar perks at lower cost",
+    ],
+  },
+
+  // ===========================================
+  // MORE NEW CARDS (8 additions)
+  // ===========================================
+
+  {
+    key: "luxury-card-gold",
+    name: "Luxury Card Mastercard Gold",
+    issuer: "Luxury Card",
+    annualFee: 995,
+    creditsTrackedAnnualized: 300,
+    logo: "/logos/luxury-card-gold.png",
+    pointsProgram: "luxury_points",
+    earnRates: { travel: 2, dining: 1, other: 1 },
+    multipliers: [
+      { label: "Airfare", x: 2 },
+      { label: "Hotels", x: 2 },
+      { label: "Everything else (redeems at 2% for airfare)", x: 1 },
+    ],
+    credits: [
+      { id: "lcg-airline", title: "Airline Travel Credit", amount: 200, frequency: "annual", notes: "Tickets, baggage, upgrades" },
+      { id: "lcg-dining", title: "Dining Credit", amount: 100, frequency: "annual", notes: "At qualifying restaurants" },
+    ],
+    perks: [
+      "24k gold-plated metal card",
+      "24/7 elite concierge for exclusive experiences",
+      "VIP Priority Pass Select (unlimited visits + guests)",
+      "Luxury hotel upgrades at select properties",
+      "No foreign transaction fees",
+    ],
+    pros: [
+      "24k gold-plated metal card and concierge deliver ultra-luxury status and experiences",
+      "High redemption values for airfare make points efficient for premium travel",
+    ],
+    cons: [
+      "Extremely limited credits fail to offset the high fee for most users",
+      "Low earning rates across categories make point accumulation slow and unrewarding",
+    ],
+  },
+
+  {
+    key: "ihg-premier",
+    name: "IHG One Rewards Premier",
+    issuer: "Chase",
+    annualFee: 99,
+    creditsTrackedAnnualized: 230,
+    logo: "/logos/ihg-premier.png",
+    pointsProgram: "ihg_points",
+    earnRates: { travel: 5, dining: 5, gas: 5, other: 3 },
+    multipliers: [
+      { label: "IHG hotels (10x card + base/status)", x: 26 },
+      { label: "Travel, gas, dining", x: 5 },
+      { label: "Everything else", x: 3 },
+    ],
+    credits: [
+      { id: "ihg-free-night", title: "Annual Free Night Award", amount: 200, frequency: "annual", notes: "Up to 40,000 points value" },
+      { id: "ihg-global-entry", title: "Global Entry / TSA PreCheck", amount: 100, frequency: "every4years" },
+    ],
+    perks: [
+      "IHG Platinum Elite status (upgrades, bonus points, late checkout)",
+      "4th reward night free on stays of 3+ nights",
+      "No foreign transaction fees",
+      "Trip cancellation & baggage delay protection",
+    ],
+    pros: [
+      "Free night and Platinum status easily offset the low fee for IHG stays",
+      "High earning at IHG accelerates free nights and upgrades",
+    ],
+    cons: [
+      "Free night cap at 40k points excludes many luxury properties",
+      "Rewards tied to IHG limit flexibility outside the chain",
+    ],
+  },
+
+  {
+    key: "world-of-hyatt",
+    name: "World of Hyatt Credit Card",
+    issuer: "Chase",
+    annualFee: 95,
+    creditsTrackedAnnualized: 400,
+    logo: "/logos/world-of-hyatt.png",
+    pointsProgram: "hyatt_points",
+    earnRates: { travel: 2, dining: 2, other: 1 },
+    multipliers: [
+      { label: "Hyatt hotels", x: 9 },
+      { label: "Dining", x: 2 },
+      { label: "Transit & fitness", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "hyatt-free-night", title: "Annual Free Night Award", amount: 200, frequency: "annual", notes: "Category 1–4 property" },
+      { id: "hyatt-free-night-2", title: "Second Free Night", amount: 200, frequency: "annual", notes: "After $15,000 annual spend" },
+    ],
+    perks: [
+      "Discoverist status (upgrades, bonus points, late checkout)",
+      "5 qualifying night credits toward status",
+      "No foreign transaction fees",
+      "Trip cancellation & baggage delay protection",
+    ],
+    pros: [
+      "Free night awards provide high value (often $200+) for minimal fee",
+      "Status and earning help build toward higher Hyatt tiers",
+    ],
+    cons: [
+      "Limited partners reduce point flexibility",
+      "Everyday earning is modest outside Hyatt",
+    ],
+  },
+
+  {
+    key: "southwest-priority",
+    name: "Southwest Rapid Rewards Priority",
+    issuer: "Chase",
+    annualFee: 149,
+    creditsTrackedAnnualized: 280,
+    logo: "/logos/southwest-priority.png",
+    pointsProgram: "southwest_points",
+    earnRates: { travel: 3, dining: 2, other: 1 },
+    multipliers: [
+      { label: "Southwest purchases", x: 3 },
+      { label: "Rapid Rewards hotel/car partners", x: 2 },
+      { label: "Transit, internet, cable, streaming", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "sw-travel", title: "Southwest Travel Credit", amount: 75, frequency: "annual" },
+      { id: "sw-anniversary", title: "Anniversary Points", amount: 105, frequency: "annual", notes: "7,500 points worth ~$105" },
+      { id: "sw-upgraded-boarding", title: "Upgraded Boardings", amount: 100, frequency: "annual", notes: "Up to 4 annually reimbursed" },
+    ],
+    perks: [
+      "25% back on inflight purchases",
+      "Path to Companion Pass (counts toward qualifying points)",
+      "No foreign transaction fees",
+      "Trip cancellation & baggage delay protection",
+    ],
+    pros: [
+      "Travel credit and anniversary points offset the fee for Southwest flyers",
+      "Upgraded boardings and inflight savings enhance flying experience",
+    ],
+    cons: [
+      "Rewards limited to Southwest, with no international partners",
+      "No lounge access or automatic elite status",
+    ],
+  },
+
+  {
+    key: "alaska-visa-signature",
+    name: "Alaska Airlines Visa Signature",
+    issuer: "Bank of America",
+    annualFee: 95,
+    creditsTrackedAnnualized: 175,
+    logo: "/logos/alaska-visa-signature.png",
+    pointsProgram: "alaska_miles",
+    earnRates: { travel: 3, gas: 2, other: 1 },
+    multipliers: [
+      { label: "Alaska purchases", x: 3 },
+      { label: "Gas, transit, shipping", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "alaska-companion", title: "Companion Fare", amount: 99, frequency: "annual", notes: "After $6,000 spend (plus taxes from $23)" },
+      { id: "alaska-bags", title: "Free Checked Bags", amount: 75, frequency: "annual", notes: "Cardholder + up to 6 companions" },
+    ],
+    perks: [
+      "Free first checked bag for cardholder + 6 companions",
+      "Path to elite status (status points on spend)",
+      "No foreign transaction fees",
+      "Trip cancellation & baggage delay protection",
+    ],
+    pros: [
+      "Companion Fare saves significantly on flights for pairs",
+      "Free checked bags add value for group travel",
+    ],
+    cons: [
+      "Limited earning categories outside Alaska",
+      "Fewer partners than major airlines",
+    ],
+  },
+
+  {
+    key: "citi-premier",
+    name: "Citi Premier Card",
+    issuer: "Citi",
+    annualFee: 95,
+    creditsTrackedAnnualized: 100,
+    logo: "/logos/citi-premier.png",
+    pointsProgram: "citi_typ",
+    earnRates: { travel: 3, dining: 3, groceries: 3, gas: 3, other: 1 },
+    multipliers: [
+      { label: "Hotels/car rentals/attractions on cititravel.com", x: 10 },
+      { label: "Air travel & other hotels", x: 3 },
+      { label: "Restaurants", x: 3 },
+      { label: "Supermarkets", x: 3 },
+      { label: "Gas & EV charging", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "citi-hotel", title: "Annual Hotel Savings", amount: 100, frequency: "annual", notes: "$100 off $500+ hotel stays via Citi Travel" },
+    ],
+    perks: [
+      "ThankYou points transferable to airline/hotel partners",
+      "No foreign transaction fees",
+      "Trip cancellation & baggage delay protection",
+    ],
+    pros: [
+      "Broad 3x categories for everyday spend, with flexible transfers",
+      "Hotel benefit offsets fee for one qualifying stay",
+    ],
+    cons: [
+      "No lounge access or elite status",
+      "Limited credits compared to premium cards",
+    ],
+  },
+
+  {
+    key: "wells-fargo-autograph-journey",
+    name: "Wells Fargo Autograph Journey",
+    issuer: "Wells Fargo",
+    annualFee: 95,
+    creditsTrackedAnnualized: 50,
+    logo: "/logos/wells-fargo-autograph-journey.png",
+    pointsProgram: "wells_fargo_points",
+    earnRates: { travel: 5, dining: 3, other: 1 },
+    multipliers: [
+      { label: "Hotels", x: 5 },
+      { label: "Airlines", x: 4 },
+      { label: "Other travel & dining", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "wf-airline", title: "Annual Airline Credit", amount: 50, frequency: "annual" },
+    ],
+    perks: [
+      "Unlimited Priority Pass lounge visits (after enrollment)",
+      "Points transferable to partners",
+      "No foreign transaction fees",
+      "Trip cancellation & baggage delay protection",
+    ],
+    pros: [
+      "High earning on travel and Priority Pass access for modest fee",
+      "Flexible redemptions enhance value",
+    ],
+    cons: [
+      "Airline credit is low; requires maximization for offset",
+      "Fewer partners than competitors",
+    ],
+  },
+
+  {
+    key: "jetblue-plus",
+    name: "JetBlue Plus Card",
+    issuer: "Barclays",
+    annualFee: 99,
+    creditsTrackedAnnualized: 150,
+    logo: "/logos/jetblue-plus.png",
+    pointsProgram: "jetblue_points",
+    earnRates: { travel: 6, dining: 2, groceries: 2, other: 1 },
+    multipliers: [
+      { label: "JetBlue purchases", x: 6 },
+      { label: "Restaurants", x: 2 },
+      { label: "Grocery stores", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "jb-bags", title: "Free Checked Bags", amount: 100, frequency: "annual", notes: "Cardholder + 3 companions" },
+      { id: "jb-inflight", title: "Inflight Savings", amount: 50, frequency: "annual", notes: "50% savings on inflight purchases" },
+    ],
+    perks: [
+      "Free first checked bag for cardholder + 3 companions",
+      "50% savings on inflight purchases",
+      "Path to Mosaic elite status after $50,000 spend",
+      "No foreign transaction fees",
+    ],
+    pros: [
+      "Checked bag and inflight perks save on JetBlue flights",
+      "High earning on JetBlue accelerates free flights",
+    ],
+    cons: [
+      "Rewards limited to JetBlue ecosystem",
+      "No lounge access or broad credits",
     ],
   },
 ];
