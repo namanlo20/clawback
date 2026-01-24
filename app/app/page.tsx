@@ -4261,26 +4261,32 @@ export default function AppDashboardPage() {
     <div className="flex items-center justify-between mb-6">
       <a
         href="/"
-        className="flex items-center gap-4 hover:opacity-90 transition cursor-pointer"
+        className="flex items-center gap-3 sm:gap-4 hover:opacity-90 transition cursor-pointer"
       >
-
         <Image 
           src="/logos/clawback-mark.png" 
           alt="ClawBack" 
           width={64} 
           height={64} 
-          className="rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10" 
+          className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl shadow-lg shadow-purple-500/30 ring-2 ring-white/10" 
         />
         <div>
-          <h1 className="text-xl font-bold text-white/95">ClawBack</h1>
-          {user && <div className="text-xs text-white/50">Welcome{displayName ? `, ${displayName}` : ''}</div>}
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg sm:text-xl font-bold text-white/95">ClawBack</h1>
+            {isPro && (
+              <span className="px-2 py-0.5 text-[10px] sm:text-xs font-bold bg-gradient-to-r from-amber-500/30 to-yellow-500/30 border border-amber-400/40 rounded-full text-amber-200">
+                PRO
+              </span>
+            )}
+          </div>
+          {user && <div className="hidden sm:block text-xs text-white/50">Welcome{displayName ? `, ${displayName}` : ''}</div>}
         </div>
       </a>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
         <button
           onClick={() => { setQuizOpen(true); resetQuiz(); }}
-          className="flex items-center gap-1.5 rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-2 text-sm text-purple-100 hover:bg-purple-500/20 transition"
+          className="flex items-center gap-1.5 rounded-full border border-purple-400/20 bg-purple-500/10 px-2.5 sm:px-3 py-1.5 sm:py-2 text-sm text-purple-100 hover:bg-purple-500/20 transition"
         >
           <IconSparkles className="h-4 w-4" />
           <span className="hidden sm:inline">Find My Card</span>
@@ -4288,12 +4294,6 @@ export default function AppDashboardPage() {
         
         {user ? (
           <>
-            {isPro && (
-              <div className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-400/30 px-3 py-1.5 text-xs font-semibold text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.15)]">
-                <span>✨</span>
-                <span>PRO</span>
-              </div>
-            )}
             <button
               onClick={() => setActiveTab('settings')}
               className="rounded-full border border-white/10 bg-white/5 p-2 text-white/70 hover:bg-white/10"
@@ -4301,7 +4301,7 @@ export default function AppDashboardPage() {
             >
               <IconGear className="h-5 w-5" />
             </button>
-            <button onClick={handleSignOut} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10">
+            <button onClick={handleSignOut} className="hidden sm:block rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10">
               Sign out
             </button>
           </>
