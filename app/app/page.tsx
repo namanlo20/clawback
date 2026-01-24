@@ -2215,6 +2215,82 @@ export default function AppDashboardPage() {
       { category: 'American Airlines', multiplier: '4x', description: 'AA purchases directly' },
       { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
     ],
+    'united-club-infinite': [
+      { category: 'United Flights', multiplier: '9x', description: '5x United + 4x card' },
+      { category: 'Renowned Hotels', multiplier: '5x', description: 'Prepaid hotels via Renowned Hotels' },
+      { category: 'United Purchases', multiplier: '4x', description: 'Other United purchases' },
+      { category: 'Travel & Dining', multiplier: '2x', description: 'All other travel & dining' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'ritz-carlton': [
+      { category: 'Marriott Hotels', multiplier: '6x', description: 'Marriott Bonvoy properties' },
+      { category: 'Dining', multiplier: '3x', description: 'Restaurants worldwide' },
+      { category: 'Car Rentals', multiplier: '3x', description: 'Car rental agencies' },
+      { category: 'Airlines', multiplier: '3x', description: 'Airlines booked directly' },
+      { category: 'Everything Else', multiplier: '2x', description: 'All other purchases' },
+    ],
+    'us-bank-altitude-reserve': [
+      { category: 'Portal Hotels/Cars', multiplier: '10x', description: 'Prepaid via US Bank Travel Center' },
+      { category: 'Portal Flights', multiplier: '5x', description: 'Prepaid via US Bank Travel Center' },
+      { category: 'Travel & Mobile Wallet', multiplier: '3x', description: 'Travel outside portal + Apple/Google Pay' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'boa-premium-rewards-elite': [
+      { category: 'Travel', multiplier: '2x', description: 'Travel purchases (up to 3.5x with Preferred Rewards)' },
+      { category: 'Dining', multiplier: '2x', description: 'Restaurants (up to 3.5x with Preferred Rewards)' },
+      { category: 'Everything Else', multiplier: '1.5x', description: 'All other (up to 2.625x with Preferred Rewards)' },
+    ],
+    'mastercard-black': [
+      { category: 'Airfare', multiplier: '2x', description: 'Via LuxuryCardTravel.com' },
+      { category: 'Hotels', multiplier: '2x', description: 'Via LuxuryCardTravel.com' },
+      { category: 'Everything Else', multiplier: '1x', description: 'Redeems at 2% airfare / 1.5% cash back' },
+    ],
+    'luxury-card-gold': [
+      { category: 'Airfare', multiplier: '2x', description: 'Via LuxuryCardTravel.com' },
+      { category: 'Hotels', multiplier: '2x', description: 'Via LuxuryCardTravel.com' },
+      { category: 'Everything Else', multiplier: '1x', description: 'Redeems at 2% for airfare/cash back' },
+    ],
+    'ihg-premier': [
+      { category: 'IHG Hotels', multiplier: '26x', description: '10x card + base/status bonuses' },
+      { category: 'Travel/Gas/Dining', multiplier: '5x', description: 'Travel, gas stations, restaurants' },
+      { category: 'Everything Else', multiplier: '3x', description: 'All other purchases' },
+    ],
+    'world-of-hyatt': [
+      { category: 'Hyatt Hotels', multiplier: '9x', description: 'Hyatt properties' },
+      { category: 'Dining', multiplier: '2x', description: 'Restaurants worldwide' },
+      { category: 'Transit & Fitness', multiplier: '2x', description: 'Transit and gym memberships' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'southwest-priority': [
+      { category: 'Southwest', multiplier: '3x', description: 'Southwest Airlines purchases' },
+      { category: 'Hotels/Cars/Transit', multiplier: '2x', description: 'RR partners, transit, streaming' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'alaska-visa-signature': [
+      { category: 'Alaska Airlines', multiplier: '3x', description: 'Alaska purchases' },
+      { category: 'Gas/Transit/Shipping', multiplier: '2x', description: 'Gas, transit, and shipping' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'citi-premier': [
+      { category: 'Hotels/Cars/Attractions', multiplier: '10x', description: 'Via cititravel.com' },
+      { category: 'Air/Hotels', multiplier: '3x', description: 'Air travel & other hotels' },
+      { category: 'Dining', multiplier: '3x', description: 'Restaurants worldwide' },
+      { category: 'Groceries', multiplier: '3x', description: 'Supermarkets' },
+      { category: 'Gas & EV', multiplier: '3x', description: 'Gas stations & EV charging' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'wells-fargo-autograph-journey': [
+      { category: 'Hotels', multiplier: '5x', description: 'Hotel purchases' },
+      { category: 'Airlines', multiplier: '4x', description: 'Airline purchases' },
+      { category: 'Travel & Dining', multiplier: '3x', description: 'Other travel & dining' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
+    'jetblue-plus': [
+      { category: 'JetBlue', multiplier: '6x', description: 'JetBlue purchases' },
+      { category: 'Dining', multiplier: '2x', description: 'Restaurants' },
+      { category: 'Groceries', multiplier: '2x', description: 'Grocery stores' },
+      { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
+    ],
   };
 
   const activeCardEarnings = cardEarningsData[activeCard?.key || ''];
