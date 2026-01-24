@@ -497,6 +497,20 @@ function CreditCalendar({
       const color = colors[cardIndex % colors.length];
       
       card.credits.forEach(credit => {
+        // Check if credit is available in the viewed month
+        const title = credit.title.toLowerCase();
+        const notes = (credit.notes || '').toLowerCase();
+        
+        // December-only credits (like Uber Cash Dec)
+        if (title.includes('(dec)') || title.includes('december') || notes.includes('december only')) {
+          if (viewMonth !== 11) return; // Skip if not viewing December
+        }
+        
+        // Jan-Nov credits (like Uber Cash Jan-Nov)
+        if (title.includes('jan–nov') || title.includes('jan-nov') || title.includes('(jan-nov)')) {
+          if (viewMonth === 11) return; // Skip if viewing December
+        }
+        
         let resetDay = 0;
         
         switch (credit.frequency) {
