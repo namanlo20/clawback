@@ -3609,7 +3609,7 @@ export default function AppDashboardPage() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-white/95">Card Comparison</h2>
         <div className="text-xs text-white/50">
-          {isPro ? 'Compare up to 3 cards' : 'Free: 2 cards'} • {compareCards.length} selected
+          {isPro ? 'Compare up to 3 cards' : 'Compare up to 2 cards'} • {compareCards.length} selected
         </div>
       </div>
       
@@ -4252,6 +4252,16 @@ export default function AppDashboardPage() {
             </a>
           </div>
         </div>
+        
+        {/* Sign Out */}
+        <div className="pt-6 border-t border-white/10">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition"
+          >
+            <span>Sign Out</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -4301,8 +4311,9 @@ export default function AppDashboardPage() {
             >
               <IconGear className="h-5 w-5" />
             </button>
-            <button onClick={handleSignOut} className="hidden sm:block rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/70 hover:bg-white/10">
-              Sign out
+            <button onClick={handleSignOut} className="rounded-full border border-white/10 bg-white/5 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white/70 hover:bg-white/10">
+              <span className="hidden sm:inline">Sign out</span>
+              <span className="sm:hidden">Out</span>
             </button>
           </>
         ) : (
