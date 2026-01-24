@@ -2262,13 +2262,12 @@ export default function AppDashboardPage() {
       { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
     ],
     'southwest-priority': [
-      { category: 'Southwest', multiplier: '3x', description: 'Southwest Airlines purchases' },
-      { category: 'Hotels/Cars/Transit', multiplier: '2x', description: 'RR partners, transit, streaming' },
+      { category: 'Southwest/Hotels/Cars', multiplier: '4x', description: 'Southwest & portal bookings' },
+      { category: 'Dining/Transit/Streaming', multiplier: '2x', description: 'Dining, transit, internet, streaming' },
       { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
     ],
     'alaska-visa-signature': [
-      { category: 'Alaska Airlines', multiplier: '3x', description: 'Alaska purchases' },
-      { category: 'Gas/Transit/Shipping', multiplier: '2x', description: 'Gas, transit, and shipping' },
+      { category: 'Alaska/Hawaiian Airlines', multiplier: '3x', description: 'Alaska & Hawaiian purchases' },
       { category: 'Everything Else', multiplier: '1x', description: 'All other purchases' },
     ],
     'citi-premier': [
@@ -2622,6 +2621,7 @@ export default function AppDashboardPage() {
     "marriott-brilliant": {
       title: "Marriott Bonvoy Brilliant® American Express® Card",
       benefits: [
+        { name: "Annual Free Night Award", description: "One free night each card anniversary at properties up to 85,000 points value (resort fees may apply)." },
         { name: "Automatic Marriott Bonvoy Platinum Elite Status", description: "Includes room upgrades (when available), late checkout, welcome gift at check-in, enhanced bonus points on stays (50% extra), and lounge access at many participating Marriott brands (e.g., executive lounges with free breakfast/snacks at select properties)." },
         { name: "25 Elite Night Credits", description: "Added each calendar year toward qualifying for higher Marriott Bonvoy Elite tiers (e.g., Titanium at 75 nights)." },
         { name: "Priority PassTM Select Membership", description: "Unlimited visits to over 1,200 airport lounges in 130+ countries (for the primary cardholder; guests may be allowed in some lounges)." },
@@ -2751,6 +2751,152 @@ export default function AppDashboardPage() {
         { name: 'Trip Delay Reimbursement', description: '$500 per ticket for 12+ hour delays' },
         { name: 'Primary Car Rental Insurance', description: 'Covers collision damage when you decline rental insurance' },
         { name: 'Purchase Protection', description: '120 days coverage against damage/theft' },
+        { name: '1:1 Point Transfers', description: 'Transfer points to airline/hotel partners like United, Hyatt, Southwest' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'united-club-infinite': {
+      title: 'United Club℠ Infinite Card',
+      benefits: [
+        { name: 'United Club Membership', description: 'Full United Club lounge access at 45+ locations for cardholder + 1 guest on any flight' },
+        { name: 'Premier Access', description: 'Priority check-in, security screening, boarding, and baggage handling on United flights' },
+        { name: 'Free Checked Bags', description: 'First and second checked bags free for cardholder on United flights (save up to $360/roundtrip)' },
+        { name: '1,500 Bonus PQP', description: 'Annual Premier Qualifying Points toward United elite status' },
+        { name: '25% Back on Inflight', description: '25% back as statement credit on United inflight purchases' },
+        { name: 'Award Flight Discounts', description: '10,000-mile discount on award flights after $20k spend (up to 2x/year)' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'ritz-carlton': {
+      title: 'Ritz-Carlton Credit Card',
+      benefits: [
+        { name: 'Marriott Bonvoy Gold Elite Status', description: '25% bonus points on stays, late checkout, room upgrades when available' },
+        { name: 'Annual Free Night Award', description: 'One free night each anniversary at properties up to 85,000 points (can add up to 15,000 points)' },
+        { name: '$100 Property Credit', description: '$100 credit at Ritz-Carlton and St. Regis properties during qualifying stays' },
+        { name: 'Travel Protections', description: 'Trip cancellation, baggage delay, and car rental coverage' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'us-bank-altitude-reserve': {
+      title: 'U.S. Bank Altitude Reserve Visa Infinite',
+      benefits: [
+        { name: 'Priority Pass Select', description: 'Lounge access for cardholder + 2 guests at 1,300+ locations worldwide' },
+        { name: 'Cell Phone Protection', description: 'Up to $800 per claim for damage or theft when paying phone bill with card' },
+        { name: 'GigSky Mobile Data', description: 'Global mobile data credits for international travel' },
+        { name: 'Concierge Service', description: '24/7 premium concierge for travel, dining, and events' },
+        { name: 'Travel Protections', description: 'Trip cancellation, baggage delay, and auto rental coverage' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'boa-premium-rewards-elite': {
+      title: 'Bank of America Premium Rewards Elite',
+      benefits: [
+        { name: 'Priority Pass Select', description: 'Lounge access for cardholder + 4 authorized users' },
+        { name: 'Preferred Rewards Boost', description: 'Up to 75% bonus on earning rates with Preferred Rewards ($20k+ with BoA/Merrill)' },
+        { name: '20% Airfare Savings', description: 'Save 20% when redeeming points for airfare' },
+        { name: '24/7 Concierge', description: 'Full-service concierge for travel, dining, and entertainment' },
+        { name: 'Travel Protections', description: 'Trip cancellation up to $5,000, baggage delay, and rental car coverage' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'mastercard-black': {
+      title: 'Luxury Card Black Card',
+      benefits: [
+        { name: '24/7 Luxury Card Concierge', description: 'Elite concierge service for travel, dining, and exclusive experiences' },
+        { name: 'VIP Priority Pass Select', description: 'Lounge access for cardholder + guests at 1,300+ locations' },
+        { name: 'Mastercard ID Theft Protection', description: 'Comprehensive identity theft monitoring and resolution services' },
+        { name: 'Travel Protections', description: 'Trip cancellation up to $5,000, baggage delay, and rental car coverage' },
+        { name: 'Luxury Card App & Magazine', description: 'Exclusive access to Luxury Card experiences and publications' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'luxury-card-gold': {
+      title: 'Luxury Card Mastercard Gold',
+      benefits: [
+        { name: '24k Gold-Plated Metal Card', description: 'Premium metal card with 24k gold plating for ultimate status' },
+        { name: 'VIP Priority Pass Select', description: 'Unlimited lounge visits + guests at 1,300+ locations worldwide' },
+        { name: '24/7 Elite Concierge', description: 'Premium concierge for travel, dining, events, and exclusive experiences' },
+        { name: 'Mastercard Priceless Golf', description: 'Access to exclusive golf courses and experiences worldwide' },
+        { name: 'Cell Phone Protection', description: 'Up to $1,000 per claim for damage or theft' },
+        { name: 'Mastercard ID Theft Protection', description: 'Comprehensive identity theft monitoring and resolution' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'ihg-premier': {
+      title: 'IHG One Rewards Premier Credit Card',
+      benefits: [
+        { name: 'IHG Platinum Elite Status', description: 'Room upgrades, bonus points, late checkout, welcome amenity' },
+        { name: '4th Reward Night Free', description: 'Book 3+ nights with points and get the 4th night free' },
+        { name: 'Path to Diamond', description: 'Earn Diamond Elite status after $40,000 annual spend' },
+        { name: 'Global Entry/TSA Credit', description: 'Up to $120 every 4 years for Global Entry, TSA PreCheck, or NEXUS' },
+        { name: 'Travel Protections', description: 'Trip cancellation, baggage delay, and purchase protection' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'world-of-hyatt': {
+      title: 'World of Hyatt Credit Card',
+      benefits: [
+        { name: 'Discoverist Status', description: 'Room upgrades when available, bonus points, late checkout, dedicated support' },
+        { name: '5 Tier-Qualifying Night Credits', description: 'Annual credits toward Explorist or Globalist elite status' },
+        { name: '2 Elite Night Credits per $5k', description: 'Earn tier credits through everyday spending toward elite status' },
+        { name: 'Member Rate Guarantee', description: 'Always get the lowest rate at Hyatt properties' },
+        { name: 'Travel Protections', description: 'Trip cancellation, baggage delay, and auto rental coverage' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'southwest-priority': {
+      title: 'Southwest Rapid Rewards Priority Credit Card',
+      benefits: [
+        { name: '10,000 Companion Pass Points', description: 'Annual qualifying points toward earning the Southwest Companion Pass' },
+        { name: '2,500 TQPs per $5k Spend', description: 'Tier-qualifying points toward A-List or A-List Preferred status' },
+        { name: '25% Back on Inflight', description: 'Statement credits on inflight purchases like WiFi and drinks' },
+        { name: '2 EarlyBird Check-In Credits', description: 'Per year for automatic early boarding position' },
+        { name: 'No Blackout Dates', description: 'Redeem points on any available Southwest seat' },
+        { name: 'Travel Protections', description: 'Auto rental coverage and baggage delay insurance' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'alaska-visa-signature': {
+      title: 'Alaska Airlines Visa Signature',
+      benefits: [
+        { name: 'Companion Fare', description: 'Annual $99 companion fare (plus taxes from $23) after $6k spend for Alaska/Hawaiian flights' },
+        { name: 'Free Checked Bag', description: 'First bag free for cardholder + up to 6 companions on Alaska flights (save up to $60/person RT)' },
+        { name: 'Loyalty Points on Spend', description: 'Earn points toward Alaska Mileage Plan elite status with everyday purchases' },
+        { name: '20% Back on Inflight', description: 'Statement credits on inflight food, beverages, and WiFi' },
+        { name: 'Travel Protections', description: 'Baggage insurance and car rental coverage included' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'citi-premier': {
+      title: 'Citi Premier Card',
+      benefits: [
+        { name: 'ThankYou Points Transfers', description: 'Transfer points 1:1 to airline and hotel partners' },
+        { name: 'Citi Entertainment', description: 'Access to presale tickets and exclusive experiences' },
+        { name: 'Trip Cancellation Insurance', description: 'Coverage for eligible trip cancellations' },
+        { name: 'Baggage Delay Insurance', description: 'Reimbursement for essentials if bags are delayed' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'wells-fargo-autograph-journey': {
+      title: 'Wells Fargo Autograph Journey Visa',
+      benefits: [
+        { name: 'Unlimited Priority Pass', description: 'Unlimited lounge visits at 1,500+ locations (enrollment required)' },
+        { name: 'Cell Phone Protection', description: 'Up to $1,000 per claim for damage or theft when paying phone bill with card' },
+        { name: 'Points Transfer Partners', description: 'Transfer points to airline and hotel partners for flexible redemptions' },
+        { name: 'Trip Cancellation Insurance', description: 'Coverage for eligible trip cancellations and interruptions' },
+        { name: 'Baggage Reimbursement', description: 'Coverage for lost, damaged, or delayed baggage' },
+        { name: 'No Foreign Transaction Fees', description: 'Use worldwide without additional fees' },
+      ]
+    },
+    'jetblue-plus': {
+      title: 'JetBlue Plus Card',
+      benefits: [
+        { name: 'Free Checked Bag', description: 'First checked bag free for cardholder + 3 companions on JetBlue flights' },
+        { name: '50% Inflight Savings', description: 'Half off food, drinks, and WiFi on JetBlue flights' },
+        { name: 'Points Pooling', description: 'Combine points with family and friends for faster redemptions' },
+        { name: 'No Blackout Dates', description: 'Redeem points on any available JetBlue seat' },
+        { name: 'Path to Mosaic', description: 'Earn Mosaic elite status after $50,000 annual spend' },
+        { name: '10% Points Back', description: 'Get 10% of redeemed points back on JetBlue award flights' },
       ]
     },
   };
