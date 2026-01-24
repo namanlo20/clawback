@@ -1279,6 +1279,10 @@ export default function AppDashboardPage() {
       marriott_points: 'Marriott Points',
       hilton_points: 'Hilton Points',
       cashback: 'Cash Back',
+      united_miles: 'United Miles',
+      usbank_points: 'US Bank Points',
+      boa_points: 'BoA Points',
+      luxury_points: 'Luxury Points',
     };
     
     let totalValue = 0;
