@@ -16,7 +16,7 @@ export default function HomePage() {
     },
     {
       title: "1. Save Your Cards",
-      description: "Add the premium credit cards you have. We support Amex Platinum, Chase Sapphire Reserve, Venture X, and 12+ more.",
+      description: "Add the premium credit cards you have. We support Amex Platinum, Chase Sapphire Reserve, Venture X, and many more premium cards.",
       visual: "cards",
     },
     {
@@ -107,7 +107,7 @@ export default function HomePage() {
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
           </span>
-          Now tracking 12+ premium cards
+          Now tracking 17 premium cards
         </div>
 
         <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">
