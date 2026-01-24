@@ -2904,7 +2904,7 @@ export default function AppDashboardPage() {
             {isSaved && <span className="text-amber-400">⭐</span>}
             <span className="font-medium text-white/95 truncate">{card.name}</span>
           </div>
-          <div className="text-xs text-white/50">{card.issuer} • {formatMoney(card.annualFee)}/yr</div>
+          <div className="text-xs text-white/50">{card.issuer} • Annual Fee – {formatMoney(card.annualFee)} per year</div>
         </div>
         <div className="text-right">
           <div className="text-emerald-400 font-semibold">{formatMoney(card.creditsTrackedAnnualized)}</div>
@@ -3073,7 +3073,7 @@ export default function AppDashboardPage() {
           <Image src={activeCard.logo} alt={activeCard.name} width={44} height={44} className="rounded-xl" />
           <div>
             <h2 className="text-lg font-semibold text-white/95">{activeCard.name}</h2>
-            <div className="text-xs text-white/50">{activeCard.issuer} • {formatMoney(activeCard.annualFee)}/yr</div>
+            <div className="text-xs text-white/50">{activeCard.issuer} • Annual Fee – {formatMoney(activeCard.annualFee)} per year</div>
           </div>
         </div>
         <button
