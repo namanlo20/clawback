@@ -1283,6 +1283,12 @@ export default function AppDashboardPage() {
       usbank_points: 'US Bank Points',
       boa_points: 'BoA Points',
       luxury_points: 'Luxury Points',
+      ihg_points: 'IHG Points',
+      hyatt_points: 'Hyatt Points',
+      southwest_points: 'Southwest Points',
+      alaska_miles: 'Alaska Miles',
+      jetblue_points: 'JetBlue Points',
+      wells_fargo_points: 'Wells Fargo Points',
     };
     
     let totalValue = 0;
