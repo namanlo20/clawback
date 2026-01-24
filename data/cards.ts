@@ -31,7 +31,11 @@ export type PointsProgram =
   | "aa_miles"
   | "delta_miles"
   | "marriott_points"
-  | "hilton_points";
+  | "hilton_points"
+  | "united_miles"
+  | "usbank_points"
+  | "boa_points"
+  | "luxury_points";
 
 export type SpendCategory =
   | "dining"
@@ -68,6 +72,11 @@ export type Card = {
 
   multipliers: Multiplier[];
   credits: Credit[];
+  
+  // Pros and cons for card details
+  pros?: string[];
+  cons?: string[];
+  perks?: string[];
 };
 
 export const DEFAULT_POINT_VALUES_USD: Record<
@@ -82,6 +91,10 @@ export const DEFAULT_POINT_VALUES_USD: Record<
   delta_miles: 0.012,
   marriott_points: 0.008,
   hilton_points: 0.006,
+  united_miles: 0.012,
+  usbank_points: 0.015,
+  boa_points: 0.01,
+  luxury_points: 0.02,
 };
 
 export function pointValueUsd(program: PointsProgram): number {
@@ -388,6 +401,204 @@ export const CARDS: Card[] = [
       { id: "aaexec-car-rentals", title: "Car rentals", amount: 120, frequency: "annual" },
       { id: "aaexec-global-entry", title: "Global Entry", amount: 120, frequency: "every4years" },
       { id: "aaexec-tsa-precheck", title: "TSA PreCheck / NEXUS fee", amount: 85, frequency: "every5years" },
+    ],
+  },
+
+  // ===========================================
+  // NEW CARDS (5 additions)
+  // ===========================================
+
+  {
+    key: "united-club-infinite",
+    name: "United Club Infinite Card",
+    issuer: "Chase",
+    annualFee: 695,
+    creditsTrackedAnnualized: 920,
+    logo: "/logos/united-club-infinite.png",
+    pointsProgram: "united_miles",
+    earnRates: { travel: 5, dining: 2, other: 1 },
+    multipliers: [
+      { label: "United flights (4x card + base)", x: 9 },
+      { label: "Prepaid hotels via Renowned Hotels", x: 5 },
+      { label: "Other United purchases", x: 4 },
+      { label: "Dining & eligible delivery", x: 2 },
+      { label: "Other travel (hotels, car rentals, rideshare)", x: 2 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "uci-renowned-hotels", title: "Renowned Hotels Credit", amount: 200, frequency: "annual", notes: "Prepaid hotels via Renowned Hotels and Resorts" },
+      { id: "uci-rideshare", title: "Rideshare Credit", amount: 12.50, frequency: "monthly", notes: "$12–$18/month for rideshare" },
+      { id: "uci-car-rental", title: "Avis/Budget Credit", amount: 100, frequency: "annual", notes: "Via United portal" },
+      { id: "uci-jsx", title: "JSX Flight Credit", amount: 200, frequency: "annual", notes: "For JSX flights" },
+      { id: "uci-instacart", title: "Instacart Credit", amount: 20, frequency: "monthly", notes: "$10/month × 2 credits" },
+      { id: "uci-global-entry", title: "Global Entry / TSA PreCheck / NEXUS", amount: 120, frequency: "every4years" },
+    ],
+    perks: [
+      "Full United Club lounge membership (cardholder + 1 guest at 45+ lounges)",
+      "Free first checked bag for cardholder + up to 8 companions",
+      "Premier Access priority services (check-in, security, boarding, baggage)",
+      "No foreign transaction fees",
+      "Travel protections (trip delay, cancellation, lost luggage)",
+      "25% back on United inflight purchases",
+      "1,500 bonus PQP annually",
+    ],
+    pros: [
+      "Complimentary United Club lounge access (valued at $650+) and Premier Access perks make airport travel smoother for frequent United flyers",
+      "Strong PQP earning and award flight discounts help fast-track elite status, potentially saving hundreds on upgrades and fees",
+    ],
+    cons: [
+      "Saver Award availability is often capacity-controlled and hard to find, leading to frustration when redeeming miles",
+      "The spending threshold for welcome bonuses is too high for many, and the card loses value quickly for non-frequent United flyers",
+    ],
+  },
+
+  {
+    key: "ritz-carlton",
+    name: "Ritz-Carlton Credit Card",
+    issuer: "Chase",
+    annualFee: 450,
+    creditsTrackedAnnualized: 425,
+    logo: "/logos/ritz-carlton.png",
+    pointsProgram: "marriott_points",
+    earnRates: { travel: 6, dining: 3, other: 2 },
+    multipliers: [
+      { label: "Marriott Bonvoy hotels", x: 6 },
+      { label: "Restaurants", x: 3 },
+      { label: "Airline purchases booked directly", x: 3 },
+      { label: "Car rentals", x: 3 },
+      { label: "Everything else", x: 2 },
+    ],
+    credits: [
+      { id: "ritz-airline", title: "Airline Incidental Credit", amount: 300, frequency: "annual", notes: "Baggage, seat upgrades, inflight, lounge passes" },
+      { id: "ritz-hotel", title: "Ritz-Carlton / St. Regis Credit", amount: 100, frequency: "annual", notes: "2+ night stay booked directly" },
+      { id: "ritz-global-entry", title: "Global Entry / TSA PreCheck", amount: 100, frequency: "every4years" },
+    ],
+    perks: [
+      "Marriott Bonvoy Gold Elite status (room upgrades, late checkout, 25% bonus points)",
+      "Annual free night award (up to 85,000 points)",
+      "Priority Pass Select (cardholder + 2 guests, effective Jan 2026)",
+      "No foreign transaction fees",
+      "Trip cancellation/interruption up to $10,000",
+    ],
+    pros: [
+      "Gold Elite status and annual free night (often worth $300–$500+) provide strong value for Marriott/Ritz stays, easily offsetting the fee",
+      "Solid airline incidental credit and Priority Pass add flexible travel perks without a higher fee",
+    ],
+    cons: [
+      "Priority Pass guest access changes (now limited to 2 guests starting 2026) make it less family-friendly",
+      "The card is no longer open to new applicants, requiring a product change from another Chase card",
+    ],
+  },
+
+  {
+    key: "us-bank-altitude-reserve",
+    name: "U.S. Bank Altitude Reserve",
+    issuer: "U.S. Bank",
+    annualFee: 400,
+    creditsTrackedAnnualized: 355,
+    logo: "/logos/us-bank-altitude-reserve.png",
+    pointsProgram: "usbank_points",
+    earnRates: { travel: 5, dining: 3, other: 1 },
+    multipliers: [
+      { label: "Prepaid hotels/car rentals via Travel Center", x: 10 },
+      { label: "Prepaid flights via Travel Center", x: 5 },
+      { label: "Travel purchases (outside portal)", x: 3 },
+      { label: "Mobile wallet spending (Apple Pay, Google Pay)", x: 3 },
+      { label: "Everything else", x: 1 },
+    ],
+    credits: [
+      { id: "usar-travel", title: "Travel Center Credit", amount: 325, frequency: "annual", notes: "Flights, hotels, car rentals via US Bank portal" },
+      { id: "usar-global-entry", title: "Global Entry / TSA PreCheck / NEXUS", amount: 120, frequency: "every4years" },
+    ],
+    perks: [
+      "Priority Pass Select (cardholder + 2 guests at 1,300+ locations)",
+      "3x on mobile wallet purchases (Apple Pay, Google Pay)",
+      "Concierge service",
+      "No foreign transaction fees",
+      "Cell phone protection up to $800/claim",
+      "GigSky global mobile data credits",
+    ],
+    pros: [
+      "The $325 travel credit (easy via portal) and $120 TSA/Global often fully offset the fee for moderate travelers",
+      "Unlimited Priority Pass lounge access and high earning on mobile wallets (Apple Pay, Google Pay) boost convenience",
+    ],
+    cons: [
+      "Recent nerfs (reduced cashback equivalents in 2026) have made it less competitive with devalued rewards",
+      "No transferable points to partners means redemptions are stuck at 1.5 cents/point max",
+    ],
+  },
+
+  {
+    key: "boa-premium-rewards-elite",
+    name: "Bank of America Premium Rewards Elite",
+    issuer: "Bank of America",
+    annualFee: 550,
+    creditsTrackedAnnualized: 480,
+    logo: "/logos/boa-premium-rewards-elite.png",
+    pointsProgram: "boa_points",
+    earnRates: { travel: 2, dining: 2, other: 1.5 },
+    multipliers: [
+      { label: "Travel", x: 2 },
+      { label: "Dining", x: 2 },
+      { label: "Everything else", x: 1.5 },
+      { label: "With Preferred Rewards: Travel/Dining", x: 3.5 },
+      { label: "With Preferred Rewards: Everything else", x: 2.625 },
+    ],
+    credits: [
+      { id: "boa-airline", title: "Airline Incidental Credit", amount: 300, frequency: "annual", notes: "Seat upgrades, baggage, inflight, lounge fees" },
+      { id: "boa-lifestyle", title: "Lifestyle Credit", amount: 150, frequency: "annual", notes: "Streaming, food delivery, fitness, rideshare" },
+      { id: "boa-global-entry", title: "Global Entry / TSA PreCheck / NEXUS", amount: 120, frequency: "every4years" },
+    ],
+    perks: [
+      "Priority Pass Select (cardholder + 4 authorized users)",
+      "20% savings on airfare when paying with points",
+      "24/7 full-service concierge",
+      "No foreign transaction fees",
+      "Trip cancellation up to $5,000",
+    ],
+    pros: [
+      "Airline incidental and lifestyle credits ($450 total) plus 20% airfare savings easily offset the fee for everyday travelers",
+      "Boosted earning (up to 3.5x/2.625x with Preferred Rewards) and unlimited Priority Pass make it rewarding for BoA clients",
+    ],
+    cons: [
+      "Poor customer service with long hold times and unresolved issues reported by many cardholders",
+      "Requires significant assets ($20k+) for Preferred Rewards boosts; without it, base earning feels underwhelming",
+    ],
+  },
+
+  {
+    key: "mastercard-black",
+    name: "Mastercard Black Card",
+    issuer: "Luxury Card",
+    annualFee: 495,
+    creditsTrackedAnnualized: 330,
+    logo: "/logos/mastercard-black.png",
+    pointsProgram: "luxury_points",
+    earnRates: { travel: 2, dining: 1, other: 1 },
+    multipliers: [
+      { label: "Airfare", x: 2 },
+      { label: "Hotels", x: 2 },
+      { label: "Everything else (redeems at 2% for airfare)", x: 1 },
+    ],
+    credits: [
+      { id: "mcb-dining", title: "Dining Credit", amount: 100, frequency: "annual", notes: "At qualifying restaurants" },
+      { id: "mcb-airline", title: "Airline Travel Credit", amount: 200, frequency: "annual", notes: "Tickets, baggage, upgrades" },
+      { id: "mcb-global-entry", title: "Global Entry / TSA PreCheck", amount: 120, frequency: "every4years" },
+    ],
+    perks: [
+      "VIP Priority Pass Select (cardholder + 2 guests)",
+      "24/7 concierge service",
+      "No foreign transaction fees",
+      "Trip cancellation up to $5,000",
+      "Points redeem at 2% for airfare, 1.5% cash back",
+    ],
+    pros: [
+      "Airline and dining credits plus high redemption values (2% for airfare) provide solid returns for travel-focused spending",
+      "VIP concierge and Priority Pass offer luxury access and convenience for high-end users",
+    ],
+    cons: [
+      "Poor earning rates (only 1x on most spend) make it hard to accumulate points quickly",
+      "Overpriced with limited rewards value—better alternatives exist for similar perks at lower cost",
     ],
   },
 ];
